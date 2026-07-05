@@ -3,11 +3,8 @@ import {
   View, Text, Pressable, StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Garden } from '@/components/Garden';
+import { Garden, useSession, getTodayRecordDate, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
-import { useSession } from '../../lib/session';
-import { getTodayRecordDate } from '../../lib/dates';
-import { colors, fonts } from '../../lib/theme';
 
 type Item = {
   id: string;

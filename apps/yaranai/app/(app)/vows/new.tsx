@@ -4,8 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
-import { useSession } from '../../../lib/session';
-import { colors, fonts } from '../../../lib/theme';
+import { useSession, colors, fonts } from '@yaranai/core';
 
 export default function NewVow() {
   const session = useSession();

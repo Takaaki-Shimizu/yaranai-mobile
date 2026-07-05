@@ -1,0 +1,18 @@
+{
+  "name": "@yaranai/core",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": "*",
+    "@supabase/supabase-js": "*",
+    "aes-js": "*",
+    "expo-secure-store": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-get-random-values": "*",
+    "react-native-svg": "*",
+    "react-native-url-polyfill": "*"
+  }
+}

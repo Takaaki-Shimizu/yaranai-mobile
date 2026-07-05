@@ -1,6 +1,5 @@
 import { Redirect, Stack } from 'expo-router';
-import { useSession } from '../../lib/session';
-import { colors } from '../../lib/theme';
+import { useSession, colors } from '@yaranai/core';
 
 export default function AppLayout() {
   const session = useSession();

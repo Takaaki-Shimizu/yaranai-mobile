@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { useSession } from '../lib/session';
+import { useSession } from '@yaranai/core';
 
 export default function Index() {
   const session = useSession();

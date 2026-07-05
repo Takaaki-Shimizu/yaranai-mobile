@@ -1,6 +1,6 @@
 import Svg, { Circle, Ellipse, Line, Path, Rect } from "react-native-svg";
 
-import { koke, sumi, suna, usuzumi } from "@/lib/theme";
+import { koke, sumi, suna, usuzumi } from "./theme";
 
 export type GardenStage = 0 | 1 | 2 | 3 | 4;
 
