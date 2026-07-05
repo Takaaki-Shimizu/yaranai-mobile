@@ -5,7 +5,7 @@ import {
 import { Link } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
-import { colors, fonts } from '../../lib/theme';
+import { colors, fonts } from '@yaranai/core';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');

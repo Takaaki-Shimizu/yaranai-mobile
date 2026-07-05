@@ -4,8 +4,7 @@ import {
 } from 'react-native';
 import { Link, Redirect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { useSession } from '../../lib/session';
-import { colors, fonts } from '../../lib/theme';
+import { useSession, colors, fonts } from '@yaranai/core';
 
 type Mode = 'signIn' | 'signUp';
 

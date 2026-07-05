@@ -55,34 +55,36 @@ class LargeSecureStore {
   }
 }
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabasePublishableKey =
-  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+// URL/キーは各アプリが自分の環境変数を渡す
+export function createYaranaiClient(
+  supabaseUrl: string,
+  supabasePublishableKey: string,
+) {
+  // Webのサーバーサイドレンダリング(Node)では window が無く、
+  // AsyncStorage/SecureStore/crypto も使えんけん、ストレージを無効にする
+  const isWeb = Platform.OS === "web";
+  const isServer = isWeb && typeof window === "undefined";
 
-// Webのサーバーサイドレンダリング(Node)では window が無く、
-// AsyncStorage/SecureStore/crypto も使えんけん、ストレージを無効にする
-const isWeb = Platform.OS === "web";
-const isServer = isWeb && typeof window === "undefined";
+  // - ネイティブ: SecureStore + AsyncStore で暗号化保存
+  // - Webブラウザ: AsyncStorage(localStorage)
+  // - Web SSR: ストレージ無し + セッション永続化を無効
+  const authStorage = isServer
+    ? undefined
+    : isWeb
+      ? AsyncStorage
+      : new LargeSecureStore();
 
-// - ネイティブ: SecureStore + AsyncStore で暗号化保存
-// - Webブラウザ: AsyncStorage(localStorage)
-// - Web SSR: ストレージ無し + セッション永続化を無効
-const authStorage = isServer
-  ? undefined
-  : isWeb
-    ? AsyncStorage
-    : new LargeSecureStore();
-
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
-  auth: {
-    storage: authStorage,
-    autoRefreshToken: !isServer,
-    persistSession: !isServer,
-    // Webブラウザだけ、リセット/確認メールのリンク(URLハッシュ)から
-    // セッションを復元する。ネイティブ/SSRでは無効。
-    detectSessionInUrl: isWeb && !isServer,
-  },
-});
+  return createClient(supabaseUrl, supabasePublishableKey, {
+    auth: {
+      storage: authStorage,
+      autoRefreshToken: !isServer,
+      persistSession: !isServer,
+      // Webブラウザだけ、リセット/確認メールのリンク(URLハッシュ)から
+      // セッションを復元する。ネイティブ/SSRでは無効。
+      detectSessionInUrl: isWeb && !isServer,
+    },
+  });
+}
 
 // リセットメールのリンク(ネイティブのディープリンク)から
 // access_token / refresh_token を取り出すためのヘルパー。

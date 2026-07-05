@@ -3,8 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { Slot } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase'; // 既存の LargeSecureStore 版をそのまま使う
-import { SessionContext } from '../lib/session';
-import { colors } from '../lib/theme';
+import { SessionContext, colors } from '@yaranai/core';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
