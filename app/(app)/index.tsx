@@ -3,6 +3,7 @@ import {
   View, Text, Pressable, StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Garden } from '@/components/Garden';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../../lib/session';
 import { getTodayRecordDate } from '../../lib/dates';
@@ -129,8 +130,8 @@ export default function Home() {
             <Text style={styles.headline}>
               {totals.longest_days}日で、{totals.total_saved_hours}時間が{'\n'}戻ってきました。
             </Text>
-            <View style={styles.phaseTrack}>
-              <View style={[styles.phaseFill, { width: `${Math.round(phase * 100)}%` }]} />
+            <View style={{ marginTop: 32, width: '100%' }}>
+              <Garden phase={phase} />
             </View>
           </>
         ) : (
@@ -198,14 +199,6 @@ const styles = StyleSheet.create({
     color: colors.sumi,
     textAlign: 'center',
   },
-  phaseTrack: {
-    marginTop: 32,
-    width: '70%',
-    height: 2,
-    backgroundColor: colors.suna,
-  },
-  phaseFill: { height: 2, backgroundColor: colors.koke },
-
   list: { gap: 28 },
   row: { gap: 12 },
   rowHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
