@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import * as aesjs from "aes-js";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import "react-native-get-random-values";
 import "react-native-url-polyfill/auto";
 
@@ -58,11 +59,42 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabasePublishableKey =
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
+// Webのサーバーサイドレンダリング(Node)では window が無く、
+// AsyncStorage/SecureStore/crypto も使えんけん、ストレージを無効にする
+const isWeb = Platform.OS === "web";
+const isServer = isWeb && typeof window === "undefined";
+
+// - ネイティブ: SecureStore + AsyncStore で暗号化保存
+// - Webブラウザ: AsyncStorage(localStorage)
+// - Web SSR: ストレージ無し + セッション永続化を無効
+const authStorage = isServer
+  ? undefined
+  : isWeb
+    ? AsyncStorage
+    : new LargeSecureStore();
+
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storage: new LargeSecureStore(),
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
+    storage: authStorage,
+    autoRefreshToken: !isServer,
+    persistSession: !isServer,
+    // Webブラウザだけ、リセット/確認メールのリンク(URLハッシュ)から
+    // セッションを復元する。ネイティブ/SSRでは無効。
+    detectSessionInUrl: isWeb && !isServer,
   },
 });
+
+// リセットメールのリンク(ネイティブのディープリンク)から
+// access_token / refresh_token を取り出すためのヘルパー。
+// Webは detectSessionInUrl が自動でやってくれるけん、主にネイティブ用。
+export function parseAuthTokensFromUrl(url: string) {
+  const fragment = url.includes("#")
+    ? url.split("#")[1]
+    : (url.split("?")[1] ?? "");
+  const params = new URLSearchParams(fragment);
+  return {
+    accessToken: params.get("access_token"),
+    refreshToken: params.get("refresh_token"),
+    type: params.get("type"),
+  };
+}
