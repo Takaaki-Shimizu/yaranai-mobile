@@ -2,10 +2,18 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Slot } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { SessionContext, colors } from '@yaranai/core';
+import { supabase, missingEnvVars } from '../lib/supabase';
+import { SessionContext, colors, MissingConfigScreen } from '@yaranai/core';
 
 export default function RootLayout() {
+  // 環境変数が欠けたビルドはクラッシュではなく設定エラー画面で止める
+  if (missingEnvVars.length > 0) {
+    return <MissingConfigScreen missingKeys={missingEnvVars} />;
+  }
+  return <SessionGate />;
+}
+
+function SessionGate() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 

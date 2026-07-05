@@ -55,11 +55,17 @@ class LargeSecureStore {
   }
 }
 
-// URL/キーは各アプリが自分の環境変数を渡す
+// URL/キーは各アプリが自分の環境変数を渡す。
+// 未設定のままビルドされた場合は throw せず null を返し、
+// 起動クラッシュではなくアプリ側の設定エラー画面に委ねる。
 export function createYaranaiClient(
-  supabaseUrl: string,
-  supabasePublishableKey: string,
+  supabaseUrl: string | undefined,
+  supabasePublishableKey: string | undefined,
 ) {
+  if (!supabaseUrl || !supabasePublishableKey) {
+    return null;
+  }
+
   // Webのサーバーサイドレンダリング(Node)では window が無く、
   // AsyncStorage/SecureStore/crypto も使えんけん、ストレージを無効にする
   const isWeb = Platform.OS === "web";
