@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../lib/baseline';
+import { formatMinutes } from '../../lib/format';
 
 export default function Declare() {
   const session = useSession();
@@ -63,7 +64,7 @@ export default function Declare() {
   if (baseline && baseline.status === 'insufficient') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>基準線を集めています</Text>
+        <Text style={styles.title}>ふだんの記録を集めています</Text>
         <Text style={styles.description}>
           この端末の記録が{BASELINE_MIN_DAYS}日ぶんに満ちると、宣言できるようになります。{'\n'}
           いまは{baseline.availableDays}日ぶんです。
@@ -85,14 +86,14 @@ export default function Declare() {
         {baseline?.status === 'ok' && (
           <Text style={styles.baseline}>
             あなたはこの{Math.round(baseline.windowDays / 7)}週、{'\n'}
-            1日平均{Math.round(baseline.averageMinutesPerDay)}分を{'\n'}
+            1日平均{formatMinutes(baseline.averageMinutesPerDay)}を{'\n'}
             このアプリに渡していました。
           </Text>
         )}
 
         <Text style={styles.note}>
-          この平均が基準線として固定されます。{'\n'}
-          基準線より使わなかったぶんだけ、時間が戻ります。
+          この平均が、あなたの「ふだん」として固定されます。{'\n'}
+          ふだんより使わなかったぶんだけ、時間が戻ります。
         </Text>
 
         <Pressable
