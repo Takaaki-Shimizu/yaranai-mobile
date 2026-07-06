@@ -1,6 +1,7 @@
-import { hasUsageAccess, isUsageStatsAvailable, queryUsage } from '../modules/usage-stats';
+import { hasUsageAccess, isUsageStatsAvailable, queryUsageBuckets } from '../modules/usage-stats';
 import { dayRange, getTodayRecordDate, recordDateDaysAgo } from './dates';
 import { supabase } from './supabase';
+import { aggregateBucketsByDay } from './usage-buckets';
 import { getMinutesForPackage, replaceDay } from './usage-db';
 
 // 同期は二層。
@@ -11,17 +12,25 @@ const LOCAL_SYNC_DAYS = 7; // OSの日次バケット保持期間に合わせる
 
 // 起動時に直近7日の日次バケットを取り直して端末内DBを埋める。
 // 当日は増え続け、昨日以前も遅延集計で変わりうるけん、毎回洗い替える。
+//
+// クエリは INTERVAL_DAILY の生バケットで取り、firstTimeStamp が直近7日(暦日)に
+// 入るものだけを日ごとに合算する。以前の queryAndAggregateUsageStats は範囲に
+// 重なる週次バケットを丸ごと返すことがあり、週合計が実際より膨らんどった。
 export async function syncLocalUsage(): Promise<void> {
   if (!isUsageStatsAvailable || !hasUsageAccess()) return;
   const now = Date.now();
+  const targetDates: string[] = [];
   for (let i = 0; i < LOCAL_SYNC_DAYS; i++) {
-    const recordDate = recordDateDaysAgo(i);
-    const { beginMs, endMs } = dayRange(recordDate);
-    if (beginMs >= now) continue;
-    const rows = queryUsage(beginMs, Math.min(endMs, now));
+    targetDates.push(recordDateDaysAgo(i));
+  }
+  const { beginMs } = dayRange(targetDates[targetDates.length - 1]);
+  const buckets = queryUsageBuckets('daily', beginMs, now);
+  const byDay = aggregateBucketsByDay(buckets, new Set(targetDates));
+  for (const recordDate of targetDates) {
+    const rows = byDay.get(recordDate);
     // 空の日は書かない: 「データが無い日」と「使わなかった日」を区別できんため。
     // 行が一切ない日は同期対象外(=獲得0)として、嘘をつかない側に倒す。
-    if (rows.length > 0) {
+    if (rows && rows.length > 0) {
       await replaceDay(recordDate, rows);
     }
   }

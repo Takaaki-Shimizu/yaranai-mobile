@@ -32,15 +32,16 @@ npx expo start --dev-client
 ┌─ Android OS ────────────────────────────────────────────┐
 │  UsageStatsManager (日次7日 / 週次4週 / 月次6ヶ月 保持)   │
 └──────────────┬──────────────────────────────────────────┘
-               │ queryAndAggregateUsageStats
+               │ queryUsageStats(生バケット。範囲に重なる分は丸ごと返る)
 ┌──────────────▼──────────────────────────────────────────┐
 │  modules/usage-stats (Expo Modules API / Kotlin)         │
 │    hasUsageAccess() / openUsageAccessSettings()          │
-│    queryUsage(beginMs, endMs)                            │
+│    queryUsageBuckets(interval, beginMs, endMs)           │
 └──────────────┬──────────────────────────────────────────┘
                │ JSラッパー(非Androidでは利用不可へフォールバック)
 ┌──────────────▼──────────────────────────────────────────┐
 │  観測レイヤー (端末内・外に出ない)                        │
+│    lib/usage-buckets.ts 範囲判定と集計(純粋関数・テスト対象)│
 │    lib/usage-sync.ts  起動時に直近7日の日次バケットを同期  │
 │    lib/usage-db.ts    expo-sqlite: usage_daily(日×アプリ) │
 │    lib/baseline.ts    宣言時: 12週平均のスナップショット   │
@@ -96,6 +97,10 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx
 
 - **日付境界は暦日(0時)** — OSの日次集計バケットが暦日基準のため。
   申告版の朝4時境界の再現は、UsageEventsから前景時間を自前で積み上げる将来課題。
+- `queryUsageStats` は範囲に重なるバケットを丸ごと返す(公式Docの既知挙動)ため、
+  firstTimeStamp が窓内のバケットだけを合算する(lib/usage-buckets.ts)。
+  基準線は日次→週次→月次の順に重複なしで継ぎ足し、実際に集計できた日数で割る。
+  バケット境界の都合で84日がフルに埋まらんことがあり、その場合は分母も短くなる。
 - 12週遡及の後半は週次・月次の粗い集計を含む平均になる(OSの保持期間の制約)。
 - 利用統計は端末に紐づくため、機種変更でリセットされる。
   履歴が28日未満の間は宣言できず「基準線を集めています」の待機になる。

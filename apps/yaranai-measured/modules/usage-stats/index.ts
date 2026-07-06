@@ -1,14 +1,16 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import type { UsageBucket } from '../../lib/usage-buckets';
 
-export type AppUsage = {
-  packageName: string;
-  totalForegroundMs: number;
-};
+export type { UsageBucket };
+
+// UsageStatsManager の INTERVAL_DAILY / WEEKLY / MONTHLY に対応
+const INTERVAL_CODE = { daily: 0, weekly: 1, monthly: 2 } as const;
+export type UsageInterval = keyof typeof INTERVAL_CODE;
 
 type UsageStatsNativeModule = {
   hasUsageAccess(): boolean;
   openUsageAccessSettings(): void;
-  queryUsage(beginMs: number, endMs: number): AppUsage[];
+  queryUsageBuckets(intervalType: number, beginMs: number, endMs: number): UsageBucket[];
 };
 
 // Android実機(dev client)以外ではネイティブモジュールが存在せんけん、
@@ -26,6 +28,12 @@ export function openUsageAccessSettings(): void {
   NativeUsageStats?.openUsageAccessSettings();
 }
 
-export function queryUsage(beginMs: number, endMs: number): AppUsage[] {
-  return NativeUsageStats?.queryUsage(beginMs, endMs) ?? [];
+// 生バケットをそのまま返す。範囲に重なるバケットが丸ごと混ざるけん、
+// 範囲内の判定・集計は lib/usage-buckets.ts の純粋関数に任せる。
+export function queryUsageBuckets(
+  interval: UsageInterval,
+  beginMs: number,
+  endMs: number,
+): UsageBucket[] {
+  return NativeUsageStats?.queryUsageBuckets(INTERVAL_CODE[interval], beginMs, endMs) ?? [];
 }
