@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DAY_MS } from '../dates';
 import {
   aggregateBucketsByDay,
+  averageMinutesPerDay,
   coveredDaysOf,
   stitchBaselineWindow,
   type UsageBucket,
@@ -149,8 +150,17 @@ test('基準線: 窓の外から始まる月次バケットを混入させず、
   // 合計 = 7×60 + (420+350+280) + 1550 = 3020分(4月・6月・7月の月次は入らない)
   assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 3020);
   // 1日平均 = 3020 / 59 ≒ 51.2分(旧実装なら4月の3000分が丸ごと混入しとった)
-  const avg = Math.round(((stitched.totalMsByPackage.get(YT) ?? 0) / 60000 / (stitched.coveredMs / DAY_MS)) * 10) / 10;
-  assert.equal(avg, 51.2);
+  assert.equal(averageMinutesPerDay(stitched, YT), 51.2);
+});
+
+test('12週平均: 記録が無いアプリと空の窓は0分になる(観測画面の除外条件)', () => {
+  const now = ms(2026, 7, 6);
+  const beginMs = now - 84 * DAY_MS;
+  const daily = [bucket(YT, ms(2026, 7, 5), ms(2026, 7, 6), 60)];
+  const stitched = stitchBaselineWindow({ daily, weekly: [], monthly: [] }, beginMs, now);
+  assert.equal(averageMinutesPerDay(stitched, 'com.example.unknown'), 0);
+  const empty = stitchBaselineWindow({ daily: [], weekly: [], monthly: [] }, beginMs, now);
+  assert.equal(averageMinutesPerDay(empty, YT), 0);
 });
 
 test('基準線: 日次しか残っとらん端末は集計日数がそのまま少なく出る(宣言不可判定用)', () => {
