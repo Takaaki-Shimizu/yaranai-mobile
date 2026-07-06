@@ -97,3 +97,11 @@ export function stitchBaselineWindow(
 export function coveredDaysOf(window: StitchedWindow): number {
   return Math.floor(window.coveredMs / DAY_MS);
 }
+
+// 指定アプリの1日平均(分)。分母は暦日数やなく、実際に集計できた時間。
+// 0.1分刻み。基準線と観測画面の両方がこれを使う(数字は必ず一致させる)。
+export function averageMinutesPerDay(window: StitchedWindow, packageName: string): number {
+  if (window.coveredMs <= 0) return 0;
+  const totalMs = window.totalMsByPackage.get(packageName) ?? 0;
+  return Math.round((totalMs / 60000 / (window.coveredMs / DAY_MS)) * 10) / 10;
+}
