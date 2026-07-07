@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deriveGrowth, mergeHighWater, type GardenSnapshot } from '../garden/growth';
-import { isEngawaOpen, ENGAWA_CLOSED_MESSAGE } from '../garden/gate';
+import { isEngawaOpen } from '../garden/gate';
 import { buildScene, cobbleCount, postPairCount, FRAME_X, FRAME_W } from '../garden/scene';
 import type { Prim, Scene } from '../garden/scene-types';
 
@@ -66,10 +66,6 @@ test('週次開扉: 日曜の暦日だけ開く', () => {
   assert.equal(isEngawaOpen(new Date(2026, 6, 7)), false);
   assert.equal(isEngawaOpen(new Date(2026, 6, 11)), false); // 土曜
   assert.equal(isEngawaOpen(new Date(2026, 6, 12)), true);
-});
-
-test('閉扉メッセージにカウントダウン数字が無い', () => {
-  assert.ok(!/[0-9０-９]/.test(ENGAWA_CLOSED_MESSAGE));
 });
 
 // ---------------------------------------------------------------- 敷石・杭

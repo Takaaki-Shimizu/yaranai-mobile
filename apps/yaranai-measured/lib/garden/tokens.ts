@@ -77,5 +77,7 @@ export const WOBBLE_PARAMS = {
   cobble: { baseFrequency: 0.05, octaves: 2, seed: 4, scale: 6 },
 } as const;
 
-// 紙の粒子(全面ノイズ)。opacity 0.12 相当
-export const GRAIN = { baseFrequency: 0.9, octaves: 2, opacity: 0.12 } as const;
+// 紙の粒子(全面ノイズ)。モック原値は 0.12 だが、実機のパネルサイズだと
+// 淡い空・大地の上でノイズが目立ってくすみ、初見で「画面が暗い」と映る。
+// 全面に効く黒ノイズなので控えめ(0.06)にして、質感は残しつつ地色を持ち上げる。
+export const GRAIN = { baseFrequency: 0.9, octaves: 2, opacity: 0.06 } as const;

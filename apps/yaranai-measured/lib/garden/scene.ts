@@ -146,12 +146,14 @@ function buildPaints(g: GrowthParams): Record<string, Paint> {
     mossMid: radial(C.mossMid, true),
     mossDeep: radial(C.mossDeep, true),
     vignette: {
+      // モック原値は端の墨 0.16 だが、実機だと四隅の減光が強く画面を暗く見せる。
+      // 周辺を落ち着かせる効果は残しつつ半分(0.08)にして初見の暗さを和らげる。
       type: 'radial',
       center: [0.5, 0.45],
       radius: 0.78,
       stops: [
         { offset: 0.62, color: C.shadowInk, opacity: 0 },
-        { offset: 1, color: C.shadowInk, opacity: 0.16 },
+        { offset: 1, color: C.shadowInk, opacity: 0.08 },
       ],
     },
   };
