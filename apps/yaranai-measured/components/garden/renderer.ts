@@ -14,6 +14,7 @@ import {
   type SkImage,
   type SkPaint,
   type SkShader,
+  type SkSurface,
 } from '@shopify/react-native-skia';
 
 import {
@@ -228,13 +229,24 @@ export function drawOverlay(canvas: SkCanvas, scene: Scene, widthPx: number, hei
   }
 }
 
+// オフスクリーン面のスナップショットは生成元のGPUコンテキストに紐づくテクスチャで、
+// 画面の Canvas(別スレッドの描画コンテキスト)からは参照できず何も映らない。
+// makeNonTextureImage() でCPU側の画像に複製してから返す。
+function snapshotRaster(surface: SkSurface): SkImage {
+  surface.flush();
+  const texture = surface.makeImageSnapshot();
+  const image = texture.makeNonTextureImage();
+  texture.dispose();
+  surface.dispose();
+  return image;
+}
+
 /** 紙の質感をビューポートサイズの一枚に焼く(パン中は載せるだけ) */
 export function bakeOverlay(scene: Scene, widthPx: number, heightPx: number): SkImage | null {
   const surface = Skia.Surface.MakeOffscreen(widthPx, heightPx) ?? Skia.Surface.Make(widthPx, heightPx);
   if (!surface) return null;
   drawOverlay(surface.getCanvas(), scene, widthPx, heightPx);
-  surface.flush();
-  return surface.makeImageSnapshot();
+  return snapshotRaster(surface);
 }
 
 export type BakedLayer = {
@@ -270,8 +282,7 @@ function bakeLayer(scene: Scene, layer: SceneLayer, scale: number): BakedLayer |
   canvas.scale(scale, scale);
   canvas.translate(-span.x0, 0);
   for (const group of layer.groups) drawGroup(canvas, scene, group);
-  surface.flush();
-  const image = surface.makeImageSnapshot();
+  const image = snapshotRaster(surface);
   return { id: layer.id, parallax: layer.parallax, image, originX: span.x0, scale };
 }
 
@@ -323,6 +334,5 @@ export function bakeComposite(
   }
   canvas.restore();
   drawOverlay(canvas, scene, viewWPx, viewHPx);
-  surface.flush();
-  return surface.makeImageSnapshot();
+  return snapshotRaster(surface);
 }
