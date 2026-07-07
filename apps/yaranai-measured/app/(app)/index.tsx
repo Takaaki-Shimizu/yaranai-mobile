@@ -11,7 +11,7 @@ import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { HomeGarden } from '../../components/garden/HomeGarden';
 import { loadGrowth } from '../../components/garden/load';
-import { ENGAWA_CLOSED_MESSAGE, isEngawaOpen } from '../../lib/garden/gate';
+import { isEngawaOpen } from '../../lib/garden/gate';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -36,7 +36,6 @@ export default function Home() {
   const [totals, setTotals] = useState<Totals | null>(null);
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [closedNote, setClosedNote] = useState(false);
 
   const loadAll = useCallback(async () => {
     // 累計はやめた誓いも含めた全体。行の表示はアクティブな誓いだけ。
@@ -84,11 +83,9 @@ export default function Home() {
   const gardenHeight = Math.round(windowHeight * 0.6);
 
   const onGardenPress = () => {
+    // 庭モード(絵巻)は週の節目にのみ開く。閉扉中は静かに何もしない
     if (isEngawaOpen(new Date())) {
       router.push('/(app)/garden');
-    } else {
-      // 閉扉中は和文一行のみ。カウントダウンやタイマーは出さない
-      setClosedNote(true);
     }
   };
 
@@ -107,12 +104,9 @@ export default function Home() {
 
       {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
       {growth && growth.stones > 0 ? (
-        <>
-          <Pressable onPress={onGardenPress}>
-            <HomeGarden growth={growth} height={gardenHeight} />
-          </Pressable>
-          {closedNote && <Text style={styles.engawaNote}>{ENGAWA_CLOSED_MESSAGE}</Text>}
-        </>
+        <Pressable onPress={onGardenPress}>
+          <HomeGarden growth={growth} height={gardenHeight} />
+        </Pressable>
       ) : (
         <View style={styles.empty}>
           <Text style={styles.headline}>ここから、始まる。</Text>
@@ -167,14 +161,6 @@ const styles = StyleSheet.create({
   signOut: { fontSize: 11, color: colors.usuzumi, letterSpacing: 2 },
 
   empty: { paddingVertical: 72, alignItems: 'center' },
-  engawaNote: {
-    marginTop: 14,
-    textAlign: 'center',
-    fontFamily: fonts.serif,
-    fontSize: 13,
-    letterSpacing: 3,
-    color: colors.usuzumi,
-  },
   stats: { paddingVertical: 40, paddingHorizontal: 28, alignItems: 'center' },
   headline: {
     fontFamily: fonts.serif,
