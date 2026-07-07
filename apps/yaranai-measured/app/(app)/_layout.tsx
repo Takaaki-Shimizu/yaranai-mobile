@@ -19,6 +19,9 @@ export default function AppLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: colors.kinari },
       }}
-    />
+    >
+      {/* 庭モードへは控えめなフェードで入る(§5.3)。派手な演出はしない */}
+      <Stack.Screen name="garden" options={{ animation: 'fade' }} />
+    </Stack>
   );
 }

@@ -1,14 +1,18 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl,
+  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Garden, useSession, colors, fonts } from '@yaranai/core';
+import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncAll } from '../../lib/usage-sync';
 import { recordDateDaysAgo } from '../../lib/dates';
 import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
+import { HomeGarden } from '../../components/garden/HomeGarden';
+import { loadGrowth } from '../../components/garden/load';
+import { ENGAWA_CLOSED_MESSAGE, isEngawaOpen } from '../../lib/garden/gate';
+import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
   vow_id: string;
@@ -20,22 +24,24 @@ type VowSummary = {
 
 type Totals = {
   longest_days: number;
-  phase: number;
 };
 
 export default function Home() {
   const session = useSession();
   const router = useRouter();
+  const { height: windowHeight } = useWindowDimensions();
   const [vows, setVows] = useState<VowSummary[]>([]);
   const [totalSavedMinutes, setTotalSavedMinutes] = useState(0);
   const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
   const [totals, setTotals] = useState<Totals | null>(null);
+  const [growth, setGrowth] = useState<GrowthParams | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [closedNote, setClosedNote] = useState(false);
 
   const loadAll = useCallback(async () => {
     // 累計はやめた誓いも含めた全体。行の表示はアクティブな誓いだけ。
-    const [totalsRes, vowsRes, dailyRes] = await Promise.all([
-      supabase.from('garden_state').select('longest_days, phase').maybeSingle(),
+    const [totalsRes, vowsRes, dailyRes, growthRes] = await Promise.all([
+      supabase.from('garden_state').select('longest_days').maybeSingle(),
       supabase
         .from('measured_saved')
         .select('vow_id, app_label, baseline_minutes, saved_minutes, discontinued_on')
@@ -44,6 +50,7 @@ export default function Home() {
         .from('measured_daily')
         .select('vow_id, actual_minutes')
         .eq('record_date', recordDateDaysAgo(1)),
+      session ? loadGrowth(session.user.id) : Promise.resolve(null),
     ]);
     const allVows = (vowsRes.data ?? []) as VowSummary[];
     setTotals(totalsRes.data ?? null);
@@ -52,7 +59,8 @@ export default function Home() {
     setYesterdayMinutes(
       new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
     );
-  }, []);
+    setGrowth(growthRes);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
@@ -72,7 +80,17 @@ export default function Home() {
     setRefreshing(false);
   };
 
-  const phase = totals?.phase ?? 0.05;
+  // ホームの庭は画面高の約60%(55〜65%は実機調整の余地)
+  const gardenHeight = Math.round(windowHeight * 0.6);
+
+  const onGardenPress = () => {
+    if (isEngawaOpen(new Date())) {
+      router.push('/(app)/garden');
+    } else {
+      // 閉扉中は和文一行のみ。カウントダウンやタイマーは出さない
+      setClosedNote(true);
+    }
+  };
 
   return (
     <ScrollView
@@ -87,21 +105,28 @@ export default function Home() {
         </Pressable>
       </View>
 
-      {/* 蓄積 */}
-      <View style={styles.garden}>
-        {totals && Math.round(totalSavedMinutes) > 0 ? (
-          <>
-            <Text style={styles.headline}>
-              {totals.longest_days}日で、{formatMinutes(totalSavedMinutes)}が{'\n'}戻ってきました。
-            </Text>
-            <View style={{ marginTop: 32, width: '100%' }}>
-              <Garden phase={phase} />
-            </View>
-          </>
-        ) : (
+      {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
+      {growth && growth.stones > 0 ? (
+        <>
+          <Pressable onPress={onGardenPress}>
+            <HomeGarden growth={growth} height={gardenHeight} />
+          </Pressable>
+          {closedNote && <Text style={styles.engawaNote}>{ENGAWA_CLOSED_MESSAGE}</Text>}
+        </>
+      ) : (
+        <View style={styles.empty}>
           <Text style={styles.headline}>ここから、始まる。</Text>
-        )}
-      </View>
+        </View>
+      )}
+
+      {/* 蓄積 */}
+      {totals && Math.round(totalSavedMinutes) > 0 && (
+        <View style={styles.stats}>
+          <Text style={styles.headline}>
+            {totals.longest_days}日で、{formatMinutes(totalSavedMinutes)}が{'\n'}戻ってきました。
+          </Text>
+        </View>
+      )}
 
       {/* 誓い */}
       <View style={styles.list}>
@@ -129,12 +154,28 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.kinari },
-  content: { paddingHorizontal: 28, paddingTop: 64, paddingBottom: 80 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  content: { paddingBottom: 80 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingHorizontal: 28,
+    paddingTop: 64,
+    paddingBottom: 20,
+  },
   wordmark: { fontFamily: fonts.serif, fontSize: 16, letterSpacing: 6, color: colors.sumi },
   signOut: { fontSize: 11, color: colors.usuzumi, letterSpacing: 2 },
 
-  garden: { paddingVertical: 72, alignItems: 'center' },
+  empty: { paddingVertical: 72, alignItems: 'center' },
+  engawaNote: {
+    marginTop: 14,
+    textAlign: 'center',
+    fontFamily: fonts.serif,
+    fontSize: 13,
+    letterSpacing: 3,
+    color: colors.usuzumi,
+  },
+  stats: { paddingVertical: 40, paddingHorizontal: 28, alignItems: 'center' },
   headline: {
     fontFamily: fonts.serif,
     fontSize: 22,
@@ -143,7 +184,7 @@ const styles = StyleSheet.create({
     color: colors.sumi,
     textAlign: 'center',
   },
-  list: { gap: 28 },
+  list: { gap: 28, paddingHorizontal: 28 },
   row: { gap: 8 },
   label: { fontFamily: fonts.serif, fontSize: 17, color: colors.sumi, letterSpacing: 1 },
   saved: { fontSize: 12, color: colors.usuzumi, letterSpacing: 1 },

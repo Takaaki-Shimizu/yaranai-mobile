@@ -111,3 +111,41 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx
 - 当日の実測は未確定のためSupabaseへ送らない(翌日以降の起動時に確定日として同期)。
 - アプリ表示名はJS側の対応表とパッケージ名の整形で決める
   (ネイティブの公開APIを3つに保つため。PackageManagerには問い合わせない)。
+
+## 庭(絵巻)アーキテクチャ — 2026-07 刷新
+
+庭は5段階の切り替え絵をやめ、**データから毎回描画されるパラメトリックな一枚**になった。
+デザインの正は `docs/mocks/`(yaranai-north-star-v3.html / yaranai-garden-growth.html)。
+論理キャンバスはモックの1200×800を中央パネルに、横3300(約2.75画面)の絵巻へ拡張している。
+
+```
+lib/garden/            純関数(node:test でテスト)
+  growth.ts            データ→成長パラメータ。単調非減少ガード(高水位マージ)
+  gate.ts              週次開扉(日曜の暦日のみ)。閉扉文言もここ
+  scene.ts             成長パラメータ→絵巻の描画スペック。モックの座標・色を移植
+  scene-types.ts       レンダラ非依存のプリミティブ型
+  prng.ts              シード付き乱数(同じデータなら同じ庭)
+  preview-svg.ts       開発用: スペック→SVG(モック照合)
+components/garden/     React Native + Skia(アプリのみ)
+  renderer.ts          スペック→Skia。起動時にレイヤーをSkImageへベイク
+  HomeGarden.tsx       ホームの窓(静止画、画面高60%)
+  GardenScroll.tsx     庭モード(横パン+視差+ラバーバンド+エッジピーク)
+app/(app)/garden.tsx   庭モードの画面(週次開扉ガード、フェード遷移)
+scripts/render-garden-previews.js  Day1/42/84のSVGプレビュー出力
+```
+
+データ対応(§4): 石=宣言(最大3・育たない) / 敷石・杭縄=記録日数 n /
+苔=累計取り戻し時間(720h=満開、既存phase規則と同一) / 竹・靄・光・影=継続週数 w=floor(n/7) /
+朱のひとひら=w=12。崩れた日は「増えない」だけで、どの要素も後退しない。
+
+性能: 揺らぎ(DisplacementMap+FractalNoise)とぼかしはベイク時に一度だけ評価し、
+パン中は各レイヤーのSkImageを平行移動するだけ。ベイク解像度の上限
+(`MAX_BAKE_SCALE`)とホーム庭の高さ(60%)は実機で調整する。
+
+プレビューの出し方:
+
+```bash
+npx tsc -p tsconfig.test.json
+node scripts/render-garden-previews.js /tmp/garden-previews
+# 出力されたSVGをブラウザで開いて docs/mocks/reference/ と見比べる
+```

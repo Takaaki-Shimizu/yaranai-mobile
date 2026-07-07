@@ -10,5 +10,10 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["lib/dates.ts", "lib/usage-buckets.ts", "lib/__tests__/**/*.ts"]
+  "include": [
+    "lib/dates.ts",
+    "lib/usage-buckets.ts",
+    "lib/garden/**/*.ts",
+    "lib/__tests__/**/*.ts"
+  ]
 }

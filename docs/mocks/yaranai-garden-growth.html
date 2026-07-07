@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yaranai — 庭の成長過程（Day 1 / Day 42）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kinari:#F2EDE1;
+    --sumi:#2E2B26;
+    --sumi-soft:#57534A;
+    --shu:#B0472F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--kinari);
+    color:var(--sumi);
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    line-height:1.9;
+    padding:56px 20px 96px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+  .brand{
+    font-family:'Shippori Mincho',serif;
+    letter-spacing:.42em;
+    font-size:14px;
+    color:var(--sumi-soft);
+    margin-bottom:28px;
+  }
+  h1{
+    font-family:'Shippori Mincho',serif;
+    font-weight:500;
+    font-size:clamp(23px,4.4vw,32px);
+    letter-spacing:.12em;
+    line-height:1.7;
+  }
+  .lede{
+    margin-top:14px;
+    font-size:14px;
+    color:var(--sumi-soft);
+    max-width:42em;
+  }
+  .hero{
+    margin-top:44px;
+    border:1px solid rgba(46,43,38,.12);
+  }
+  .hero svg{display:block;width:100%;height:auto;}
+  .hero-caption{
+    font-family:'Shippori Mincho',serif;
+    font-size:13px;
+    letter-spacing:.2em;
+    margin:12px 0 8px;
+    text-align:center;
+    color:var(--sumi-soft);
+  }
+  h2{
+    font-family:'Shippori Mincho',serif;
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:.14em;
+    border-bottom:1px solid rgba(46,43,38,.18);
+    padding-bottom:12px;
+    margin:72px 0 20px;
+  }
+  .element{
+    display:grid;
+    grid-template-columns:100px 1fr;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(46,43,38,.07);
+    font-size:13.5px;
+  }
+  .element .tag{
+    font-family:'Shippori Mincho',serif;
+    color:var(--shu);
+    letter-spacing:.06em;
+    font-size:13px;
+  }
+  .element p{color:var(--sumi-soft);}
+  .element b{color:var(--sumi);font-weight:500;}
+  footer{
+    margin-top:88px;
+    font-size:12px;
+    color:var(--sumi-soft);
+    letter-spacing:.1em;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">Y a r a n a i</div>
+  <h1>同じ庭の、三つの時間</h1>
+  <p class="lede">v3（Day 84）と同じ構図のまま、Day 1 と Day 42 を描いたもの。構図・座標は完全に固定して、要素の「実り方」だけで時間を表現しとる。Day 84 は v3 のファイルを参照。</p>
+</header>
+
+<!-- ============================================================= -->
+<!-- DAY 1 -->
+<!-- ============================================================= -->
+<div class="hero">
+<svg viewBox="0 0 1200 800" role="img" aria-label="Day 1：乾いた地に石が据わり、道と竹林はまだ気配だけ">
+<defs>
+  <filter id="wobbleA" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="16"/>
+  </filter>
+  <filter id="wobbleSoftA" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="8"/>
+  </filter>
+  <filter id="wobbleCobbleA" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="6"/>
+  </filter>
+  <filter id="grainA">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.3 0.3 0.3 0 0"/>
+  </filter>
+  <filter id="blur2A"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <filter id="blur4A"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="blur6A"><feGaussianBlur stdDeviation="6"/></filter>
+
+  <linearGradient id="gSkyA" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EFECDB"/>
+    <stop offset="1" stop-color="#ECE6D3"/>
+  </linearGradient>
+  <linearGradient id="gMistA" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F3F0E1" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#F3F0E1" stop-opacity=".95"/>
+    <stop offset="1" stop-color="#F3F0E1" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="gFieldDryA" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E2D7BA"/>
+    <stop offset=".5" stop-color="#D3C5A3"/>
+    <stop offset="1" stop-color="#C2B28D"/>
+  </linearGradient>
+  <radialGradient id="gStoneA" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#5A5448"/>
+    <stop offset=".5" stop-color="#2E2B26"/>
+    <stop offset="1" stop-color="#181612"/>
+  </radialGradient>
+  <radialGradient id="gCobbleA_A" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#B3AB97"/>
+    <stop offset=".55" stop-color="#948C79"/>
+    <stop offset="1" stop-color="#6B6454"/>
+  </radialGradient>
+  <radialGradient id="gCobbleB_A" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#A8A69A"/>
+    <stop offset=".55" stop-color="#87857A"/>
+    <stop offset="1" stop-color="#5F5D52"/>
+  </radialGradient>
+  <radialGradient id="gMossLightA" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#BCCB86"/>
+    <stop offset=".55" stop-color="#8CA05F"/>
+    <stop offset="1" stop-color="#5F7340"/>
+  </radialGradient>
+  <radialGradient id="gMossMidA" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#A0B76F"/>
+    <stop offset=".55" stop-color="#6E824A"/>
+    <stop offset="1" stop-color="#46572F"/>
+  </radialGradient>
+  <radialGradient id="gMossDeepA" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#84995A"/>
+    <stop offset=".55" stop-color="#54673A"/>
+    <stop offset="1" stop-color="#313E23"/>
+  </radialGradient>
+  <radialGradient id="gVigA" cx=".5" cy=".45" r=".78">
+    <stop offset=".62" stop-color="#1F1D19" stop-opacity="0"/>
+    <stop offset="1" stop-color="#1F1D19" stop-opacity=".16"/>
+  </radialGradient>
+
+  <g id="tuftA">
+    <ellipse cx="0" cy="0" rx="34" ry="18" fill="url(#gMossMidA)"/>
+    <ellipse cx="-30" cy="10" rx="26" ry="14" fill="url(#gMossDeepA)"/>
+    <ellipse cx="30" cy="8" rx="24" ry="13" fill="url(#gMossLightA)"/>
+    <ellipse cx="-8" cy="18" rx="20" ry="11" fill="url(#gMossDeepA)"/>
+    <ellipse cx="18" cy="-10" rx="18" ry="10" fill="url(#gMossLightA)"/>
+    <g fill="#C6D48F" opacity=".85">
+      <circle cx="-20" cy="-8" r="2.6"/><circle cx="10" cy="-10" r="2.8"/><circle cx="-32" cy="4" r="2.4"/>
+      <circle cx="16" cy="8" r="2.4"/><circle cx="-14" cy="10" r="2.2"/>
+    </g>
+    <g fill="#3A4A28" opacity=".5">
+      <circle cx="-12" cy="16" r="2.2"/><circle cx="22" cy="14" r="2"/>
+    </g>
+  </g>
+</defs>
+
+<rect width="1200" height="800" fill="url(#gSkyA)"/>
+
+<!-- 竹林はまだ「気配」：靄の向こうの薄い影 -->
+<g fill="#A8B18E" opacity=".13" filter="url(#blur2A)">
+  <rect x="62" y="90" width="7" height="330"/>
+  <rect x="212" y="86" width="8" height="334"/>
+  <rect x="332" y="98" width="6" height="322"/>
+  <rect x="502" y="104" width="6" height="316"/>
+  <rect x="662" y="100" width="6" height="320"/>
+  <rect x="742" y="88" width="8" height="332"/>
+  <rect x="912" y="90" width="7" height="330"/>
+  <rect x="1072" y="88" width="8" height="332"/>
+  <rect x="96" y="80" width="12" height="340"/>
+  <rect x="476" y="82" width="11" height="338"/>
+  <rect x="866" y="84" width="13" height="336"/>
+</g>
+<g filter="url(#wobbleA)" opacity=".14">
+  <ellipse cx="430" cy="10" rx="260" ry="70" fill="#5C7643"/>
+  <ellipse cx="1090" cy="40" rx="225" ry="80" fill="#5C7643"/>
+</g>
+
+<!-- 厚い朝靄：まだ世界の多くが隠れとる -->
+<rect x="-40" y="290" width="1280" height="200" fill="url(#gMistA)" filter="url(#blur6A)"/>
+
+<!-- 乾いた大地 -->
+<path d="M0,415 C150,392 300,422 450,408 C600,394 750,422 900,408 C1050,395 1150,414 1200,404 L1200,800 L0,800 Z"
+      fill="url(#gFieldDryA)" filter="url(#wobbleA)"/>
+<!-- 乾いた地の粒 -->
+<g fill="#B4A582">
+  <circle cx="120" cy="520" r="1.8"/><circle cx="240" cy="620" r="1.8"/><circle cx="180" cy="720" r="1.8"/>
+  <circle cx="420" cy="560" r="1.8"/><circle cx="760" cy="600" r="1.8"/><circle cx="900" cy="700" r="1.8"/>
+  <circle cx="1020" cy="560" r="1.8"/><circle cx="1100" cy="680" r="1.8"/><circle cx="330" cy="760" r="1.8"/>
+  <circle cx="700" cy="740" r="1.8"/><circle cx="80" cy="620" r="1.8"/><circle cx="960" cy="480" r="1.8"/>
+</g>
+
+<!-- 道：気配（薄いリボン＋破線の縁） -->
+<path d="M525,805 C517,790 513,775 512,760 C509,747 507,733 506,720 C504,708 503,697 503,685 C503,673 504,661 506,650 C510,638 515,626 521,615 C526,604 531,593 537,583 C545,573 553,563 561,553 C568,544 576,534 582,525 C584,516 585,507 585,498 C584,490 582,481 581,473 C580,465 579,458 579,450 C578,443 576,436 575,430 L602,430 C607,436 610,443 613,450 C617,458 620,465 623,473 C627,481 631,490 635,498 C637,507 640,516 642,525 C639,534 635,544 631,553 C627,563 623,573 619,583 C616,593 613,604 611,615 C608,626 607,638 606,650 C606,661 608,673 613,685 C617,697 621,708 626,720 C632,733 639,747 647,760 C656,775 665,790 675,805 Z"
+  fill="#D5C9AC" opacity=".28" filter="url(#wobbleSoftA)"/>
+<path d="M525,805 C517,790 513,775 512,760 C509,747 507,733 506,720 C504,708 503,697 503,685 C503,673 504,661 506,650 C510,638 515,626 521,615 C526,604 531,593 537,583 C545,573 553,563 561,553 C568,544 576,534 582,525 C584,516 585,507 585,498 C584,490 582,481 581,473 C580,465 579,458 579,450 C578,443 576,436 575,430 L602,430 C607,436 610,443 613,450 C617,458 620,465 623,473 C627,481 631,490 635,498 C637,507 640,516 642,525 C639,534 635,544 631,553 C627,563 623,573 619,583 C616,593 613,604 611,615 C608,626 607,638 606,650 C606,661 608,673 613,685 C617,697 621,708 626,720 C632,733 639,747 647,760 C656,775 665,790 675,805 Z"
+  fill="none" stroke="#8D8778" stroke-width="1.5" stroke-dasharray="5 6" opacity=".35"/>
+
+<!-- 最初の敷石：3枚だけ -->
+<g filter="url(#wobbleCobbleA)">
+  <ellipse cx="545" cy="795" rx="24" ry="14" fill="url(#gCobbleA_A)" transform="rotate(8 545 795)"/>
+  <ellipse cx="600" cy="793" rx="26" ry="15" fill="url(#gCobbleB_A)" transform="rotate(-5 600 793)"/>
+  <ellipse cx="655" cy="796" rx="23" ry="13" fill="url(#gCobbleA_A)" transform="rotate(11 655 796)"/>
+</g>
+<!-- 最初の杭：一対だけ、縄はまだ -->
+<g fill="#4A3B2C">
+  <rect x="509" y="732" width="5" height="28" rx="1.5"/>
+  <rect x="645" y="732" width="5" height="28" rx="1.5"/>
+</g>
+
+<!-- 石：宣言と同時に据わる（Day 1 から本物） -->
+<ellipse cx="372" cy="598" rx="92" ry="17" fill="#1F1D19" opacity=".14" filter="url(#blur6A)"/>
+<path d="M292,532 q22,-50 76,-56 q62,-6 94,28 q26,32 -6,56 q-44,34 -102,22 q-56,-12 -62,-50 z"
+      fill="url(#gStoneA)" filter="url(#wobbleSoftA)"/>
+<ellipse cx="368" cy="498" rx="46" ry="15" fill="#7A7261" opacity=".25" filter="url(#blur4A)"/>
+
+<ellipse cx="854" cy="642" rx="62" ry="12" fill="#1F1D19" opacity=".13" filter="url(#blur6A)"/>
+<path d="M822,598 q14,-34 52,-38 q42,-4 62,20 q16,22 -6,38 q-30,22 -68,14 q-38,-8 -40,-34 z"
+      fill="url(#gStoneA)" filter="url(#wobbleSoftA)"/>
+
+<!-- 最初の苔：石の根元にひとつまみ -->
+<use href="#tuftA" transform="translate(352,576) scale(.7)"/>
+<g fill="#8CA05F">
+  <circle cx="416" cy="586" r="2.6"/><circle cx="300" cy="580" r="2.2"/><circle cx="380" cy="606" r="2"/>
+</g>
+
+<rect width="1200" height="800" filter="url(#grainA)" opacity=".12"/>
+<rect width="1200" height="800" fill="url(#gVigA)"/>
+</svg>
+</div>
+<p class="hero-caption">DAY 1 — 乾いた地に石が据わる。道はまだ、気配。</p>
+
+<!-- ============================================================= -->
+<!-- DAY 42 -->
+<!-- ============================================================= -->
+<div class="hero" style="margin-top:56px;">
+<svg viewBox="0 0 1200 800" role="img" aria-label="Day 42：苔が石のまわりから広がり、石畳が半ばまで敷かれ、竹林が姿を見せ始める">
+<defs>
+  <filter id="wobbleB" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="16"/>
+  </filter>
+  <filter id="wobbleSoftB" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="8"/>
+  </filter>
+  <filter id="wobbleCobbleB" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="6"/>
+  </filter>
+  <filter id="grainB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.3 0.3 0.3 0 0"/>
+  </filter>
+  <filter id="blur1B"><feGaussianBlur stdDeviation="1.2"/></filter>
+  <filter id="blur2B"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <filter id="blur4B"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="blur6B"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="blur16B"><feGaussianBlur stdDeviation="16"/></filter>
+
+  <linearGradient id="gSkyB" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EDE9D0"/>
+    <stop offset="1" stop-color="#EAE4CC"/>
+  </linearGradient>
+  <linearGradient id="gMistB" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F3F1E2" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#F3F1E2" stop-opacity=".92"/>
+    <stop offset="1" stop-color="#F3F1E2" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="gCulmMidB" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#9DB07C"/>
+    <stop offset="1" stop-color="#6E8557"/>
+  </linearGradient>
+  <linearGradient id="gCulmNearB" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#8FA765"/>
+    <stop offset=".45" stop-color="#62804A"/>
+    <stop offset="1" stop-color="#40552F"/>
+  </linearGradient>
+  <linearGradient id="gFieldB" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#AEB980"/>
+    <stop offset=".5" stop-color="#8F9C66"/>
+    <stop offset="1" stop-color="#71804F"/>
+  </linearGradient>
+  <linearGradient id="gJointB" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8A8271"/>
+    <stop offset="1" stop-color="#6E6656"/>
+  </linearGradient>
+  <radialGradient id="gMossLightB" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#BCCB86"/>
+    <stop offset=".55" stop-color="#8CA05F"/>
+    <stop offset="1" stop-color="#5F7340"/>
+  </radialGradient>
+  <radialGradient id="gMossMidB" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#A0B76F"/>
+    <stop offset=".55" stop-color="#6E824A"/>
+    <stop offset="1" stop-color="#46572F"/>
+  </radialGradient>
+  <radialGradient id="gMossDeepB" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#84995A"/>
+    <stop offset=".55" stop-color="#54673A"/>
+    <stop offset="1" stop-color="#313E23"/>
+  </radialGradient>
+  <radialGradient id="gStoneB" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#5A5448"/>
+    <stop offset=".5" stop-color="#2E2B26"/>
+    <stop offset="1" stop-color="#181612"/>
+  </radialGradient>
+  <radialGradient id="gCobbleA_B" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#B3AB97"/>
+    <stop offset=".55" stop-color="#948C79"/>
+    <stop offset="1" stop-color="#6B6454"/>
+  </radialGradient>
+  <radialGradient id="gCobbleB_B" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#A8A69A"/>
+    <stop offset=".55" stop-color="#87857A"/>
+    <stop offset="1" stop-color="#5F5D52"/>
+  </radialGradient>
+  <radialGradient id="gCobbleC_B" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#9A9078"/>
+    <stop offset=".55" stop-color="#7C725C"/>
+    <stop offset="1" stop-color="#564F40"/>
+  </radialGradient>
+  <radialGradient id="gVigB" cx=".5" cy=".45" r=".78">
+    <stop offset=".62" stop-color="#1F1D19" stop-opacity="0"/>
+    <stop offset="1" stop-color="#1F1D19" stop-opacity=".16"/>
+  </radialGradient>
+
+  <g id="tuftB">
+    <ellipse cx="0" cy="0" rx="34" ry="18" fill="url(#gMossMidB)"/>
+    <ellipse cx="-30" cy="10" rx="26" ry="14" fill="url(#gMossDeepB)"/>
+    <ellipse cx="30" cy="8" rx="24" ry="13" fill="url(#gMossLightB)"/>
+    <ellipse cx="-8" cy="18" rx="20" ry="11" fill="url(#gMossDeepB)"/>
+    <ellipse cx="18" cy="-10" rx="18" ry="10" fill="url(#gMossLightB)"/>
+    <ellipse cx="-38" cy="-6" rx="16" ry="9" fill="url(#gMossMidB)"/>
+    <ellipse cx="40" cy="16" rx="14" ry="8" fill="url(#gMossDeepB)"/>
+    <ellipse cx="4" cy="-16" rx="12" ry="7" fill="url(#gMossMidB)"/>
+    <ellipse cx="-20" cy="-14" rx="10" ry="6" fill="url(#gMossLightB)"/>
+    <g fill="#C6D48F" opacity=".85">
+      <circle cx="-20" cy="-8" r="2.6"/><circle cx="-5" cy="-14" r="2.2"/><circle cx="10" cy="-10" r="2.8"/>
+      <circle cx="24" cy="-2" r="2.2"/><circle cx="-32" cy="4" r="2.4"/><circle cx="2" cy="2" r="2"/>
+      <circle cx="16" cy="8" r="2.4"/><circle cx="-14" cy="10" r="2.2"/><circle cx="30" cy="10" r="2"/>
+      <circle cx="-26" cy="14" r="2.4"/><circle cx="8" cy="16" r="2"/><circle cx="38" cy="2" r="2.2"/>
+    </g>
+    <g fill="#3A4A28" opacity=".5">
+      <circle cx="-12" cy="16" r="2.2"/><circle cx="22" cy="14" r="2"/><circle cx="-36" cy="12" r="2.2"/><circle cx="36" cy="18" r="1.8"/>
+    </g>
+  </g>
+</defs>
+
+<rect width="1200" height="800" fill="url(#gSkyB)"/>
+
+<!-- 竹林：奥と中の層が姿を見せ始める -->
+<g fill="#A3B183" opacity=".3" filter="url(#blur2B)">
+  <rect x="62" y="70" width="7" height="360" transform="rotate(-1.2 65 250)"/>
+  <rect x="132" y="80" width="6" height="350"/>
+  <rect x="212" y="66" width="8" height="364" transform="rotate(1 216 250)"/>
+  <rect x="332" y="78" width="6" height="352"/>
+  <rect x="412" y="70" width="7" height="360" transform="rotate(-.8 415 250)"/>
+  <rect x="502" y="84" width="6" height="346"/>
+  <rect x="592" y="72" width="7" height="358" transform="rotate(.9 595 250)"/>
+  <rect x="662" y="80" width="6" height="350"/>
+  <rect x="742" y="68" width="8" height="362" transform="rotate(-1 746 250)"/>
+  <rect x="832" y="82" width="6" height="348"/>
+  <rect x="912" y="70" width="7" height="360" transform="rotate(1.1 915 250)"/>
+  <rect x="992" y="78" width="6" height="352"/>
+  <rect x="1072" y="68" width="8" height="362" transform="rotate(-.9 1076 250)"/>
+  <rect x="1148" y="80" width="6" height="350"/>
+</g>
+<g opacity=".6">
+  <g transform="rotate(-1 96 240)">
+    <rect x="90" y="40" width="13" height="400" fill="url(#gCulmMidB)"/>
+    <rect x="90" y="130" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="90" y="230" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="90" y="330" width="13" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(.8 266 240)">
+    <rect x="260" y="46" width="14" height="394" fill="url(#gCulmMidB)"/>
+    <rect x="260" y="150" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="260" y="255" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="260" y="360" width="14" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(-.6 476 240)">
+    <rect x="470" y="42" width="12" height="398" fill="url(#gCulmMidB)"/>
+    <rect x="470" y="140" width="12" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="470" y="245" width="12" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="470" y="350" width="12" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(.7 646 240)">
+    <rect x="640" y="48" width="13" height="392" fill="url(#gCulmMidB)"/>
+    <rect x="640" y="155" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="640" y="260" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="640" y="365" width="13" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(-.9 866 240)">
+    <rect x="860" y="44" width="14" height="396" fill="url(#gCulmMidB)"/>
+    <rect x="860" y="145" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="860" y="250" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="860" y="355" width="14" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(.6 1036 240)">
+    <rect x="1030" y="46" width="13" height="394" fill="url(#gCulmMidB)"/>
+    <rect x="1030" y="150" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="1030" y="255" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="1030" y="360" width="13" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+</g>
+<!-- 手前の太竹：まだ2本、薄く -->
+<g opacity=".5">
+  <g transform="rotate(-1.4 33 230)">
+    <rect x="20" y="0" width="26" height="460" fill="url(#gCulmNearB)"/>
+    <rect x="20" y="118" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="20" y="238" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="20" y="358" width="26" height="6" fill="#334524" opacity=".65"/>
+  </g>
+  <g transform="rotate(1.3 1133 230)">
+    <rect x="1120" y="0" width="26" height="460" fill="url(#gCulmNearB)"/>
+    <rect x="1120" y="112" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="1120" y="232" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="1120" y="352" width="26" height="6" fill="#334524" opacity=".65"/>
+  </g>
+</g>
+<!-- 梢：まだ薄い -->
+<g filter="url(#wobbleB)" opacity=".5">
+  <ellipse cx="430" cy="4" rx="260" ry="78" fill="#4E6A3C"/>
+  <ellipse cx="1090" cy="42" rx="225" ry="90" fill="#4E6A3C"/>
+  <ellipse cx="110" cy="30" rx="230" ry="88" fill="#5C7643" opacity=".7"/>
+  <ellipse cx="770" cy="24" rx="245" ry="84" fill="#5C7643" opacity=".7"/>
+</g>
+
+<rect x="-40" y="320" width="1280" height="160" fill="url(#gMistB)" filter="url(#blur6B)"/>
+
+<!-- 大地：緑づき始め、乾きも残る -->
+<path d="M0,415 C150,392 300,422 450,408 C600,394 750,422 900,408 C1050,395 1150,414 1200,404 L1200,800 L0,800 Z"
+      fill="url(#gFieldB)" filter="url(#wobbleB)"/>
+<g filter="url(#wobbleB)" fill="#D8CCA9" opacity=".45">
+  <ellipse cx="980" cy="475" rx="110" ry="26"/>
+  <ellipse cx="120" cy="700" rx="100" ry="30"/>
+  <ellipse cx="420" cy="765" rx="80" ry="22"/>
+  <ellipse cx="1130" cy="580" rx="70" ry="20"/>
+</g>
+
+<!-- 木漏れ日：光だまり2つ（まだ控えめ） -->
+<g filter="url(#blur6B)">
+  <ellipse cx="300" cy="600" rx="170" ry="42" fill="#E6EEA6" opacity=".2" transform="rotate(-16 300 600)"/>
+  <ellipse cx="880" cy="630" rx="180" ry="44" fill="#E6EEA6" opacity=".17" transform="rotate(-14 880 630)"/>
+</g>
+
+<!-- 遠景の苔：半分 -->
+<g opacity=".85" filter="url(#blur1B)">
+  <use href="#tuftB" transform="translate(300,458) scale(.5)"/>
+  <use href="#tuftB" transform="translate(706,452) scale(.5)"/>
+  <use href="#tuftB" transform="translate(982,454) scale(.45)"/>
+  <use href="#tuftB" transform="translate(150,448) scale(.45)"/>
+</g>
+
+<!-- 中景の苔：石のまわりから広がる -->
+<g filter="url(#wobbleSoftB)">
+  <use href="#tuftB" transform="translate(140,502) scale(.9)"/>
+  <use href="#tuftB" transform="translate(262,542) scale(1.05)"/>
+  <use href="#tuftB" transform="translate(396,486) scale(.85)"/>
+  <use href="#tuftB" transform="translate(460,548) scale(1) rotate(6)"/>
+  <use href="#tuftB" transform="translate(726,540) scale(1) rotate(-5)"/>
+  <use href="#tuftB" transform="translate(948,522) scale(.9)"/>
+  <use href="#tuftB" transform="translate(58,562) scale(.95)"/>
+</g>
+
+<!-- 参道：目地は全線、敷石は半ばまで -->
+<path d="M525,805 C517,790 513,775 512,760 C509,747 507,733 506,720 C504,708 503,697 503,685 C503,673 504,661 506,650 C510,638 515,626 521,615 C526,604 531,593 537,583 C545,573 553,563 561,553 C568,544 576,534 582,525 C584,516 585,507 585,498 C584,490 582,481 581,473 C580,465 579,458 579,450 C578,443 576,436 575,430 L602,430 C607,436 610,443 613,450 C617,458 620,465 623,473 C627,481 631,490 635,498 C637,507 640,516 642,525 C639,534 635,544 631,553 C627,563 623,573 619,583 C616,593 613,604 611,615 C608,626 607,638 606,650 C606,661 608,673 613,685 C617,697 621,708 626,720 C632,733 639,747 647,760 C656,775 665,790 675,805 Z"
+  fill="url(#gJointB)" opacity=".75" filter="url(#wobbleSoftB)"/>
+
+<g filter="url(#wobbleCobbleB)">
+  <ellipse cx="545" cy="795" rx="24" ry="14" fill="url(#gCobbleA_B)" transform="rotate(8 545 795)"/>
+  <ellipse cx="600" cy="793" rx="26" ry="15" fill="url(#gCobbleB_B)" transform="rotate(-5 600 793)"/>
+  <ellipse cx="655" cy="796" rx="23" ry="13" fill="url(#gCobbleC_B)" transform="rotate(11 655 796)"/>
+  <ellipse cx="528" cy="763" rx="22" ry="13" fill="url(#gCobbleC_B)" transform="rotate(-9 528 763)"/>
+  <ellipse cx="583" cy="761" rx="24" ry="14" fill="url(#gCobbleA_B)" transform="rotate(6 583 761)"/>
+  <ellipse cx="636" cy="764" rx="21" ry="12" fill="url(#gCobbleB_B)" transform="rotate(-7 636 764)"/>
+  <ellipse cx="520" cy="726" rx="20" ry="12" fill="url(#gCobbleB_B)" transform="rotate(10 520 726)"/>
+  <ellipse cx="570" cy="724" rx="22" ry="13" fill="url(#gCobbleC_B)" transform="rotate(-4 570 724)"/>
+  <ellipse cx="618" cy="727" rx="19" ry="11" fill="url(#gCobbleA_B)" transform="rotate(7 618 727)"/>
+  <ellipse cx="512" cy="692" rx="18" ry="11" fill="url(#gCobbleA_B)" transform="rotate(-11 512 692)"/>
+  <ellipse cx="558" cy="690" rx="20" ry="12" fill="url(#gCobbleB_B)" transform="rotate(5 558 690)"/>
+  <ellipse cx="604" cy="693" rx="17" ry="10" fill="url(#gCobbleC_B)" transform="rotate(-6 604 693)"/>
+  <ellipse cx="516" cy="657" rx="17" ry="10" fill="url(#gCobbleC_B)" transform="rotate(9 516 657)"/>
+  <ellipse cx="558" cy="655" rx="18" ry="11" fill="url(#gCobbleA_B)" transform="rotate(-8 558 655)"/>
+  <ellipse cx="598" cy="658" rx="16" ry="9" fill="url(#gCobbleB_B)" transform="rotate(4 598 658)"/>
+  <ellipse cx="528" cy="622" rx="15" ry="9" fill="url(#gCobbleB_B)" transform="rotate(-5 528 622)"/>
+  <ellipse cx="566" cy="620" rx="17" ry="10" fill="url(#gCobbleC_B)" transform="rotate(8 566 620)"/>
+  <ellipse cx="604" cy="623" rx="14" ry="8" fill="url(#gCobbleA_B)" transform="rotate(-10 604 623)"/>
+  <ellipse cx="545" cy="589" rx="14" ry="8" fill="url(#gCobbleA_B)" transform="rotate(6 545 589)"/>
+  <ellipse cx="580" cy="587" rx="15" ry="9" fill="url(#gCobbleB_B)" transform="rotate(-7 580 587)"/>
+  <ellipse cx="613" cy="590" rx="13" ry="7.5" fill="url(#gCobbleC_B)" transform="rotate(9 613 590)"/>
+  <ellipse cx="566" cy="557" rx="13" ry="7.5" fill="url(#gCobbleC_B)" transform="rotate(-6 566 557)"/>
+  <ellipse cx="598" cy="555" rx="14" ry="8" fill="url(#gCobbleA_B)" transform="rotate(5 598 555)"/>
+  <ellipse cx="626" cy="558" rx="12" ry="7" fill="url(#gCobbleB_B)" transform="rotate(-9 626 558)"/>
+</g>
+
+<!-- 竹の影：まだ淡い -->
+<g filter="url(#blur2B)" fill="#2C3A20">
+  <polygon points="260,442 274,442 108,578 78,568" opacity=".14"/>
+  <polygon points="640,442 653,442 476,584 446,573" opacity=".15"/>
+  <polygon points="1030,442 1043,442 862,588 832,577" opacity=".14"/>
+  <polygon points="1122,452 1148,452 964,640 924,624" opacity=".15"/>
+</g>
+
+<!-- 結界：3対まで伸びた -->
+<g fill="#4A3B2C">
+  <rect x="509" y="732" width="5" height="28" rx="1.5"/>
+  <rect x="502" y="666" width="4.5" height="24" rx="1.5"/>
+  <rect x="528" y="591" width="4" height="21" rx="1.2"/>
+  <rect x="645" y="732" width="5" height="28" rx="1.5"/>
+  <rect x="609" y="666" width="4.5" height="24" rx="1.5"/>
+  <rect x="600" y="591" width="4" height="21" rx="1.2"/>
+</g>
+<g stroke="#5C4A36" stroke-width="2" fill="none" opacity=".75">
+  <path d="M512,732 Q503,702 505,666 Q512,626 530,591"/>
+  <path d="M648,732 Q622,700 611,666 Q604,636 602,591"/>
+</g>
+
+<!-- 石 -->
+<ellipse cx="352" cy="600" rx="98" ry="18" fill="#1F1D19" opacity=".18" filter="url(#blur6B)"/>
+<path d="M292,532 q22,-50 76,-56 q62,-6 94,28 q26,32 -6,56 q-44,34 -102,22 q-56,-12 -62,-50 z"
+      fill="url(#gStoneB)" filter="url(#wobbleSoftB)"/>
+<ellipse cx="368" cy="498" rx="46" ry="15" fill="#7A7261" opacity=".28" filter="url(#blur4B)"/>
+<path d="M306,558 q40,26 118,16 q26,-4 38,-16 q-10,26 -50,34 q-70,12 -106,-14 z"
+      fill="#46572F" filter="url(#wobbleSoftB)"/>
+
+<ellipse cx="850" cy="644" rx="66" ry="13" fill="#1F1D19" opacity=".16" filter="url(#blur6B)"/>
+<path d="M822,598 q14,-34 52,-38 q42,-4 62,20 q16,22 -6,38 q-30,22 -68,14 q-38,-8 -40,-34 z"
+      fill="url(#gStoneB)" filter="url(#wobbleSoftB)"/>
+<path d="M834,620 q22,10 56,6 q12,-2 18,-8 q-4,12 -26,17 q-34,6 -52,-8 z"
+      fill="#46572F" filter="url(#wobbleSoftB)"/>
+
+<!-- 前景の苔：石の周辺から半分ほど -->
+<g filter="url(#wobbleB)">
+  <ellipse cx="150" cy="740" rx="130" ry="60" fill="url(#gMossDeepB)"/>
+  <ellipse cx="810" cy="778" rx="110" ry="50" fill="url(#gMossMidB)"/>
+</g>
+<g filter="url(#wobbleSoftB)">
+  <use href="#tuftB" transform="translate(112,646) scale(1.6)"/>
+  <use href="#tuftB" transform="translate(94,742) scale(1.4) rotate(5)"/>
+  <use href="#tuftB" transform="translate(252,708) scale(1.7)"/>
+  <use href="#tuftB" transform="translate(336,642) scale(1.2) rotate(-6)"/>
+  <use href="#tuftB" transform="translate(462,672) scale(1) rotate(8)"/>
+  <use href="#tuftB" transform="translate(816,748) scale(1.5)"/>
+  <use href="#tuftB" transform="translate(936,656) scale(1.2)"/>
+  <use href="#tuftB" transform="translate(202,606) scale(1)"/>
+</g>
+
+<!-- 苔の飛び地：広がりの先端 -->
+<g fill="#8CA05F">
+  <circle cx="486" cy="452" r="2.6"/><circle cx="286" cy="452" r="2.4"/><circle cx="762" cy="448" r="2.4"/>
+  <circle cx="1046" cy="700" r="2.6"/><circle cx="1120" cy="640" r="2.4"/><circle cx="700" cy="720" r="2.4"/>
+</g>
+
+<!-- 光条：1本だけ差し込み始めた -->
+<polygon points="760,30 830,30 520,560 455,535" fill="#FFF8DF" opacity=".09" filter="url(#blur16B)"/>
+
+<rect width="1200" height="800" filter="url(#grainB)" opacity=".12"/>
+<rect width="1200" height="800" fill="url(#gVigB)"/>
+</svg>
+</div>
+<p class="hero-caption">DAY 42 — 苔がひろがり、道が半ばまで。竹林が姿を見せ始める。</p>
+
+<h2>何が、何によって育つか（案）</h2>
+<div class="element">
+  <span class="tag">石</span>
+  <p><b>断つ宣言。</b>Day 1 の瞬間から本物として据わる。育たない。動かない。この庭で唯一、最初から完成しとる要素。</p>
+</div>
+<div class="element">
+  <span class="tag">敷石</span>
+  <p><b>日々の実測記録。</b>1日ぶん記録が積まれるごとに一枚敷かれる。Day 1 で3枚、Day 42 で道半ば、Day 84 で竹林の入口へ届く。杭と縄も同じ歩調で伸びる。</p>
+</div>
+<div class="element">
+  <span class="tag">苔</span>
+  <p><b>取り戻した時間の累計。</b>石の根元に宿り、外へ広がる。累計値やけん、崩れた日があっても減らない＝消えない蓄積。Day 42 は緑の中に乾いた地がまだ残る。</p>
+</div>
+<div class="element">
+  <span class="tag">竹と光</span>
+  <p><b>継続の節目で開く借景。</b>Day 1 は靄の向こうの気配だけ。週の節目ごとに層が近づき、影が伸び、光条が差す。朱のひとひらは Day 84、山を越えた印として一枚だけ。</p>
+</div>
+
+<footer>Yaranai — 庭の成長過程モック（Day 1 / Day 42）/ 2026.07</footer>
+
+</div>
+</body>
+</html>
