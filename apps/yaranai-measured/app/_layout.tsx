@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Slot } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -29,8 +30,10 @@ export default function RootLayout() {
   }
 
   return (
-    <SessionContext.Provider value={session}>
-      <Slot />
-    </SessionContext.Provider>
+    <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+      <SessionContext.Provider value={session}>
+        <Slot />
+      </SessionContext.Provider>
+    </GestureHandlerRootView>
   );
 }

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yaranai — 北極星の一枚 v3（石畳・木漏れ日）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kinari:#F2EDE1;
+    --sumi:#2E2B26;
+    --sumi-soft:#57534A;
+    --shu:#B0472F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--kinari);
+    color:var(--sumi);
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    line-height:1.9;
+    padding:56px 20px 96px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+  .brand{
+    font-family:'Shippori Mincho',serif;
+    letter-spacing:.42em;
+    font-size:14px;
+    color:var(--sumi-soft);
+    margin-bottom:28px;
+  }
+  h1{
+    font-family:'Shippori Mincho',serif;
+    font-weight:500;
+    font-size:clamp(23px,4.4vw,32px);
+    letter-spacing:.12em;
+    line-height:1.7;
+  }
+  .lede{
+    margin-top:14px;
+    font-size:14px;
+    color:var(--sumi-soft);
+    max-width:42em;
+  }
+  .hero{
+    margin-top:44px;
+    border:1px solid rgba(46,43,38,.12);
+  }
+  .hero svg{display:block;width:100%;height:auto;}
+  .hero-caption{
+    font-family:'Shippori Mincho',serif;
+    font-size:13px;
+    letter-spacing:.2em;
+    margin-top:12px;
+    text-align:center;
+    color:var(--sumi-soft);
+  }
+  h2{
+    font-family:'Shippori Mincho',serif;
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:.14em;
+    border-bottom:1px solid rgba(46,43,38,.18);
+    padding-bottom:12px;
+    margin:64px 0 20px;
+  }
+  .element{
+    display:grid;
+    grid-template-columns:100px 1fr;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(46,43,38,.07);
+    font-size:13.5px;
+  }
+  .element .tag{
+    font-family:'Shippori Mincho',serif;
+    color:var(--shu);
+    letter-spacing:.06em;
+    font-size:13px;
+  }
+  .element p{color:var(--sumi-soft);}
+  .element b{color:var(--sumi);font-weight:500;}
+  footer{
+    margin-top:88px;
+    font-size:12px;
+    color:var(--sumi-soft);
+    letter-spacing:.1em;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">Y a r a n a i</div>
+  <h1>北極星の一枚 v3 — 石畳と木漏れ日</h1>
+  <p class="lede">v2からの変更点：①参道をS字にくねらせ、石畳（敷石＋目地）に変えて、靄の奥にも道の続きを覗かせた ②光源を右上に固定し、竹の長い影が苔と石畳を斜めに横切る「木漏れ日」の層を追加 ③縁石を杭と縄の結界に差し替え。引き続き画像素材ゼロ、全部コード描画。</p>
+</header>
+
+<div class="hero">
+<svg viewBox="0 0 1200 800" role="img" aria-label="苔の庭を石畳の参道がくねりながら竹林の奥へ続く。右上からの木漏れ日が長い影を落とす">
+<defs>
+  <filter id="wobble" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="16"/>
+  </filter>
+  <filter id="wobbleSoft" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="11" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="8"/>
+  </filter>
+  <filter id="wobbleCobble" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="6"/>
+  </filter>
+  <filter id="grain">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.3 0.3 0.3 0 0"/>
+  </filter>
+  <filter id="blur1"><feGaussianBlur stdDeviation="1.2"/></filter>
+  <filter id="blur2"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <filter id="blur4"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="blur16"><feGaussianBlur stdDeviation="16"/></filter>
+
+  <linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EDE9D0"/>
+    <stop offset="1" stop-color="#EAE4CC"/>
+  </linearGradient>
+  <linearGradient id="gMist" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F3F1E2" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#F3F1E2" stop-opacity=".92"/>
+    <stop offset="1" stop-color="#F3F1E2" stop-opacity="0"/>
+  </linearGradient>
+
+  <linearGradient id="gCulmNear" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#8FA765"/>
+    <stop offset=".45" stop-color="#62804A"/>
+    <stop offset="1" stop-color="#40552F"/>
+  </linearGradient>
+  <linearGradient id="gCulmMid" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#9DB07C"/>
+    <stop offset="1" stop-color="#6E8557"/>
+  </linearGradient>
+
+  <linearGradient id="gField" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#93A76B"/>
+    <stop offset=".5" stop-color="#71854D"/>
+    <stop offset="1" stop-color="#54663C"/>
+  </linearGradient>
+  <linearGradient id="gJoint" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8A8271"/>
+    <stop offset="1" stop-color="#6E6656"/>
+  </linearGradient>
+  <radialGradient id="gMossLight" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#BCCB86"/>
+    <stop offset=".55" stop-color="#8CA05F"/>
+    <stop offset="1" stop-color="#5F7340"/>
+  </radialGradient>
+  <radialGradient id="gMossMid" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#A0B76F"/>
+    <stop offset=".55" stop-color="#6E824A"/>
+    <stop offset="1" stop-color="#46572F"/>
+  </radialGradient>
+  <radialGradient id="gMossDeep" cx=".35" cy=".28" r="1">
+    <stop offset="0" stop-color="#84995A"/>
+    <stop offset=".55" stop-color="#54673A"/>
+    <stop offset="1" stop-color="#313E23"/>
+  </radialGradient>
+  <radialGradient id="gStone" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#5A5448"/>
+    <stop offset=".5" stop-color="#2E2B26"/>
+    <stop offset="1" stop-color="#181612"/>
+  </radialGradient>
+  <radialGradient id="gCobbleA" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#B3AB97"/>
+    <stop offset=".55" stop-color="#948C79"/>
+    <stop offset="1" stop-color="#6B6454"/>
+  </radialGradient>
+  <radialGradient id="gCobbleB" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#A8A69A"/>
+    <stop offset=".55" stop-color="#87857A"/>
+    <stop offset="1" stop-color="#5F5D52"/>
+  </radialGradient>
+  <radialGradient id="gCobbleC" cx=".32" cy=".25" r="1.1">
+    <stop offset="0" stop-color="#9A9078"/>
+    <stop offset=".55" stop-color="#7C725C"/>
+    <stop offset="1" stop-color="#564F40"/>
+  </radialGradient>
+  <radialGradient id="gVig" cx=".5" cy=".45" r=".78">
+    <stop offset=".62" stop-color="#1F1D19" stop-opacity="0"/>
+    <stop offset="1" stop-color="#1F1D19" stop-opacity=".16"/>
+  </radialGradient>
+
+  <g id="tuft">
+    <ellipse cx="0" cy="0" rx="34" ry="18" fill="url(#gMossMid)"/>
+    <ellipse cx="-30" cy="10" rx="26" ry="14" fill="url(#gMossDeep)"/>
+    <ellipse cx="30" cy="8" rx="24" ry="13" fill="url(#gMossLight)"/>
+    <ellipse cx="-8" cy="18" rx="20" ry="11" fill="url(#gMossDeep)"/>
+    <ellipse cx="18" cy="-10" rx="18" ry="10" fill="url(#gMossLight)"/>
+    <ellipse cx="-38" cy="-6" rx="16" ry="9" fill="url(#gMossMid)"/>
+    <ellipse cx="40" cy="16" rx="14" ry="8" fill="url(#gMossDeep)"/>
+    <ellipse cx="4" cy="-16" rx="12" ry="7" fill="url(#gMossMid)"/>
+    <ellipse cx="-20" cy="-14" rx="10" ry="6" fill="url(#gMossLight)"/>
+    <g fill="#C6D48F" opacity=".85">
+      <circle cx="-20" cy="-8" r="2.6"/><circle cx="-5" cy="-14" r="2.2"/><circle cx="10" cy="-10" r="2.8"/>
+      <circle cx="24" cy="-2" r="2.2"/><circle cx="-32" cy="4" r="2.4"/><circle cx="2" cy="2" r="2"/>
+      <circle cx="16" cy="8" r="2.4"/><circle cx="-14" cy="10" r="2.2"/><circle cx="30" cy="10" r="2"/>
+      <circle cx="-26" cy="14" r="2.4"/><circle cx="8" cy="16" r="2"/><circle cx="38" cy="2" r="2.2"/>
+    </g>
+    <g fill="#3A4A28" opacity=".5">
+      <circle cx="-12" cy="16" r="2.2"/><circle cx="22" cy="14" r="2"/><circle cx="-36" cy="12" r="2.2"/><circle cx="36" cy="18" r="1.8"/>
+    </g>
+  </g>
+</defs>
+
+<!-- ===== 空 ===== -->
+<rect width="1200" height="800" fill="url(#gSky)"/>
+
+<!-- ===== 借景：竹林 ===== -->
+<g fill="#A3B183" opacity=".38" filter="url(#blur2)">
+  <rect x="62" y="70" width="7" height="360" transform="rotate(-1.2 65 250)"/>
+  <rect x="132" y="80" width="6" height="350"/>
+  <rect x="212" y="66" width="8" height="364" transform="rotate(1 216 250)"/>
+  <rect x="332" y="78" width="6" height="352"/>
+  <rect x="412" y="70" width="7" height="360" transform="rotate(-.8 415 250)"/>
+  <rect x="502" y="84" width="6" height="346"/>
+  <rect x="592" y="72" width="7" height="358" transform="rotate(.9 595 250)"/>
+  <rect x="662" y="80" width="6" height="350"/>
+  <rect x="742" y="68" width="8" height="362" transform="rotate(-1 746 250)"/>
+  <rect x="832" y="82" width="6" height="348"/>
+  <rect x="912" y="70" width="7" height="360" transform="rotate(1.1 915 250)"/>
+  <rect x="992" y="78" width="6" height="352"/>
+  <rect x="1072" y="68" width="8" height="362" transform="rotate(-.9 1076 250)"/>
+  <rect x="1148" y="80" width="6" height="350"/>
+</g>
+
+<g opacity=".85">
+  <g transform="rotate(-1 96 240)">
+    <rect x="90" y="40" width="13" height="400" fill="url(#gCulmMid)"/>
+    <rect x="90" y="130" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="90" y="230" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="90" y="330" width="13" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(.8 266 240)">
+    <rect x="260" y="46" width="14" height="394" fill="url(#gCulmMid)"/>
+    <rect x="260" y="150" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="260" y="255" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="260" y="360" width="14" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(-.6 476 240)">
+    <rect x="470" y="42" width="12" height="398" fill="url(#gCulmMid)"/>
+    <rect x="470" y="140" width="12" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="470" y="245" width="12" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="470" y="350" width="12" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(.7 646 240)">
+    <rect x="640" y="48" width="13" height="392" fill="url(#gCulmMid)"/>
+    <rect x="640" y="155" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="640" y="260" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="640" y="365" width="13" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(-.9 866 240)">
+    <rect x="860" y="44" width="14" height="396" fill="url(#gCulmMid)"/>
+    <rect x="860" y="145" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="860" y="250" width="14" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="860" y="355" width="14" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+  <g transform="rotate(.6 1036 240)">
+    <rect x="1030" y="46" width="13" height="394" fill="url(#gCulmMid)"/>
+    <rect x="1030" y="150" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="1030" y="255" width="13" height="4" fill="#4E6438" opacity=".6"/>
+    <rect x="1030" y="360" width="13" height="4" fill="#4E6438" opacity=".6"/>
+  </g>
+</g>
+
+<g>
+  <g transform="rotate(-1.4 33 230)">
+    <rect x="20" y="0" width="26" height="460" fill="url(#gCulmNear)"/>
+    <rect x="20" y="118" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="20" y="238" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="20" y="358" width="26" height="6" fill="#334524" opacity=".65"/>
+  </g>
+  <g transform="rotate(1 165 230)">
+    <rect x="155" y="0" width="19" height="452" fill="url(#gCulmNear)"/>
+    <rect x="155" y="132" width="19" height="5" fill="#334524" opacity=".65"/>
+    <rect x="155" y="262" width="19" height="5" fill="#334524" opacity=".65"/>
+    <rect x="155" y="392" width="19" height="5" fill="#334524" opacity=".65"/>
+  </g>
+  <g transform="rotate(1.3 1133 230)">
+    <rect x="1120" y="0" width="26" height="460" fill="url(#gCulmNear)"/>
+    <rect x="1120" y="112" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="1120" y="232" width="26" height="6" fill="#334524" opacity=".65"/>
+    <rect x="1120" y="352" width="26" height="6" fill="#334524" opacity=".65"/>
+  </g>
+  <g transform="rotate(-.8 1014 230)">
+    <rect x="1005" y="0" width="18" height="452" fill="url(#gCulmNear)"/>
+    <rect x="1005" y="128" width="18" height="5" fill="#334524" opacity=".65"/>
+    <rect x="1005" y="258" width="18" height="5" fill="#334524" opacity=".65"/>
+    <rect x="1005" y="388" width="18" height="5" fill="#334524" opacity=".65"/>
+  </g>
+</g>
+
+<g filter="url(#wobble)">
+  <ellipse cx="110" cy="30" rx="230" ry="88" fill="#5C7643" opacity=".55"/>
+  <ellipse cx="430" cy="4" rx="260" ry="78" fill="#4E6A3C" opacity=".8"/>
+  <ellipse cx="770" cy="24" rx="245" ry="84" fill="#5C7643" opacity=".6"/>
+  <ellipse cx="1090" cy="42" rx="225" ry="90" fill="#4E6A3C" opacity=".8"/>
+  <ellipse cx="270" cy="52" rx="150" ry="52" fill="#6E8557" opacity=".45"/>
+  <ellipse cx="930" cy="60" rx="160" ry="50" fill="#6E8557" opacity=".45"/>
+</g>
+<g fill="#5C7643" opacity=".7">
+  <ellipse cx="356" cy="128" rx="12" ry="3.4" transform="rotate(-28 356 128)"/>
+  <ellipse cx="540" cy="108" rx="11" ry="3" transform="rotate(18 540 108)"/>
+  <ellipse cx="742" cy="140" rx="12" ry="3.4" transform="rotate(-14 742 140)"/>
+  <ellipse cx="208" cy="112" rx="10" ry="3" transform="rotate(24 208 112)"/>
+  <ellipse cx="948" cy="122" rx="11" ry="3.2" transform="rotate(-22 948 122)"/>
+</g>
+
+<!-- 朝靄 -->
+<rect x="-40" y="330" width="1280" height="150" fill="url(#gMist)" filter="url(#blur6)"/>
+
+<!-- 靄の奥へ続く道の気配 -->
+<polygon points="580,382 598,382 601,396 577,396" fill="#CFC3A6" opacity=".4" filter="url(#blur1)"/>
+
+<!-- ===== 苔の大地 ===== -->
+<path d="M0,415 C150,392 300,422 450,408 C600,394 750,422 900,408 C1050,395 1150,414 1200,404 L1200,800 L0,800 Z"
+      fill="url(#gField)" filter="url(#wobble)"/>
+
+<!-- 遠景の苔 -->
+<g opacity=".85" filter="url(#blur1)">
+  <use href="#tuft" transform="translate(150,448) scale(.55)"/>
+  <use href="#tuft" transform="translate(300,458) scale(.6)"/>
+  <use href="#tuft" transform="translate(432,448) scale(.5)"/>
+  <use href="#tuft" transform="translate(706,452) scale(.6)"/>
+  <use href="#tuft" transform="translate(836,444) scale(.5)"/>
+  <use href="#tuft" transform="translate(982,454) scale(.6)"/>
+  <use href="#tuft" transform="translate(1112,446) scale(.55)"/>
+  <use href="#tuft" transform="translate(60,456) scale(.5)"/>
+</g>
+
+<!-- 中景の苔 -->
+<g filter="url(#wobbleSoft)">
+  <use href="#tuft" transform="translate(140,502) scale(1.05)"/>
+  <use href="#tuft" transform="translate(262,542) scale(1.2)"/>
+  <use href="#tuft" transform="translate(396,486) scale(.95)"/>
+  <use href="#tuft" transform="translate(460,548) scale(1.15) rotate(6)"/>
+  <use href="#tuft" transform="translate(726,540) scale(1.2) rotate(-5)"/>
+  <use href="#tuft" transform="translate(796,492) scale(1)"/>
+  <use href="#tuft" transform="translate(948,522) scale(1.2)"/>
+  <use href="#tuft" transform="translate(1084,498) scale(1.05) rotate(4)"/>
+  <use href="#tuft" transform="translate(58,562) scale(1.15)"/>
+  <use href="#tuft" transform="translate(1156,562) scale(1.1)"/>
+  <use href="#tuft" transform="translate(196,472) scale(.8)"/>
+  <use href="#tuft" transform="translate(872,470) scale(.8) rotate(-8)"/>
+</g>
+
+<!-- ===== 木漏れ日：光だまり（苔の上） ===== -->
+<g filter="url(#blur6)">
+  <ellipse cx="300" cy="600" rx="190" ry="46" fill="#E6EEA6" opacity=".30" transform="rotate(-16 300 600)"/>
+  <ellipse cx="860" cy="640" rx="210" ry="50" fill="#E6EEA6" opacity=".26" transform="rotate(-14 860 640)"/>
+  <ellipse cx="150" cy="520" rx="120" ry="30" fill="#DCE79C" opacity=".25" transform="rotate(-18 150 520)"/>
+  <ellipse cx="1010" cy="540" rx="130" ry="32" fill="#DCE79C" opacity=".25" transform="rotate(-15 1010 540)"/>
+  <ellipse cx="560" cy="700" rx="160" ry="40" fill="#F0ECC2" opacity=".22" transform="rotate(-12 560 700)"/>
+</g>
+
+<!-- ===== 参道：S字にくねる石畳 ===== -->
+<!-- 目地（下地） -->
+<path d="M525,805
+  C517,790 513,775 512,760
+  C509,747 507,733 506,720
+  C504,708 503,697 503,685
+  C503,673 504,661 506,650
+  C510,638 515,626 521,615
+  C526,604 531,593 537,583
+  C545,573 553,563 561,553
+  C568,544 576,534 582,525
+  C584,516 585,507 585,498
+  C584,490 582,481 581,473
+  C580,465 579,458 579,450
+  C578,443 576,436 575,430
+  L602,430
+  C607,436 610,443 613,450
+  C617,458 620,465 623,473
+  C627,481 631,490 635,498
+  C637,507 640,516 642,525
+  C639,534 635,544 631,553
+  C627,563 623,573 619,583
+  C616,593 613,604 611,615
+  C608,626 607,638 606,650
+  C606,661 608,673 613,685
+  C617,697 621,708 626,720
+  C632,733 639,747 647,760
+  C656,775 665,790 675,805 Z"
+  fill="url(#gJoint)" filter="url(#wobbleSoft)"/>
+
+<!-- 敷石：手前は大きく、奥へ小さく -->
+<g filter="url(#wobbleCobble)">
+  <ellipse cx="545" cy="795" rx="24" ry="14" fill="url(#gCobbleA)" transform="rotate(8 545 795)"/>
+  <ellipse cx="600" cy="793" rx="26" ry="15" fill="url(#gCobbleB)" transform="rotate(-5 600 793)"/>
+  <ellipse cx="655" cy="796" rx="23" ry="13" fill="url(#gCobbleC)" transform="rotate(11 655 796)"/>
+  <ellipse cx="528" cy="763" rx="22" ry="13" fill="url(#gCobbleC)" transform="rotate(-9 528 763)"/>
+  <ellipse cx="583" cy="761" rx="24" ry="14" fill="url(#gCobbleA)" transform="rotate(6 583 761)"/>
+  <ellipse cx="636" cy="764" rx="21" ry="12" fill="url(#gCobbleB)" transform="rotate(-7 636 764)"/>
+  <ellipse cx="520" cy="726" rx="20" ry="12" fill="url(#gCobbleB)" transform="rotate(10 520 726)"/>
+  <ellipse cx="570" cy="724" rx="22" ry="13" fill="url(#gCobbleC)" transform="rotate(-4 570 724)"/>
+  <ellipse cx="618" cy="727" rx="19" ry="11" fill="url(#gCobbleA)" transform="rotate(7 618 727)"/>
+  <ellipse cx="512" cy="692" rx="18" ry="11" fill="url(#gCobbleA)" transform="rotate(-11 512 692)"/>
+  <ellipse cx="558" cy="690" rx="20" ry="12" fill="url(#gCobbleB)" transform="rotate(5 558 690)"/>
+  <ellipse cx="604" cy="693" rx="17" ry="10" fill="url(#gCobbleC)" transform="rotate(-6 604 693)"/>
+  <ellipse cx="516" cy="657" rx="17" ry="10" fill="url(#gCobbleC)" transform="rotate(9 516 657)"/>
+  <ellipse cx="558" cy="655" rx="18" ry="11" fill="url(#gCobbleA)" transform="rotate(-8 558 655)"/>
+  <ellipse cx="598" cy="658" rx="16" ry="9" fill="url(#gCobbleB)" transform="rotate(4 598 658)"/>
+  <ellipse cx="528" cy="622" rx="15" ry="9" fill="url(#gCobbleB)" transform="rotate(-5 528 622)"/>
+  <ellipse cx="566" cy="620" rx="17" ry="10" fill="url(#gCobbleC)" transform="rotate(8 566 620)"/>
+  <ellipse cx="604" cy="623" rx="14" ry="8" fill="url(#gCobbleA)" transform="rotate(-10 604 623)"/>
+  <ellipse cx="545" cy="589" rx="14" ry="8" fill="url(#gCobbleA)" transform="rotate(6 545 589)"/>
+  <ellipse cx="580" cy="587" rx="15" ry="9" fill="url(#gCobbleB)" transform="rotate(-7 580 587)"/>
+  <ellipse cx="613" cy="590" rx="13" ry="7.5" fill="url(#gCobbleC)" transform="rotate(9 613 590)"/>
+  <ellipse cx="566" cy="557" rx="13" ry="7.5" fill="url(#gCobbleC)" transform="rotate(-6 566 557)"/>
+  <ellipse cx="598" cy="555" rx="14" ry="8" fill="url(#gCobbleA)" transform="rotate(5 598 555)"/>
+  <ellipse cx="626" cy="558" rx="12" ry="7" fill="url(#gCobbleB)" transform="rotate(-9 626 558)"/>
+  <ellipse cx="588" cy="528" rx="12" ry="7" fill="url(#gCobbleB)" transform="rotate(7 588 528)"/>
+  <ellipse cx="616" cy="526" rx="13" ry="7.5" fill="url(#gCobbleC)" transform="rotate(-5 616 526)"/>
+  <ellipse cx="638" cy="529" rx="11" ry="6" fill="url(#gCobbleA)" transform="rotate(8 638 529)"/>
+  <ellipse cx="592" cy="500" rx="11" ry="6" fill="url(#gCobbleA)" transform="rotate(-8 592 500)"/>
+  <ellipse cx="618" cy="498" rx="12" ry="6.5" fill="url(#gCobbleB)" transform="rotate(6 618 498)"/>
+  <ellipse cx="588" cy="476" rx="10" ry="5.5" fill="url(#gCobbleC)" transform="rotate(-6 588 476)"/>
+  <ellipse cx="612" cy="474" rx="10.5" ry="6" fill="url(#gCobbleA)" transform="rotate(9 612 474)"/>
+  <ellipse cx="585" cy="455" rx="9" ry="5" fill="url(#gCobbleB)" transform="rotate(-7 585 455)"/>
+  <ellipse cx="606" cy="453" rx="9" ry="5" fill="url(#gCobbleC)" transform="rotate(5 606 453)"/>
+  <ellipse cx="582" cy="436" rx="7.5" ry="4" fill="url(#gCobbleA)" transform="rotate(6 582 436)"/>
+  <ellipse cx="598" cy="435" rx="8" ry="4.5" fill="url(#gCobbleB)" transform="rotate(-6 598 435)"/>
+</g>
+
+<!-- ===== 石 ===== -->
+<ellipse cx="348" cy="600" rx="102" ry="19" fill="#1F1D19" opacity=".22" filter="url(#blur6)"/>
+<path d="M292,532 q22,-50 76,-56 q62,-6 94,28 q26,32 -6,56 q-44,34 -102,22 q-56,-12 -62,-50 z"
+      fill="url(#gStone)" filter="url(#wobbleSoft)"/>
+<ellipse cx="368" cy="498" rx="46" ry="15" fill="#7A7261" opacity=".32" filter="url(#blur4)"/>
+<path d="M306,558 q40,26 118,16 q26,-4 38,-16 q-10,26 -50,34 q-70,12 -106,-14 z"
+      fill="#46572F" filter="url(#wobbleSoft)"/>
+
+<ellipse cx="846" cy="644" rx="70" ry="14" fill="#1F1D19" opacity=".2" filter="url(#blur6)"/>
+<path d="M822,598 q14,-34 52,-38 q42,-4 62,20 q16,22 -6,38 q-30,22 -68,14 q-38,-8 -40,-34 z"
+      fill="url(#gStone)" filter="url(#wobbleSoft)"/>
+<path d="M830,618 q26,14 68,8 q16,-2 24,-10 q-6,16 -32,22 q-42,8 -64,-10 z"
+      fill="#46572F" filter="url(#wobbleSoft)"/>
+
+<!-- ===== 前景の苔 ===== -->
+<g filter="url(#wobble)">
+  <ellipse cx="150" cy="740" rx="150" ry="70" fill="url(#gMossDeep)"/>
+  <ellipse cx="390" cy="775" rx="130" ry="60" fill="url(#gMossMid)"/>
+  <ellipse cx="810" cy="778" rx="140" ry="62" fill="url(#gMossDeep)"/>
+  <ellipse cx="1080" cy="745" rx="160" ry="72" fill="url(#gMossMid)"/>
+</g>
+<g filter="url(#wobbleSoft)">
+  <use href="#tuft" transform="translate(112,646) scale(2)"/>
+  <use href="#tuft" transform="translate(94,742) scale(1.8) rotate(5)"/>
+  <use href="#tuft" transform="translate(252,708) scale(2.2)"/>
+  <use href="#tuft" transform="translate(336,642) scale(1.5) rotate(-6)"/>
+  <use href="#tuft" transform="translate(408,748) scale(1.8)"/>
+  <use href="#tuft" transform="translate(462,672) scale(1.3) rotate(8)"/>
+  <use href="#tuft" transform="translate(752,678) scale(1.5) rotate(-4)"/>
+  <use href="#tuft" transform="translate(816,748) scale(2)"/>
+  <use href="#tuft" transform="translate(936,656) scale(1.7)"/>
+  <use href="#tuft" transform="translate(1046,722) scale(2.2) rotate(6)"/>
+  <use href="#tuft" transform="translate(1148,646) scale(1.6) rotate(-7)"/>
+  <use href="#tuft" transform="translate(1160,762) scale(1.9)"/>
+  <use href="#tuft" transform="translate(202,606) scale(1.2)"/>
+  <use href="#tuft" transform="translate(980,592) scale(1.15) rotate(-5)"/>
+  <use href="#tuft" transform="translate(452,606) scale(1) rotate(4)"/>
+  <use href="#tuft" transform="translate(736,606) scale(1.05)"/>
+</g>
+
+<!-- ===== 木漏れ日：竹の長い影（右上光源→左下へ、道も横切る） ===== -->
+<g filter="url(#blur2)" fill="#2C3A20">
+  <polygon points="159,446 176,446 20,586 -12,574" opacity=".26"/>
+  <polygon points="260,442 274,442 108,578 78,568" opacity=".24"/>
+  <polygon points="470,440 482,440 318,572 290,562" opacity=".24"/>
+  <polygon points="640,442 653,442 476,584 446,573" opacity=".26"/>
+  <polygon points="860,442 874,442 692,592 660,580" opacity=".24"/>
+  <polygon points="1030,442 1043,442 862,588 832,577" opacity=".24"/>
+  <polygon points="1122,452 1148,452 964,640 924,624" opacity=".26"/>
+  <polygon points="1008,448 1026,448 850,616 818,603" opacity=".22"/>
+</g>
+<!-- 道を渡る枝影 -->
+<g filter="url(#blur2)" fill="#3A3428">
+  <polygon points="668,700 690,688 508,760 496,776" opacity=".20"/>
+  <polygon points="648,586 664,577 522,642 512,655" opacity=".18"/>
+</g>
+
+<!-- ===== 結界：杭と縄 ===== -->
+<g fill="#4A3B2C">
+  <rect x="509" y="732" width="5" height="28" rx="1.5"/>
+  <rect x="502" y="666" width="4.5" height="24" rx="1.5"/>
+  <rect x="528" y="591" width="4" height="21" rx="1.2"/>
+  <rect x="570" y="522" width="3.5" height="18" rx="1"/>
+  <rect x="572" y="465" width="3" height="15" rx="1"/>
+  <rect x="572" y="420" width="3" height="12" rx="1"/>
+  <rect x="645" y="732" width="5" height="28" rx="1.5"/>
+  <rect x="609" y="666" width="4.5" height="24" rx="1.5"/>
+  <rect x="600" y="591" width="4" height="21" rx="1.2"/>
+  <rect x="638" y="522" width="3.5" height="18" rx="1"/>
+  <rect x="613" y="465" width="3" height="15" rx="1"/>
+  <rect x="594" y="420" width="3" height="12" rx="1"/>
+</g>
+<g stroke="#5C4A36" stroke-width="2" fill="none" opacity=".75">
+  <path d="M512,732 Q503,702 505,666 Q512,626 530,591 Q550,554 572,522 Q576,492 574,465 Q572,440 574,420"/>
+  <path d="M648,732 Q622,700 611,666 Q604,636 602,591 Q616,560 640,522 Q626,492 615,465 Q604,440 596,420"/>
+</g>
+
+<!-- 苔の飛び地 -->
+<g fill="#8CA05F">
+  <circle cx="96" cy="452" r="3"/><circle cx="486" cy="452" r="2.6"/><circle cx="936" cy="456" r="3"/>
+  <circle cx="1130" cy="448" r="2.4"/><circle cx="286" cy="452" r="2.4"/><circle cx="762" cy="448" r="2.4"/>
+</g>
+
+<!-- 朱ひとひら -->
+<g transform="translate(760,684) rotate(24) scale(1.5)">
+  <path d="M0,-10 L3,-3 L10,-4 L5,2 L7,9 L0,5 L-7,9 L-5,2 L-10,-4 L-3,-3 Z" fill="#B0472F"/>
+</g>
+
+<!-- ===== 光条：右上から斜めに ===== -->
+<polygon points="760,30 830,30 520,560 455,535" fill="#FFF8DF" opacity=".12" filter="url(#blur16)"/>
+<polygon points="950,60 1005,60 700,540 650,520" fill="#FFF8DF" opacity=".09" filter="url(#blur16)"/>
+<polygon points="560,20 610,20 430,430 390,415" fill="#FFF8DF" opacity=".07" filter="url(#blur16)"/>
+
+<!-- ===== 質感 ===== -->
+<rect width="1200" height="800" filter="url(#grain)" opacity=".12"/>
+<rect width="1200" height="800" fill="url(#gVig)"/>
+</svg>
+</div>
+<p class="hero-caption">DAY 84 — 木漏れ日の石畳が、竹林の奥へ</p>
+
+<h2>v2からの変更点</h2>
+<div class="element">
+  <span class="tag">石畳の参道</span>
+  <p>直線を<b>S字の曲線</b>に変え、目地（濃い下地）の上に<b>敷石36個</b>を3色の階調＋個別の回転で敷いた。石ごとに輪郭を歪ませてゴツゴツ感を出しとる。手前は大きく、奥へ向かって小さく。</p>
+</div>
+<div class="element">
+  <span class="tag">奥へ続く道</span>
+  <p>道の終端を靄の中に沈め、<b>靄の向こうに道の続きがうっすら覗く</b>ようにした。行き止まりやなく「この先がある」構図。飛び石と箒目は石畳と競合するけん撤去、縁石は<b>杭と縄の結界</b>に差し替え。</p>
+</div>
+<div class="element">
+  <span class="tag">木漏れ日</span>
+  <p>光源を右上に固定して3層で表現：①梢からの光条 ②苔の上の<b>光だまり5つ</b>（斜めに揃えた明るい帯）③竹の幹が落とす<b>長い影8本</b>＋道を横切る枝影2本。影が石畳を渡るのが優雅さの肝。</p>
+</div>
+
+<footer>Yaranai — 北極星コンセプトモック v3 / 2026.07</footer>
+
+</div>
+</body>
+</html>
