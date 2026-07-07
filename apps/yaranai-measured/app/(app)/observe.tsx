@@ -11,6 +11,7 @@ import { recordDateDaysAgo } from '../../lib/dates';
 import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../lib/baseline';
 import { averageMinutesPerDay } from '../../lib/usage-buckets';
 import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
+import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 
 const MAX_VOWS = 3;
@@ -80,7 +81,7 @@ export default function Observe() {
       <Text style={styles.subtitle}>この12週、あなたの時間はここへ。</Text>
       <Text style={styles.note}>
         直近7日に使ったアプリを、12週の1日平均で。{'\n'}
-        宣言すると、この平均がそのまま基準線になります。
+        宣言すると、この平均がそのまま、あなたの「ふだん」になります。
       </Text>
 
       <View style={styles.list}>
@@ -90,7 +91,7 @@ export default function Observe() {
             <View key={row.packageName} style={styles.row}>
               <View style={styles.rowHead}>
                 <Text style={styles.label}>{labelForPackage(row.packageName)}</Text>
-                <Text style={styles.minutes}>1日 平均{Math.round(row.avgMinutesPerDay)}分</Text>
+                <Text style={styles.minutes}>1日 平均{formatMinutes(row.avgMinutesPerDay)}</Text>
               </View>
               <View style={styles.rowFoot}>
                 {vowed ? (

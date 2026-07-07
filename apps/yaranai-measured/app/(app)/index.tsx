@@ -6,18 +6,19 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Garden, useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncAll } from '../../lib/usage-sync';
+import { recordDateDaysAgo } from '../../lib/dates';
+import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 
 type VowSummary = {
   vow_id: string;
   app_label: string;
   baseline_minutes: number;
-  saved_hours: number;
-  measured_days: number;
+  saved_minutes: number;
+  discontinued_on: string | null;
 };
 
 type Totals = {
-  total_saved_hours: number;
   longest_days: number;
   phase: number;
 };
@@ -26,20 +27,31 @@ export default function Home() {
   const session = useSession();
   const router = useRouter();
   const [vows, setVows] = useState<VowSummary[]>([]);
+  const [totalSavedMinutes, setTotalSavedMinutes] = useState(0);
+  const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
   const [totals, setTotals] = useState<Totals | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAll = useCallback(async () => {
-    const [totalsRes, vowsRes] = await Promise.all([
-      supabase.from('garden_state').select('*').maybeSingle(),
+    // 累計はやめた誓いも含めた全体。行の表示はアクティブな誓いだけ。
+    const [totalsRes, vowsRes, dailyRes] = await Promise.all([
+      supabase.from('garden_state').select('longest_days, phase').maybeSingle(),
       supabase
         .from('measured_saved')
-        .select('vow_id, app_label, baseline_minutes, saved_hours, measured_days')
-        .is('discontinued_on', null)
+        .select('vow_id, app_label, baseline_minutes, saved_minutes, discontinued_on')
         .order('declared_on', { ascending: true }),
+      supabase
+        .from('measured_daily')
+        .select('vow_id, actual_minutes')
+        .eq('record_date', recordDateDaysAgo(1)),
     ]);
+    const allVows = (vowsRes.data ?? []) as VowSummary[];
     setTotals(totalsRes.data ?? null);
-    setVows(vowsRes.data ?? []);
+    setVows(allVows.filter((v) => v.discontinued_on === null));
+    setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
+    setYesterdayMinutes(
+      new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
+    );
   }, []);
 
   useFocusEffect(
@@ -77,10 +89,10 @@ export default function Home() {
 
       {/* 蓄積 */}
       <View style={styles.garden}>
-        {totals && totals.total_saved_hours > 0 ? (
+        {totals && Math.round(totalSavedMinutes) > 0 ? (
           <>
             <Text style={styles.headline}>
-              {totals.longest_days}日で、{totals.total_saved_hours}時間が{'\n'}戻ってきました。
+              {totals.longest_days}日で、{formatMinutes(totalSavedMinutes)}が{'\n'}戻ってきました。
             </Text>
             <View style={{ marginTop: 32, width: '100%' }}>
               <Garden phase={phase} />
@@ -93,26 +105,24 @@ export default function Home() {
 
       {/* 誓い */}
       <View style={styles.list}>
-        {vows.map((vow) => (
-          <View key={vow.vow_id} style={styles.row}>
-            <View style={styles.rowHead}>
+        {vows.map((vow) => {
+          const actual = yesterdayMinutes.get(vow.vow_id);
+          return (
+            <View key={vow.vow_id} style={styles.row}>
               <Text style={styles.label}>{vow.app_label}</Text>
-              <Text style={styles.minutes}>基準線 {Math.round(vow.baseline_minutes)}分/日</Text>
+              <Text style={styles.saved}>
+                {actual != null
+                  ? `昨日の使用 ${formatMinutes(actual)}(ふだん ${formatMinutes(vow.baseline_minutes)})→ ${formatMinutes(vow.baseline_minutes - actual)}戻った`
+                  : '昨日の実測を待っています。'}
+              </Text>
             </View>
-            <Text style={styles.saved}>
-              {vow.measured_days > 0
-                ? `${vow.measured_days}日の実測で、${vow.saved_hours}時間。`
-                : '実測を待っています。'}
-            </Text>
-          </View>
-        ))}
+          );
+        })}
 
         <Pressable style={styles.observe} onPress={() => router.push('/(app)/observe')}>
           <Text style={styles.observeText}>時間の行き先を見る</Text>
         </Pressable>
       </View>
-
-      <Text style={styles.footnote}>基準線を超えた日も、庭は縮まない。</Text>
     </ScrollView>
   );
 }
@@ -135,9 +145,7 @@ const styles = StyleSheet.create({
   },
   list: { gap: 28 },
   row: { gap: 8 },
-  rowHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   label: { fontFamily: fonts.serif, fontSize: 17, color: colors.sumi, letterSpacing: 1 },
-  minutes: { fontSize: 11, color: colors.usuzumi },
   saved: { fontSize: 12, color: colors.usuzumi, letterSpacing: 1 },
 
   observe: {
@@ -149,12 +157,4 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   observeText: { fontFamily: fonts.serif, fontSize: 14, color: colors.sumi, letterSpacing: 4 },
-
-  footnote: {
-    marginTop: 56,
-    textAlign: 'center',
-    fontSize: 11,
-    color: colors.usuzumi,
-    letterSpacing: 2,
-  },
 });
