@@ -9,7 +9,7 @@ const path = require('node:path');
 const dist = path.join(__dirname, '..', '.test-dist');
 const { deriveGrowth } = require(path.join(dist, 'garden', 'growth.js'));
 const {
-  buildScene, PAN_CENTER, PAN_MAX, EDGE_PEEK, HOME_CX, FRAME_W, HOME_CROP,
+  buildScene, PAN_CENTER, PAN_MAX, EDGE_PEEK, HOME_CX, FRAME_W, HOME_CROP, VIEW_LOGICAL_W, WORLD_W,
 } = require(path.join(dist, 'garden', 'scene.js'));
 const { sceneToSvg } = require(path.join(dist, 'garden', 'preview-svg.js'));
 
@@ -38,17 +38,17 @@ for (const [name, snap] of Object.entries(days)) {
   );
 }
 
-// 絵巻(Day84)の各パネル
+// 絵巻(Day84)。各スクロール位置(画面が見せる範囲)+ 全景パノラマ
 {
   const scene = buildScene(deriveGrowth(days.day84));
   const emaki = {
-    'emaki-left': 0,
-    'emaki-right': PAN_MAX,
-    'emaki-center': PAN_CENTER,
+    'emaki-center': PAN_CENTER, // 中央始まり(開扉直後 = ホームとほぼ同じ絵)
+    'emaki-left': 0, // 左端で停止
+    'emaki-right': PAN_MAX, // 右端で停止
     'emaki-peek': PAN_CENTER - EDGE_PEEK,
   };
   for (const [nm, pan] of Object.entries(emaki)) {
-    fs.writeFileSync(path.join(outDir, `${nm}.svg`), sceneToSvg(scene, { pan, viewWidth: FRAME_W }));
+    fs.writeFileSync(path.join(outDir, `${nm}.svg`), sceneToSvg(scene, { pan, viewWidth: VIEW_LOGICAL_W }));
   }
 }
 

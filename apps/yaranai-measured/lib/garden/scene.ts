@@ -23,19 +23,21 @@ import type { Paint, Prim, Scene, SceneGroup, SceneLayer, Transform } from './sc
 
 export { WORLD_W, WORLD_H, FRAME_X, FRAME_W, HORIZON_Y } from './dims';
 
-/** 庭モードで1画面に見せる論理幅 = 中央パネル幅(3300 / 1500 = 2.2画面) */
-export const VIEW_LOGICAL_W = FRAME_W;
-/** パンの中央値(中央パネルの左端がビュー左端に来る位置) */
-export const PAN_CENTER = FRAME_X;
-export const PAN_MAX = WORLD_W - VIEW_LOGICAL_W;
-/** エッジピーク: 開いた直後に隣の景色を覗かせる量(画面幅の7%) */
-export const EDGE_PEEK = Math.round(VIEW_LOGICAL_W * 0.07);
 /** ホームの窓の中心 = 中央パネルの中心(§変更1: 構図の中央基準で 90% クロップ) */
 export const HOME_CX = FRAME_CX;
 /** ホーム窓のクロップ比率(構図の横 90%・縦 100%。§変更1) */
 export const HOME_CROP = 0.9;
 /** ホーム窓の縦横比(横 90% × 縦 100% = 1350:1000 = 1.35:1。§変更1) */
 export const HOME_ASPECT = (FRAME_W * HOME_CROP) / WORLD_H;
+
+/** 庭モードで1画面に見せる論理幅。§変更2「縦のスケールはホームと同一」に合わせ、
+ *  ホームの窓と同じ 90% 幅(1350)にする。絵巻は 3300 / 1350 ≒ 2.44 画面。 */
+export const VIEW_LOGICAL_W = Math.round(FRAME_W * HOME_CROP);
+/** パンの中央値 = 構図中央をビュー中心に置く位置(開扉時の中央始まり)。ホームと同じ絵 */
+export const PAN_CENTER = FRAME_CX - VIEW_LOGICAL_W / 2;
+export const PAN_MAX = WORLD_W - VIEW_LOGICAL_W;
+/** エッジピーク(§変更2 は中央始まり。ヒント用に僅かに残すが既定は 0=中央) */
+export const EDGE_PEEK = 0;
 
 const WING_SEED = 0x59a7;
 
@@ -147,6 +149,11 @@ function buildPaints(g: GrowthParams): Record<string, Paint> {
       ],
     },
     stone: radial([C.stoneLight, C.sumi, C.stoneDark]),
+    // 蹲踞の水(§変更2 右翼。mock v4 waterG)
+    water: {
+      type: 'radial', center: [0.5, 0.4], radius: 0.8,
+      stops: [{ offset: 0, color: C.water[0] }, { offset: 1, color: C.water[1] }],
+    },
     cobbleA: radial(C.cobbleA),
     cobbleB: radial(C.cobbleB),
     cobbleC: radial(C.cobbleC),
@@ -380,65 +387,133 @@ function tuftScaleAt(t: TuftSpec, thr: number, m: number): number | null {
   return t.s * lerp(0.6, 1, thr >= 1 ? 1 : (m - thr) / (1 - thr));
 }
 
-// ---------------------------------------------------------------- 翼(左右の拡張)
+// ---------------------------------------------------------------- 翼(左右の拡張。§変更2)
 
-type WingTuft = { x: number; y: number; s: number; rot: number; thr: number };
-function wingTufts(rng: Rng, xMin: number, xMax: number, count: number, band: [number, number], sRange: [number, number]): WingTuft[] {
-  const out: WingTuft[] = [];
+// 翼の苔房を中央パネル [900,2400] の外側にだけ散らす。苔は中央と同じく苔充実度 m で育つ
+// (取り戻した時間の反映)。ハードスケープの motif(三尊石・蹲踞・飛び石・庭の竹)だけが
+// 完成形固定(借景と同じ)。位置は決定論的、y は north-star 800系(wy() で新世界へ)。
+type WT = { x: number; y: number; s: number; rot: number; thr: number };
+function wingScatter(rng: Rng, xMin: number, xMax: number, count: number, band: [number, number], sRange: [number, number]): WT[] {
+  const out: WT[] = [];
   for (let i = 0; i < count; i++) {
     const x = range(rng, xMin, xMax);
-    const y = range(rng, band[0], band[1]);
+    // 中央パネルの縁から遠いほど遅く現れる(外周へ広がる)
     const d = Math.min(Math.abs(x - FRAME_X), Math.abs(x - (FRAME_X + FRAME_W)));
     const thr = clamp01(0.3 + 0.6 * (d / FRAME_X) + range(rng, -0.06, 0.06));
-    out.push({ x, y, s: range(rng, sRange[0], sRange[1]), rot: range(rng, -8, 8), thr });
+    out.push({ x, y: range(rng, band[0], band[1]), s: range(rng, sRange[0], sRange[1]), rot: range(rng, -8, 8), thr });
   }
   return out;
 }
-
-type Wings = {
-  farTufts: WingTuft[]; midTufts: WingTuft[]; foreTufts: WingTuft[];
-  foreBlobs: [number, number, number, number, boolean, number][];
-  dryGrains: [number, number][];
-  rocks: { x: number; y: number; scale: number }[];
-  shadowsR: number[][]; shadowL: number[][];
-  poolL: [number, number, number, number, number];
-};
-function buildWings(): Wings {
+const WING = (() => {
   const rng = mulberry32(WING_SEED);
-  // 翼の苔は中央パネル [900,2400] の外側だけに置く(中央=ホーム視界は north-star の作図だけ)
-  const farTufts = [
-    ...wingTufts(rng, 260, 880, 7, [440, 462], [0.45, 0.6]),
-    ...wingTufts(rng, 2420, 3080, 4, [440, 462], [0.45, 0.6]),
+  const far = [...wingScatter(rng, 260, 880, 7, [440, 462], [0.45, 0.6]), ...wingScatter(rng, 2420, 3080, 4, [440, 462], [0.45, 0.6])];
+  const mid = [...wingScatter(rng, 230, 880, 10, [478, 566], [0.85, 1.2]), ...wingScatter(rng, 2420, 3100, 5, [478, 566], [0.8, 1.1])];
+  const fore = [...wingScatter(rng, 130, 880, 10, [640, 770], [1.2, 2.2]), ...wingScatter(rng, 2420, 3220, 8, [618, 774], [1.1, 1.9])];
+  // 前景の苔面 [cx, cy(800系), rx, ry, deep, thr]
+  const blobs: [number, number, number, number, boolean, number][] = [
+    [430, 786, 150, 70, true, 0.35], [760, 800, 130, 62, false, 0.55], [120, 775, 130, 64, false, 0.75],
+    [2450, 792, 140, 64, true, 0.5], [2900, 788, 150, 70, false, 0.7], [3220, 795, 130, 62, true, 0.85],
   ];
-  const midTufts = [
-    ...wingTufts(rng, 230, 880, 10, [478, 566], [0.85, 1.2]),
-    ...wingTufts(rng, 2420, 3100, 5, [478, 566], [0.8, 1.1]),
-  ];
-  const foreTufts = [
-    ...wingTufts(rng, 130, 880, 10, [640, 770], [1.2, 2.2]),
-    ...wingTufts(rng, 2420, 3220, 8, [618, 774], [1.1, 1.9]),
-  ];
-  const foreBlobs: [number, number, number, number, boolean, number][] = [
-    [430, 786, 150, 70, true, 0.35], [760, 800, 130, 62, false, 0.55],
-    [120, 775, 130, 64, false, 0.75], [2450, 792, 140, 64, true, 0.5],
-    [2900, 788, 150, 70, false, 0.7], [3220, 795, 130, 62, true, 0.85],
-  ];
-  const dryGrains: [number, number][] = [];
-  for (let i = 0; i < 9; i++) dryGrains.push([range(rng, 260, 880), range(rng, 470, 780)]);
-  for (let i = 0; i < 6; i++) dryGrains.push([range(rng, 2420, 3120), range(rng, 470, 780)]);
-  const rocks = [
-    { x: 385, y: 588, scale: 0.66 }, { x: 585, y: 622, scale: 0.48 },
-    { x: 185, y: 552, scale: 0.55 },
-  ];
-  const shadowsR = [2440, 2560, 2690].map((x) => {
-    const drop = range(rng, 136, 150);
-    return [x, 444, x + 14, 444, x - drop, 588, x - drop - 31, 577];
-  });
-  const shadowL = [[700, 446, 714, 446, 556, 586, 526, 575]];
-  const poolL: [number, number, number, number, number] = [560, 620, 150, 38, -15];
-  return { farTufts, midTufts, foreTufts, foreBlobs, dryGrains, rocks, shadowsR, shadowL, poolL };
+  return { far, mid, fore, blobs };
+})();
+
+/** 苔充実度 m での翼房。m<thr は現れない。単調非減少 */
+function wingTuftPrim(t: WT, m: number): Prim | null {
+  if (m < t.thr) return null;
+  const k = lerp(0.6, 1, clamp01((m - t.thr) / Math.max(0.05, 1 - t.thr)));
+  return { kind: 'tuft', x: t.x, y: wy(t.y), scale: t.s * SX * k, rotateDeg: t.rot };
 }
-const WINGS = buildWings();
+
+// 石(north-star 品質。world 座標)。§変更2 の三尊石・蹲踞の水鉢で共用
+function worldStone(cx: number, cy: number, rx: number, ry: number): Prim[] {
+  return [
+    { kind: 'ellipse', cx, cy: cy + ry * 0.86, rx: rx * 1.08, ry: ry * 0.36, paint: solid('#4A4436'), opacity: 0.22, blur: 6 },
+    { kind: 'ellipse', cx, cy, rx, ry, paint: ref('stone') },
+    { kind: 'ellipse', cx: cx + rx * 0.3, cy: cy - ry * 0.42, rx: rx * 0.42, ry: ry * 0.3, paint: solid(C.stoneHighlight), opacity: 0.5, blur: 2.2 },
+    { kind: 'ellipse', cx: cx - rx * 0.32, cy: cy + ry * 0.3, rx: rx * 0.5, ry: ry * 0.34, paint: solid(C.stoneDark), opacity: 0.5, blur: 2.2 },
+  ];
+}
+// 飛び石(参道から分かれる。world 座標)
+function steppingStone(x: number, y: number, sz: number, op: number): Prim[] {
+  return [
+    { kind: 'ellipse', cx: x, cy: y + 3, rx: sz * 0.56, ry: sz * 0.24, paint: solid('#6E6858'), opacity: 0.55 * op },
+    { kind: 'ellipse', cx: x, cy: y, rx: sz * 0.55, ry: sz * 0.23, paint: solid('#948C77'), opacity: op },
+    { kind: 'ellipse', cx: x - sz * 0.1, cy: y - sz * 0.05, rx: sz * 0.4, ry: sz * 0.14, paint: solid('#ABA28A'), opacity: 0.8 * op },
+  ];
+}
+
+/**
+ * 翼(左右の拡張)のレイヤー群(§変更2)。id は 'wing-' 始まりで、絵巻(GardenScroll)は
+ * 開扉時にこれらだけをフェードインさせる(差分演出とは別系統、イージング/時間は共有)。
+ * 苔は中央と同じく m で育つ。motif(三尊石・蹲踞・飛び石・庭の竹)は完成形固定=借景。
+ * 左翼: 三尊石+苔。右翼: 参道から分かれる飛び石+蹲踞(水鉢・水面・柄杓)+苔。庭の竹 左2右3。
+ */
+function buildWingLayers(m: number, frontY: number): SceneLayer[] {
+  const layers: SceneLayer[] = [];
+  const tufts = (list: WT[]) => list.map((t) => wingTuftPrim(t, m)).filter((p): p is Prim => p != null);
+
+  // wing-field (0.8): 遠中景の苔 + 光だまり
+  const poolOp = 0.22 * lightVisAt(frontY, 620);
+  layers.push({
+    id: 'wing-field', parallax: 0.8,
+    groups: [
+      { blur: 1.2, opacity: 0.85, prims: tufts(WING.far) },
+      { wobble: 'soft', prims: tufts(WING.mid) },
+      ...(poolOp > 0.005
+        ? [{ blur: 6, prims: [{ kind: 'ellipse', cx: 560, cy: wy(620), rx: 150, ry: 38 * SY, rotateDeg: -15, paint: solid(C.lightPool), opacity: poolOp } as Prim] }]
+        : []),
+    ],
+  });
+
+  // wing-motif (1.0): 三尊石(左) / 飛び石+蹲踞(右)
+  const motif: Prim[] = [];
+  // 左翼: 三尊石(三尊石風の3石)
+  motif.push(...worldStone(350, 700, 104, 74), ...worldStone(238, 782, 62, 44), ...worldStone(456, 768, 52, 38));
+  // 右翼: 飛び石(参道から分かれて蹲踞へ)
+  [[2470, 940, 60], [2560, 876, 52], [2644, 818, 44], [2708, 776, 38]].forEach(([x, y, sz], i) =>
+    motif.push(...steppingStone(x, y, sz, 0.9 - i * 0.04)));
+  // 右翼: 蹲踞(石の水鉢・水面・柄杓)
+  motif.push(
+    { kind: 'ellipse', cx: 2800, cy: 800, rx: 92, ry: 30, paint: solid('#4A4436'), opacity: 0.22, blur: 6 },
+    { kind: 'ellipse', cx: 2800, cy: 756, rx: 86, ry: 54, paint: ref('stone') },
+    { kind: 'ellipse', cx: 2800, cy: 740, rx: 52, ry: 22, paint: ref('water') },
+    { kind: 'ellipse', cx: 2784, cy: 735, rx: 22, ry: 7, paint: solid(C.waterHighlight), opacity: 0.55 },
+    { kind: 'rect', x: 2762, y: 706, w: 98, h: 6, rx: 3, paint: solid(C.ladle), rotate: { deg: -14, cx: 2810, cy: 709 } },
+    { kind: 'circle', cx: 2854, cy: 694, r: 10, paint: solid(C.ladleKnob) },
+  );
+  layers.push({ id: 'wing-motif', parallax: 1.0, groups: [{ wobble: 'soft', prims: motif }] });
+
+  // wing-fore (1.1): 前景の苔(面+房)。面も m で育つ
+  const blobPrims: Prim[] = [];
+  for (const [cx, cy, rx, ry, deep, thr] of WING.blobs) {
+    if (m < thr) continue;
+    const k = lerp(0.6, 1, clamp01((m - thr) / Math.max(0.05, 1 - thr)));
+    blobPrims.push({ kind: 'ellipse', cx, cy: wy(cy), rx: rx * k, ry: ry * k * SY, paint: ref(deep ? 'mossDeep' : 'mossMid') });
+  }
+  layers.push({
+    id: 'wing-fore', parallax: 1.1,
+    groups: [
+      { wobble: 'strong', prims: blobPrims },
+      { wobble: 'soft', prims: tufts(WING.fore) },
+    ],
+  });
+
+  // wing-bamboo (1.0): 庭に立つ竹 左2・右3(奥行きをばらす。§変更6 の開扉分)
+  layers.push({
+    id: 'wing-bamboo', parallax: 1.0,
+    groups: [{
+      prims: [
+        ...gardenCulmPrims(640, 0.1, HORIZON_Y + 150),
+        ...gardenCulmPrims(180, 0.28, HORIZON_Y + 85),
+        ...gardenCulmPrims(2450, 0.32, HORIZON_Y + 80),
+        ...gardenCulmPrims(2940, 0.12, HORIZON_Y + 160),
+        ...gardenCulmPrims(3140, 0.22, HORIZON_Y + 110),
+      ],
+    }],
+  });
+
+  return layers;
+}
 
 // ---------------------------------------------------------------- 大地の輪郭(絵巻全幅、新世界)
 
@@ -495,10 +570,7 @@ export function buildScene(g: GrowthParams): Scene {
   if (grainOp > 0) {
     fieldGroups.push({
       opacity: grainOp,
-      prims: [
-        ...DRY_GRAINS.map(([x, y]) => ({ kind: 'circle', cx: wx(x), cy: wy(y), r: 1.8 * SX, paint: solid(C.dryGrain) }) as Prim),
-        ...WINGS.dryGrains.map(([x, y]) => ({ kind: 'circle', cx: x, cy: wy(y), r: 1.8 * SX, paint: solid(C.dryGrain) }) as Prim),
-      ],
+      prims: DRY_GRAINS.map(([x, y]) => ({ kind: 'circle', cx: wx(x), cy: wy(y), r: 1.8 * SX, paint: solid(C.dryGrain) }) as Prim),
     });
   }
   const patchOp = 0.45 * clamp01(Math.min(m / 0.15, (0.95 - m) / 0.3));
@@ -515,9 +587,6 @@ export function buildScene(g: GrowthParams): Scene {
     const s = tuftScaleAt(t, farThr[i], m);
     if (s != null) farPrims.push(tuftPrim(t.x, t.y, s, t.rot));
   });
-  for (const t of WINGS.farTufts) {
-    if (m >= t.thr) farPrims.push({ kind: 'tuft', x: t.x, y: wy(t.y), scale: t.s * SX * lerp(0.6, 1, clamp01((m - t.thr) / Math.max(0.05, 1 - t.thr))), rotateDeg: t.rot });
-  }
   fieldGroups.push({ blur: 1.2, opacity: 0.85, prims: farPrims });
   // 中景の房
   const midThr = tuftThresholds(MID_TUFTS);
@@ -526,9 +595,6 @@ export function buildScene(g: GrowthParams): Scene {
     const s = tuftScaleAt(t, midThr[i], m);
     if (s != null) midPrims.push(tuftPrim(t.x, t.y, s, t.rot));
   });
-  for (const t of WINGS.midTufts) {
-    if (m >= t.thr) midPrims.push({ kind: 'tuft', x: t.x, y: wy(t.y), scale: t.s * SX * lerp(0.6, 1, clamp01((m - t.thr) / Math.max(0.05, 1 - t.thr))), rotateDeg: t.rot });
-  }
   fieldGroups.push({ wobble: 'soft', prims: midPrims });
   // 苔の飛び地
   const patchDots = MOSS_PATCHES.filter(([, , , thr]) => m >= thr).map(
@@ -542,11 +608,6 @@ export function buildScene(g: GrowthParams): Scene {
     if (op <= 0.005) return;
     poolPrims.push(nsEllipse(cx, cy, rx, ry, solid(C.lightPool), { rotateDeg: rot, opacity: op }));
   });
-  {
-    const [cx, cy, rx, ry, rot] = WINGS.poolL;
-    const op = 0.22 * lightVisAt(frontY, cy);
-    if (op > 0.005) poolPrims.push({ kind: 'ellipse', cx, cy: wy(cy), rx, ry: ry * SY, rotateDeg: rot, paint: solid(C.lightPool), opacity: op });
-  }
   fieldGroups.push({ blur: 6, prims: poolPrims });
   push('field', 0.8, fieldGroups);
 
@@ -584,22 +645,6 @@ export function buildScene(g: GrowthParams): Scene {
       }) as Prim),
     });
   }
-  // 左翼の景石(庭の地形。データの石とは別)
-  const ROCK_SRC = { x: 879, y: 615 };
-  pathGroups.push({
-    wobble: 'soft',
-    prims: WINGS.rocks.flatMap((r) => {
-      const sc = r.scale;
-      return [
-        { kind: 'ellipse', cx: r.x, cy: wy(r.y + 32 * sc), rx: 66 * sc, ry: 13 * sc * SY, paint: solid(C.shadowInk), opacity: 0.16, blur: 4 } as Prim,
-        {
-          kind: 'path', d: STONE_COMP_D,
-          transform: { tx: r.x - ROCK_SRC.x * sc * SX, ty: wy(r.y) - ROCK_SRC.y * sc * SY, sx: sc * SX, sy: sc * SY },
-          paint: ref('stone'),
-        } as Prim,
-      ];
-    }),
-  });
   // 石(宣言): 主石 → 添石 → 三の石。参道を挟んで左に大石+苔、右に小石+苔(§変更5)
   const shadowOp = ramp(w, [[0, 1], [12, 1.55]]);
   const stonePrims: Prim[] = [];
@@ -653,14 +698,6 @@ export function buildScene(g: GrowthParams): Scene {
     if (op <= 0.005) return;
     shadowPrims.push({ kind: 'polygon', points: worldPts(pts), paint: solid(C.trunkShadow), opacity: op });
   });
-  for (const pts of WINGS.shadowsR) {
-    const op = 0.15 * lightVisAt(frontY, shadowFrontY(pts));
-    if (op > 0.005) shadowPrims.push({ kind: 'polygon', points: pts.map((v, i) => (i % 2 === 0 ? v : wy(v))), paint: solid(C.trunkShadow), opacity: op });
-  }
-  for (const pts of WINGS.shadowL) {
-    const op = 0.14 * lightVisAt(frontY, shadowFrontY(pts));
-    if (op > 0.005) shadowPrims.push({ kind: 'polygon', points: pts.map((v, i) => (i % 2 === 0 ? v : wy(v))), paint: solid(C.trunkShadow), opacity: op });
-  }
   const branchPrims: Prim[] = BRANCH_SHADOWS.flatMap(([pts, opFull]) => {
     const op = opFull * lightVisAt(frontY, shadowFrontY(pts));
     return op > 0.005 ? [{ kind: 'polygon', points: worldPts(pts), paint: solid(C.trunkShadow), opacity: op } as Prim] : [];
@@ -681,11 +718,6 @@ export function buildScene(g: GrowthParams): Scene {
       : lerp(0.6, 1, (m - thr) / (1 - thr));
     blobPrims.push(nsEllipse(cx, cy, rx * k, ry * k, ref(deep ? 'mossDeep' : 'mossMid')));
   });
-  for (const [cx, cy, rx, ry, deep, thr] of WINGS.foreBlobs) {
-    if (m < thr) continue;
-    const k = lerp(0.6, 1, clamp01((m - thr) / Math.max(0.05, 1 - thr)));
-    blobPrims.push({ kind: 'ellipse', cx, cy: wy(cy), rx: rx * k, ry: ry * k * SY, paint: ref(deep ? 'mossDeep' : 'mossMid') });
-  }
   foreGroups.push({ wobble: 'strong', prims: blobPrims });
   const foreThr = tuftThresholds(FORE_TUFTS);
   const forePrims: Prim[] = [];
@@ -693,9 +725,6 @@ export function buildScene(g: GrowthParams): Scene {
     const s = tuftScaleAt(t, foreThr[i], m);
     if (s != null) forePrims.push(tuftPrim(t.x, t.y, s, t.rot));
   });
-  for (const t of WINGS.foreTufts) {
-    if (m >= t.thr) forePrims.push({ kind: 'tuft', x: t.x, y: wy(t.y), scale: t.s * SX * lerp(0.6, 1, clamp01((m - t.thr) / Math.max(0.05, 1 - t.thr))), rotateDeg: t.rot });
-  }
   foreGroups.push({ wobble: 'soft', prims: forePrims });
   // 朱のひとひら(Day 84 のみ)
   if (g.redLeaf) {
@@ -731,6 +760,13 @@ export function buildScene(g: GrowthParams): Scene {
       ],
     },
   ]);
+
+  // ---- 翼(左右の拡張。§変更2)。id 'wing-' 始まり = 絵巻で開扉時にフェードイン。
+  // ホームの窓(中央パネル)には現れず、絵巻でスワイプすると視界に入る。
+  for (const wl of buildWingLayers(m, frontY)) {
+    const nonEmpty = wl.groups.filter((gr) => gr.prims.length > 0);
+    if (nonEmpty.length) layers.push({ ...wl, groups: nonEmpty });
+  }
 
   return {
     worldWidth: WORLD_W,
