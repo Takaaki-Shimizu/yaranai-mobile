@@ -65,6 +65,10 @@ function hexLerp(a: string, b: string, t: number): string {
   return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
 }
 
+/** 土→Day42→Day84 の3アンカー色補間(m: 苔の充実 0〜1) */
+const lerp3 = (dry: string, mid: string, full: string, m: number) =>
+  m <= 0.5 ? hexLerp(dry, mid, m / 0.5) : hexLerp(mid, full, (m - 0.5) / 0.5);
+
 // ---------------------------------------------------------------- 配置ヘルパ(north-star → 世界)
 
 const ref = (name: string): Paint => ({ type: 'ref', name });
@@ -102,7 +106,8 @@ const radial = (colors: readonly string[], moss = false): Paint => ({
   ],
 });
 
-function buildPaints(_g: GrowthParams): Record<string, Paint> {
+function buildPaints(g: GrowthParams): Record<string, Paint> {
+  const m = g.moss;
   return {
     // 空: 暖色3ストップ(mock v4 skyG)。借景の空気として固定
     sky: {
@@ -122,13 +127,14 @@ function buildPaints(_g: GrowthParams): Record<string, Paint> {
         { offset: 1, color: C.mist, opacity: 0.14 },
       ],
     },
-    // 地面: 暖色の土(mock v4 groundG)。緑の苔面ではなく、苔は房・面で乗る(§変更3)
+    // 地面: 苔の充実 m で 土色→中間の緑→完成の緑 へ補間(§変更3)。
+    // 初期〜中期は暖色の土で画面を暗くせず、Day84 では苔が地面全体を覆う(north-star)
     field: {
       type: 'linear', from: [0, 0], to: [0, 1],
       stops: [
-        { offset: 0, color: C.ground[0] },
-        { offset: 0.45, color: C.ground[1] },
-        { offset: 1, color: C.ground[2] },
+        { offset: 0, color: lerp3(C.ground[0], C.fieldMid[0], C.fieldFull[0], m) },
+        { offset: 0.45, color: lerp3(C.ground[1], C.fieldMid[1], C.fieldFull[1], m) },
+        { offset: 1, color: lerp3(C.ground[2], C.fieldMid[2], C.fieldFull[2], m) },
       ],
     },
     joint: {

@@ -17,8 +17,11 @@ export const GARDEN_COLORS = {
   // 地平線直下に落ちる靄の帯
   mistFloor: '#E2D8B8',
 
-  // 地面(暖色の土。mock v4 groundG。緑の苔面ではなく、苔は房・面で乗る)
-  ground: ['#D9CDAB', '#D0C29D', '#C6B78F'] as const,
+  // 地面のベース色。苔の充実 m で 土色(m=0)→中間の緑(Day42)→完成の緑(Day84)へ補間。
+  // 初期〜中期は暖色の土で画面を暗くしない(§変更3)。Day84 は苔が地面全体を覆う(north-star)。
+  ground: ['#D9CDAB', '#D0C29D', '#C6B78F'] as const, // m=0(土)。mock v4 groundG
+  fieldMid: ['#AEB980', '#8F9C66', '#71804F'] as const, // Day42
+  fieldFull: ['#93A76B', '#71854D', '#54663C'] as const, // Day84(north-star gField)
 
   // 墨・石(north-star v3 の階調を維持)
   sumi: '#2E2B26',
