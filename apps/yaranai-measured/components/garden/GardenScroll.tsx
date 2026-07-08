@@ -2,12 +2,12 @@
 // 端では優しく止まる(小さなラバーバンドのみ。ループ・追加読み込みはしない)。
 // 開いた直後は中央からわずかに左へずらし、隣の景色を画面幅の7%だけ覗かせる。
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { PixelRatio, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Canvas, Group, Image as SkiaImage, Rect } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
-  useDerivedValue, useSharedValue, withDecay, type SharedValue,
+  Easing, useDerivedValue, useSharedValue, withDecay, withTiming, type SharedValue,
 } from 'react-native-reanimated';
 
 import type { GrowthParams } from '../../lib/garden/growth';
@@ -36,9 +36,11 @@ type LayerProps = {
   baked: BakedLayer;
   panX: SharedValue<number>;
   dpScale: number;
+  /** 翼レイヤーの開扉フェード(§変更2)。中央レイヤーは undefined=常時不透明 */
+  reveal?: SharedValue<number>;
 };
 
-function ParallaxLayer({ baked, panX, dpScale }: LayerProps) {
+function ParallaxLayer({ baked, panX, dpScale, reveal }: LayerProps) {
   const transform = useDerivedValue(() => [
     {
       translateX:
@@ -49,7 +51,7 @@ function ParallaxLayer({ baked, panX, dpScale }: LayerProps) {
   const h = (baked.image.height() / baked.scale) * dpScale;
   return (
     <Group transform={transform}>
-      <SkiaImage image={baked.image} x={0} y={0} width={w} height={h} fit="fill" />
+      <SkiaImage image={baked.image} x={0} y={0} width={w} height={h} fit="fill" opacity={reveal} />
     </Group>
   );
 }
@@ -74,8 +76,15 @@ export function GardenScroll({ growth }: Props) {
   }, [scene, width, height]);
   const bleed = useMemo(() => bleedColors(scene), [scene]);
 
-  // エッジピーク: 中央よりわずかに左から始めて「先がある」ことを示唆する
+  // §変更2: 開扉は中央始まり(EDGE_PEEK=0)。ホームとほぼ同じ絵から左右どちらへも歩ける
   const pan = useSharedValue(PAN_CENTER - EDGE_PEEK);
+
+  // §変更2: 翼(wing-* レイヤー)は開扉時にふわっとフェードイン。
+  // 入庭時の差分演出とは別系統だが、イージング・時間の語彙は共有する(out-cubic, ~1.4s)。
+  const wingReveal = useSharedValue(0);
+  useEffect(() => {
+    wingReveal.value = withTiming(1, { duration: 1400, easing: Easing.out(Easing.cubic) });
+  }, [wingReveal]);
 
   const gesture = useMemo(
     () =>
@@ -113,7 +122,13 @@ export function GardenScroll({ growth }: Props) {
           <Rect x={0} y={offsetY + paintH / 2} width={width} height={height} color={bleed.ground} />
           <Group transform={[{ translateY: offsetY }]}>
             {layers.map((baked) => (
-              <ParallaxLayer key={baked.id} baked={baked} panX={pan} dpScale={dpScale} />
+              <ParallaxLayer
+                key={baked.id}
+                baked={baked}
+                panX={pan}
+                dpScale={dpScale}
+                reveal={baked.id.startsWith('wing') ? wingReveal : undefined}
+              />
             ))}
           </Group>
           {overlay && (

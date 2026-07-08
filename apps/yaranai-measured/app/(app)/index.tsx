@@ -11,6 +11,7 @@ import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { HomeGarden } from '../../components/garden/HomeGarden';
 import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
+import { HOME_ASPECT } from '../../lib/garden/scene';
 import { isEngawaOpen } from '../../lib/garden/gate';
 import { changedCategories, changeNote } from '../../lib/garden/diff';
 import type { GrowthParams } from '../../lib/garden/growth';
@@ -30,7 +31,7 @@ type Totals = {
 export default function Home() {
   const session = useSession();
   const router = useRouter();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
   const [vows, setVows] = useState<VowSummary[]>([]);
   const [totalSavedMinutes, setTotalSavedMinutes] = useState(0);
   const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
@@ -96,8 +97,9 @@ export default function Home() {
     setRefreshing(false);
   };
 
-  // ホームの庭は画面高の約60%(55〜65%は実機調整の余地)
-  const gardenHeight = Math.round(windowHeight * 0.6);
+  // ホームの庭窓は全幅・構図の 90%×縦100%。アスペクト 1.35:1 で高さが決まる(§変更1)。
+  // 例: 幅390pt → 高さ≈289pt(縦画面844ptの約34%)。スクロール不要で全体が見える。
+  const gardenHeight = Math.round(windowWidth / HOME_ASPECT);
 
   const onGardenPress = () => {
     // 庭モード(絵巻)は週の節目にのみ開く。閉扉中は静かに何もしない
