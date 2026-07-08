@@ -23,7 +23,7 @@ import {
   TUFT_BALLS, TUFT_GRAINS_DARK, TUFT_GRAINS_LIGHT,
   TUFT_SIMPLE_BALLS, TUFT_SIMPLE_GRAINS_DARK, TUFT_SIMPLE_GRAINS_LIGHT,
 } from '../../lib/garden/scene';
-import { GARDEN_COLORS as C, GRAIN, WOBBLE_PARAMS } from '../../lib/garden/tokens';
+import { GARDEN_COLORS as C, GRAIN, GRAIN_RGB, WOBBLE_PARAMS } from '../../lib/garden/tokens';
 import type { Paint, Prim, Scene, SceneGroup, SceneLayer } from '../../lib/garden/scene-types';
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -120,12 +120,22 @@ function drawPrim(canvas: SkCanvas, scene: Scene, prim: Prim, groupOpacity: numb
     }
     case 'ellipse': {
       const box: Box = { x: prim.cx - prim.rx, y: prim.cy - prim.ry, w: prim.rx * 2, h: prim.ry * 2 };
-      const paint = fillPaint(prim.paint, scene, box, op, prim.blur);
+      const oval = { x: box.x, y: box.y, width: box.w, height: box.h };
       if (prim.rotateDeg) {
         canvas.save();
         canvas.rotate(prim.rotateDeg, prim.cx, prim.cy);
       }
-      canvas.drawOval({ x: box.x, y: box.y, width: box.w, height: box.h }, paint);
+      if (prim.paint) canvas.drawOval(oval, fillPaint(prim.paint, scene, box, op, prim.blur));
+      if (prim.stroke) {
+        const sp = Skia.Paint();
+        sp.setAntiAlias(true);
+        sp.setStyle(PaintStyle.Stroke);
+        sp.setStrokeWidth(prim.stroke.width);
+        sp.setColor(Skia.Color(prim.stroke.color));
+        sp.setAlphaf((prim.stroke.opacity ?? 1) * op);
+        if (prim.blur != null) sp.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, prim.blur, true));
+        canvas.drawOval(oval, sp);
+      }
       if (prim.rotateDeg) canvas.restore();
       break;
     }
@@ -142,7 +152,8 @@ function drawPrim(canvas: SkCanvas, scene: Scene, prim: Prim, groupOpacity: numb
       if (t) {
         canvas.translate(t.tx ?? 0, t.ty ?? 0);
         if (t.rotateDeg) canvas.rotate(t.rotateDeg, 0, 0);
-        if (t.scale != null && t.scale !== 1) canvas.scale(t.scale, t.scale);
+        if (t.sx != null || t.sy != null) canvas.scale(t.sx ?? 1, t.sy ?? 1);
+        else if (t.scale != null && t.scale !== 1) canvas.scale(t.scale, t.scale);
       }
       const b = path.getBounds();
       const box: Box = { x: b.x, y: b.y, w: b.width, h: b.height };
@@ -225,12 +236,13 @@ export function drawOverlay(canvas: SkCanvas, scene: Scene, widthPx: number, hei
   if (scene.overlay.grain) {
     const paint = Skia.Paint();
     paint.setShader(Skia.Shader.MakeFractalNoise(GRAIN.baseFrequency, GRAIN.baseFrequency, GRAIN.octaves, 0, 0, 0));
-    // SVG の feColorMatrix と同じ: 輝度をアルファへ、RGBは黒
+    // §変更3: 暖色寄りの粒(mock v4 grainF)。RGB を砂色に固定し、アルファは輝度から作る
+    const [gr, gg, gb] = GRAIN_RGB;
     paint.setColorFilter(Skia.ColorFilter.MakeMatrix([
-      0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0,
-      0.3, 0.3, 0.3, 0, 0,
+      0, 0, 0, 0, gr,
+      0, 0, 0, 0, gg,
+      0, 0, 0, 0, gb,
+      0.33, 0.33, 0.33, 0, 0,
     ]));
     paint.setAlphaf(GRAIN.opacity);
     canvas.drawRect({ x: 0, y: 0, width: widthPx, height: heightPx }, paint);

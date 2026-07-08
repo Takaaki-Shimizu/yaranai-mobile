@@ -14,13 +14,17 @@ export type Transform = {
   tx?: number;
   ty?: number;
   scale?: number;
+  /** 非等方スケール(paths を新世界の縦横比へ置く)。指定時は scale より優先 */
+  sx?: number;
+  sy?: number;
   rotateDeg?: number; // tx,ty 適用後の位置を中心に回転
 };
 
 export type Prim = { opacity?: number; blur?: number } & (
   | { kind: 'rect'; x: number; y: number; w: number; h: number; rx?: number; paint: Paint;
       rotate?: { deg: number; cx: number; cy: number } }
-  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number; paint: Paint; rotateDeg?: number }
+  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number; paint?: Paint; rotateDeg?: number;
+      stroke?: { color: string; width: number; opacity?: number } }
   | { kind: 'circle'; cx: number; cy: number; r: number; paint: Paint }
   | { kind: 'path'; d: string; paint?: Paint; transform?: Transform;
       stroke?: { color: string; width: number; dash?: [number, number]; opacity?: number } }

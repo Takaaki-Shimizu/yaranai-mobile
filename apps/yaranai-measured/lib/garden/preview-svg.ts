@@ -2,7 +2,7 @@
 // モックとの視覚照合(受け入れ基準1)に使う。アプリ本体からは import しない。
 // 揺らぎ・粒子はモックと同じ feTurbulence / feDisplacementMap / feColorMatrix を出す。
 
-import { GARDEN_COLORS as C, GRAIN, WOBBLE_PARAMS } from './tokens';
+import { GARDEN_COLORS as C, GRAIN, GRAIN_RGB, WOBBLE_PARAMS } from './tokens';
 import {
   PAN_CENTER, VIEW_LOGICAL_W, WORLD_H,
   TUFT_BALLS, TUFT_GRAINS_DARK, TUFT_GRAINS_LIGHT,
@@ -46,7 +46,8 @@ function transformAttr(t?: Transform): string {
   const parts: string[] = [];
   if (t.tx || t.ty) parts.push(`translate(${esc(t.tx ?? 0)},${esc(t.ty ?? 0)})`);
   if (t.rotateDeg) parts.push(`rotate(${esc(t.rotateDeg)})`);
-  if (t.scale != null && t.scale !== 1) parts.push(`scale(${esc(t.scale)})`);
+  if (t.sx != null || t.sy != null) parts.push(`scale(${esc(t.sx ?? 1)},${esc(t.sy ?? 1)})`);
+  else if (t.scale != null && t.scale !== 1) parts.push(`scale(${esc(t.scale)})`);
   return parts.length ? ` transform="${parts.join(' ')}"` : '';
 }
 
@@ -76,7 +77,12 @@ function primSvg(p: Prim): string {
     }
     case 'ellipse': {
       const rot = p.rotateDeg ? ` transform="rotate(${esc(p.rotateDeg)} ${esc(p.cx)} ${esc(p.cy)})"` : '';
-      return `<ellipse cx="${esc(p.cx)}" cy="${esc(p.cy)}" rx="${esc(p.rx)}" ry="${esc(p.ry)}" ${fillAttr(p.paint)}${rot}${op}${blur}/>`;
+      let stroke = '';
+      if (p.stroke) {
+        stroke = ` stroke="${p.stroke.color}" stroke-width="${esc(p.stroke.width)}"`;
+        if (p.stroke.opacity != null) stroke += ` stroke-opacity="${esc(p.stroke.opacity)}"`;
+      }
+      return `<ellipse cx="${esc(p.cx)}" cy="${esc(p.cy)}" rx="${esc(p.rx)}" ry="${esc(p.ry)}" ${fillAttr(p.paint)}${stroke}${rot}${op}${blur}/>`;
     }
     case 'circle':
       return `<circle cx="${esc(p.cx)}" cy="${esc(p.cy)}" r="${esc(p.r)}" ${fillAttr(p.paint)}${op}${blur}/>`;
@@ -129,10 +135,11 @@ export function sceneToSvg(scene: Scene, opts: PreviewOptions = {}): string {
       `<feTurbulence type="fractalNoise" baseFrequency="${wp.baseFrequency}" numOctaves="${wp.octaves}" seed="${wp.seed}" result="n"/>` +
       `<feDisplacementMap in="SourceGraphic" in2="n" scale="${wp.scale}"/></filter>`;
   }
+  const [gr, gg, gb] = GRAIN_RGB;
   defs +=
     '<filter id="grain">' +
     `<feTurbulence type="fractalNoise" baseFrequency="${GRAIN.baseFrequency}" numOctaves="${GRAIN.octaves}" result="n"/>` +
-    '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.3 0.3 0.3 0 0"/></filter>';
+    `<feColorMatrix in="n" type="matrix" values="0 0 0 0 ${gr}  0 0 0 0 ${gg}  0 0 0 0 ${gb}  0.33 0.33 0.33 0 0"/></filter>`;
 
   let clipDefs = '';
   let clipN = 0;
