@@ -14,7 +14,7 @@ import type { GrowthParams } from '../../lib/garden/growth';
 import {
   changedCategories, diffStages, DIFF_ORDER, STAGE_TIMING, type DiffCategory,
 } from '../../lib/garden/diff';
-import { buildScene, HOME_CX, WORLD_H } from '../../lib/garden/scene';
+import { buildScene, FRAME_W, HOME_CROP, HOME_CX } from '../../lib/garden/scene';
 import { bakeComposite } from './renderer';
 
 type Props = {
@@ -38,7 +38,9 @@ export function HomeGarden({ growth, height, prevGrowth }: Props) {
     const density = Math.min(2, PixelRatio.get());
     const viewWPx = Math.max(1, Math.round(width * density));
     const viewHPx = Math.max(1, Math.round(height * density));
-    const viewW = viewWPx / (viewHPx / WORLD_H);
+    // §変更1: 構図の横 90%・縦 100% を中心基準でクロップ(上トリムなし)。
+    // 窓のアスペクトは 1350:1000 = 1.35:1(index.tsx が height をこの比で決める)。
+    const viewW = FRAME_W * HOME_CROP;
     const opts = { pan: HOME_CX - viewW / 2, viewW, viewWPx, viewHPx };
     const stages = animate ? diffStages(prevGrowth!, growth, categories) : [growth];
     return stages.map((g) => bakeComposite(buildScene(g), opts));

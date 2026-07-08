@@ -34,6 +34,8 @@ export const EDGE_PEEK = Math.round(VIEW_LOGICAL_W * 0.07);
 export const HOME_CX = FRAME_CX;
 /** ホーム窓のクロップ比率(構図の横 90%・縦 100%。§変更1) */
 export const HOME_CROP = 0.9;
+/** ホーム窓の縦横比(横 90% × 縦 100% = 1350:1000 = 1.35:1。§変更1) */
+export const HOME_ASPECT = (FRAME_W * HOME_CROP) / WORLD_H;
 
 const WING_SEED = 0x59a7;
 
@@ -717,6 +719,18 @@ export function buildScene(g: GrowthParams): Scene {
     shaftPrims.push({ kind: 'polygon', points: worldPts(pts), paint: solid(C.lightShaft), opacity: op });
   });
   push('light-shafts', 0.45, [{ blur: 16, prims: shaftPrims }]);
+
+  // ---- 庭に立つ竹(§変更6)。竹林と庭を地続きに見せる。前景(光条の手前)に立つ。
+  // ホーム(90%視界)には左端奥1本(t≈0.08)・右端奥1本(t≈0.18)が視界の端に掛かる。
+  // 開扉時の翼の竹(左2・右3)は §変更2(絵巻)で翼と一緒にフェードインさせる。
+  push('garden-bamboo', 1.0, [
+    {
+      prims: [
+        ...gardenCulmPrims(1015, 0.08, HORIZON_Y + 150),
+        ...gardenCulmPrims(2272, 0.18, HORIZON_Y + 105),
+      ],
+    },
+  ]);
 
   return {
     worldWidth: WORLD_W,
