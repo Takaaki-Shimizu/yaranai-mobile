@@ -134,6 +134,8 @@ export function sceneToSvg(scene: Scene, opts: PreviewOptions = {}): string {
     `<feTurbulence type="fractalNoise" baseFrequency="${GRAIN.baseFrequency}" numOctaves="${GRAIN.octaves}" result="n"/>` +
     '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.3 0.3 0.3 0 0"/></filter>';
 
+  let clipDefs = '';
+  let clipN = 0;
   let body = '';
   for (const layer of scene.layers) {
     // screenX = worldX - PAN_CENTER - (pan - PAN_CENTER) * parallax
@@ -143,10 +145,17 @@ export function sceneToSvg(scene: Scene, opts: PreviewOptions = {}): string {
       const attrs =
         (g.opacity != null ? ` opacity="${esc(g.opacity)}"` : '') +
         (g.wobble ? ` filter="url(#wobble-${g.wobble})"` : g.blur != null ? ` filter="url(#blur-${g.blur})"` : '');
-      body += `<g${attrs}>${g.prims.map(primSvg).join('')}</g>`;
+      let clipAttr = '';
+      if (g.clip) {
+        const id = `clip-${clipN++}`;
+        clipDefs += `<clipPath id="${id}"><rect x="${esc(g.clip.x)}" y="${esc(g.clip.y)}" width="${esc(g.clip.w)}" height="${esc(g.clip.h)}"/></clipPath>`;
+        clipAttr = ` clip-path="url(#${id})"`;
+      }
+      body += `<g${clipAttr}><g${attrs}>${g.prims.map(primSvg).join('')}</g></g>`;
     }
     body += '</g>';
   }
+  defs += clipDefs;
   if (scene.overlay.grain) {
     body += `<rect width="${viewW}" height="${WORLD_H}" filter="url(#grain)" opacity="${GRAIN.opacity}"/>`;
   }

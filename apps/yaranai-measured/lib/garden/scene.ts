@@ -8,16 +8,14 @@
 
 import { mulberry32, range, type Rng } from './prng';
 import { GARDEN_COLORS as C } from './tokens';
-import type { GrowthParams } from './growth';
+import { WORLD_W, WORLD_H, FRAME_X, FRAME_W, HORIZON_Y, wx } from './dims';
+import { buildBambooLayers, type MidCulmSpec } from './bamboo';
+import { FULL_WEEKS, type GrowthParams } from './growth';
 import type { Paint, Prim, Scene, SceneGroup, SceneLayer } from './scene-types';
 
-// ---------------------------------------------------------------- 基本寸法
+// ---------------------------------------------------------------- 基本寸法(dims.ts から再輸出)
 
-export const WORLD_W = 3300;
-export const WORLD_H = 800;
-export const FRAME_X = 1050; // モック中央パネルの左端(世界座標)
-export const FRAME_W = 1200;
-export const HORIZON_Y = 415;
+export { WORLD_W, WORLD_H, FRAME_X, FRAME_W, HORIZON_Y } from './dims';
 
 /** 庭モードで1画面に見せる論理幅。3300 / 1200 = 2.75画面(§5.2) */
 export const VIEW_LOGICAL_W = FRAME_W;
@@ -160,9 +158,7 @@ function buildPaints(g: GrowthParams): Record<string, Paint> {
 }
 
 // ---------------------------------------------------------------- モック移植テーブル
-// 座標はモックの 1200×800 系。世界座標へは wx() で +1050 する。
-
-const wx = (x: number) => x + FRAME_X;
+// 座標はモックの 1200×800 系。世界座標へは wx()(dims.ts)で +FRAME_X する。
 
 // 参道の目地(S字)。Day 1 の気配・目地・(縮尺の基準として)縄にも共用
 const JOINT_D =
@@ -229,47 +225,6 @@ const STONE_COMP_D =
 const STONE_COMP_SKIRT_D =
   'M830,618 q26,14 68,8 q16,-2 24,-10 q-6,16 -32,22 q-42,8 -64,-10 z';
 
-// 竹: 遠景(Day84 の14本)。[x, y, w, h, rot?, rotCx?, rotCy?]
-const FAR_CULMS: number[][] = [
-  [62, 70, 7, 360, -1.2, 65, 250], [132, 80, 6, 350], [212, 66, 8, 364, 1, 216, 250],
-  [332, 78, 6, 352], [412, 70, 7, 360, -0.8, 415, 250], [502, 84, 6, 346],
-  [592, 72, 7, 358, 0.9, 595, 250], [662, 80, 6, 350], [742, 68, 8, 362, -1, 746, 250],
-  [832, 82, 6, 348], [912, 70, 7, 360, 1.1, 915, 250], [992, 78, 6, 352],
-  [1072, 68, 8, 362, -0.9, 1076, 250], [1148, 80, 6, 350],
-];
-// Day 1 の気配(靄の向こうの薄影)
-const GHOST_CULMS: number[][] = [
-  [62, 90, 7, 330], [212, 86, 8, 334], [332, 98, 6, 322], [502, 104, 6, 316],
-  [662, 100, 6, 320], [742, 88, 8, 332], [912, 90, 7, 330], [1072, 88, 8, 332],
-  [96, 80, 12, 340], [476, 82, 11, 338], [866, 84, 13, 336],
-];
-// 中景の竹(節つき)。{rot, rcx, rcy, x, y, w, h, nodes[]}
-const MID_CULMS = [
-  { rot: -1, rcx: 96, rcy: 240, x: 90, y: 40, w: 13, h: 400, nodes: [130, 230, 330] },
-  { rot: 0.8, rcx: 266, rcy: 240, x: 260, y: 46, w: 14, h: 394, nodes: [150, 255, 360] },
-  { rot: -0.6, rcx: 476, rcy: 240, x: 470, y: 42, w: 12, h: 398, nodes: [140, 245, 350] },
-  { rot: 0.7, rcx: 646, rcy: 240, x: 640, y: 48, w: 13, h: 392, nodes: [155, 260, 365] },
-  { rot: -0.9, rcx: 866, rcy: 240, x: 860, y: 44, w: 14, h: 396, nodes: [145, 250, 355] },
-  { rot: 0.6, rcx: 1036, rcy: 240, x: 1030, y: 46, w: 13, h: 394, nodes: [150, 255, 360] },
-];
-// 手前の太竹(w4で両端2本→w9で4本)
-const NEAR_CULMS = [
-  { rot: -1.4, rcx: 33, rcy: 230, x: 20, y: 0, w: 26, h: 460, nodes: [118, 238, 358], nh: 6, early: true },
-  { rot: 1, rcx: 165, rcy: 230, x: 155, y: 0, w: 19, h: 452, nodes: [132, 262, 392], nh: 5, early: false },
-  { rot: 1.3, rcx: 1133, rcy: 230, x: 1120, y: 0, w: 26, h: 460, nodes: [112, 232, 352], nh: 6, early: true },
-  { rot: -0.8, rcx: 1014, rcy: 230, x: 1005, y: 0, w: 18, h: 452, nodes: [128, 258, 388], nh: 5, early: false },
-];
-// 梢。[cx, cy, rx, ry, color, opacity]、idx 1,3 は Day 1 から
-const CANOPY: [number, number, number, number, string, number][] = [
-  [110, 30, 230, 88, C.canopyLight, 0.55], [430, 4, 260, 78, C.canopyDark, 0.8],
-  [770, 24, 245, 84, C.canopyLight, 0.6], [1090, 42, 225, 90, C.canopyDark, 0.8],
-  [270, 52, 150, 52, C.canopyMid, 0.45], [930, 60, 160, 50, C.canopyMid, 0.45],
-];
-const CANOPY_LEAVES: [number, number, number, number, number][] = [
-  [356, 128, 12, 3.4, -28], [540, 108, 11, 3, 18], [742, 140, 12, 3.4, -14],
-  [208, 112, 10, 3, 24], [948, 122, 11, 3.2, -22],
-];
-
 // 苔の房。[x, y, finalScale, rot, day42Scale?] day42Scale が無いものは後半(m>0.5)で現れる
 type TuftSpec = { x: number; y: number; s: number; rot?: number; s42?: number };
 const FAR_TUFTS: TuftSpec[] = [
@@ -302,35 +257,61 @@ const FORE_BLOBS: [number, number, number, number, boolean, number | null][] = [
   [810, 778, 140, 62, true, 0.79], [1080, 745, 160, 72, false, null],
 ];
 
-// 木漏れ日: 光だまり [cx, cy, rx, ry, rot, color, 最終op, w6のop(nullはw6で非表示)]
-const LIGHT_POOLS: [number, number, number, number, number, string, number, number | null][] = [
-  [300, 600, 190, 46, -16, C.lightPool, 0.3, 0.2],
-  [860, 640, 210, 50, -14, C.lightPool, 0.26, 0.17],
-  [150, 520, 120, 30, -18, C.lightPoolSoft, 0.25, null],
-  [1010, 540, 130, 32, -15, C.lightPoolSoft, 0.25, null],
-  [560, 700, 160, 40, -12, C.lightPoolWarm, 0.22, null],
+// 木漏れ日: 光だまり [cx, cy, rx, ry, rot, color, 最終op(Day84)]
+// §変更2: 到達距離(reach)で cy に応じて手前へ滲み広がる。cy が小さい(奥)ほど早く灯る。
+// 先頭3つは最奥(竹林の足元)の溜まり。Week0 でもわずかに存在する(光がある世界)。
+const LIGHT_POOLS: [number, number, number, number, number, string, number][] = [
+  [230, 450, 160, 20, -14, C.lightPoolSoft, 0.22],
+  [650, 452, 180, 22, -12, C.lightPoolSoft, 0.2],
+  [1010, 448, 160, 20, -14, C.lightPoolSoft, 0.22],
+  [150, 520, 120, 30, -18, C.lightPoolSoft, 0.25],
+  [1010, 540, 130, 32, -15, C.lightPoolSoft, 0.25],
+  [300, 600, 190, 46, -16, C.lightPool, 0.3],
+  [860, 640, 210, 50, -14, C.lightPool, 0.26],
+  [560, 700, 160, 40, -12, C.lightPoolWarm, 0.22],
 ];
-// 竹の長い影(右上光源→左下)。[点8つ, 最終op, w6のop]
-const TRUNK_SHADOWS: [number[], number, number | null][] = [
-  [[159, 446, 176, 446, 20, 586, -12, 574], 0.26, null],
-  [[260, 442, 274, 442, 108, 578, 78, 568], 0.24, 0.14],
-  [[470, 440, 482, 440, 318, 572, 290, 562], 0.24, null],
-  [[640, 442, 653, 442, 476, 584, 446, 573], 0.26, 0.15],
-  [[860, 442, 874, 442, 692, 592, 660, 580], 0.24, null],
-  [[1030, 442, 1043, 442, 862, 588, 832, 577], 0.24, 0.14],
-  [[1122, 452, 1148, 452, 964, 640, 924, 624], 0.26, 0.15],
-  [[1008, 448, 1026, 448, 850, 616, 818, 603], 0.22, null],
+// 竹の長い影(右上光源→左下)。[点8つ, 最終op]。影は光が届いた所にだけ落ちる(前端のyで判定)
+const TRUNK_SHADOWS: [number[], number][] = [
+  [[159, 446, 176, 446, 20, 586, -12, 574], 0.26],
+  [[260, 442, 274, 442, 108, 578, 78, 568], 0.24],
+  [[470, 440, 482, 440, 318, 572, 290, 562], 0.24],
+  [[640, 442, 653, 442, 476, 584, 446, 573], 0.26],
+  [[860, 442, 874, 442, 692, 592, 660, 580], 0.24],
+  [[1030, 442, 1043, 442, 862, 588, 832, 577], 0.24],
+  [[1122, 452, 1148, 452, 964, 640, 924, 624], 0.26],
+  [[1008, 448, 1026, 448, 850, 616, 818, 603], 0.22],
 ];
 const BRANCH_SHADOWS: [number[], number][] = [
   [[668, 700, 690, 688, 508, 760, 496, 776], 0.2],
   [[648, 586, 664, 577, 522, 642, 512, 655], 0.18],
 ];
-// 光条 [点8つ, 最終op, w6のop]
-const LIGHT_SHAFTS: [number[], number, number | null][] = [
-  [[760, 30, 830, 30, 520, 560, 455, 535], 0.12, 0.09],
-  [[950, 60, 1005, 60, 700, 540, 650, 520], 0.09, null],
-  [[560, 20, 610, 20, 430, 430, 390, 415], 0.07, null],
+// 光条(右上の光源から斜めに)。[点8つ, 最終op]。overhead の光なので reach で全体が強まる
+const LIGHT_SHAFTS: [number[], number][] = [
+  [[760, 30, 830, 30, 520, 560, 455, 535], 0.12],
+  [[950, 60, 1005, 60, 700, 540, 650, 520], 0.09],
+  [[560, 20, 610, 20, 430, 430, 390, 415], 0.07],
 ];
+
+// ---------------------------------------------------------------- 光の到達距離(§変更2)
+// 連続週数 → 光と竹の影が「竹林の足元(最奥)から手前(画面最下部)へ」どこまで届いたか。
+// Week0 でも最奥にわずかに溜まり(ゼロにしない)、週を重ねるごとに手前へ滲み出る。
+// 先端はハード境界にせず feather 幅でグラデ状に消える。reach は weeks に単調非減少。
+const LIGHT_FEET_Y = 452; // 竹林の足元(地面の最奥)
+const LIGHT_BOTTOM_Y = 900; // 画面最下部より下(reach=1 で前景まで完全に届く)
+const LIGHT_FEATHER = 180; // 光の先端のにじみ幅(px)
+
+/** weeks(0〜12)→ 到達距離 0〜1 */
+function lightReach(weeks: number): number {
+  return clamp01(weeks / FULL_WEEKS);
+}
+/** reach における光の先端の y 座標 */
+function lightFrontY(reach: number): number {
+  return lerp(LIGHT_FEET_Y, LIGHT_BOTTOM_Y, reach);
+}
+/** y 位置での光の届き具合 0〜1。先端(frontY 付近)を feather 幅で柔らかく減衰させる */
+function lightVisAt(frontY: number, y: number): number {
+  return clamp01((frontY - y) / LIGHT_FEATHER + 0.5);
+}
 
 // Day 42 の乾いた地の残り / Day 1 の乾いた粒
 const DRY_PATCHES: [number, number, number, number][] = [
@@ -427,7 +408,7 @@ function wingTufts(rng: Rng, xMin: number, xMax: number, count: number, band: [n
 
 type Wings = {
   farCulmsL: number[][]; farCulmsR: number[][];
-  midCulmsL: typeof MID_CULMS; midCulmsR: typeof MID_CULMS;
+  midCulmsL: MidCulmSpec[]; midCulmsR: MidCulmSpec[];
   canopyExtra: [number, number, number, number, string, number][];
   farTufts: WingTuft[]; midTufts: WingTuft[]; foreTufts: WingTuft[];
   foreBlobs: [number, number, number, number, boolean, number][]; // + thr
@@ -513,32 +494,6 @@ const FIELD_D = (() => {
 
 // ---------------------------------------------------------------- シーン構築
 
-// 翼の竹(座標は既に世界座標)
-const culmRect = (c: number[], paint: Paint): Prim => ({
-  kind: 'rect', x: c[0], y: c[1], w: c[2], h: c[3], paint,
-});
-
-// モックの竹(+1050 して世界座標へ)
-function mockCulmRect(c: number[], paint: Paint): Prim {
-  return {
-    kind: 'rect', x: wx(c[0]), y: c[1], w: c[2], h: c[3], paint,
-    ...(c.length > 4 ? { rotate: { deg: c[4], cx: wx(c[5]), cy: c[6] } } : {}),
-  };
-}
-
-function midCulmGroup(spec: (typeof MID_CULMS)[number], world: boolean, withNodes: boolean): Prim[] {
-  const X = world ? spec.x : wx(spec.x);
-  const RCX = world ? spec.rcx : wx(spec.rcx);
-  const rotate = { deg: spec.rot, cx: RCX, cy: spec.rcy };
-  const prims: Prim[] = [{ kind: 'rect', x: X, y: spec.y, w: spec.w, h: spec.h, paint: ref('culmMid'), rotate }];
-  if (withNodes) {
-    for (const ny of spec.nodes) {
-      prims.push({ kind: 'rect', x: X, y: ny, w: spec.w, h: 4, paint: solid(C.nodeMid), opacity: 0.6, rotate });
-    }
-  }
-  return prims;
-}
-
 function tuftPrim(x: number, y: number, s: number, rot?: number, simple?: boolean): Prim {
   return { kind: 'tuft', x, y, scale: s, rotateDeg: rot, simple };
 }
@@ -547,7 +502,9 @@ export function buildScene(g: GrowthParams): Scene {
   const m = g.moss;
   const w = g.weeks;
   const n = g.recordedDays;
-  const p = g.path;
+  // 光の到達距離(§変更2): weeks を「奥→手前へ光がどこまで届いたか」に読み替える
+  const reach = lightReach(w);
+  const frontY = lightFrontY(reach);
   const layers: SceneLayer[] = [];
   const push = (id: string, parallax: number, groups: SceneGroup[]) => {
     const nonEmpty = groups.filter((gr) => gr.prims.length > 0 && gr.opacity !== 0);
@@ -559,79 +516,17 @@ export function buildScene(g: GrowthParams): Scene {
     { prims: [{ kind: 'rect', x: 0, y: -WORLD_H, w: WORLD_W, h: WORLD_H * 2, paint: ref('sky') }] },
   ]);
 
-  // ---- 遠景の竹 (0.25)
-  const ghostOp = ramp(w, [[0, 0.13], [2, 0.13], [4, 0]]);
-  const farOp = ramp(w, [[0, 0], [1, 0.18], [6, 0.3], [12, 0.38]]);
-  push('bamboo-far', 0.25, [
-    {
-      blur: 2.2, opacity: ghostOp,
-      prims: GHOST_CULMS.map((c) => mockCulmRect(c, solid(C.culmGhost))),
-    },
-    {
-      blur: 2.2, opacity: farOp,
-      prims: [
-        ...FAR_CULMS.map((c) => mockCulmRect(c, solid(C.culmFar))),
-        ...WINGS.farCulmsL.map((c) => culmRect(c, solid(C.culmFar))),
-        ...WINGS.farCulmsR.map((c) => culmRect(c, solid(C.culmFar))),
-      ],
-    },
-  ]);
+  // ---- 借景の竹林(§変更1): Day1 から完成形で固定。成長パラメータに依存しない。
+  // 遠景(0.25)と中景+梢+葉(0.45)をここで、手前の太竹(0.8)は苔の大地の後で描く。
+  const [bambooFar, bambooMid, bambooNear] = buildBambooLayers(WINGS);
+  layers.push(bambooFar);
+  layers.push(bambooMid);
 
-  // ---- 中景の竹 + 梢 (0.45)
-  const midOp = ramp(w, [[0, 0], [2, 0.25], [6, 0.6], [12, 0.85]]);
-  const withNodes = w >= 2;
-  const canopyOp = ramp(w, [[0, 0.15], [3, 0.35], [6, 0.55], [12, 1]]);
-  const canopyPrims: Prim[] = [];
-  CANOPY.forEach(([cx, cy, rx, ry, color, op], i) => {
-    const core = i === 1 || i === 3;
-    if (!core && w < 3) return;
-    if ((i === 4 || i === 5) && w < 7) return;
-    // Day 1 は淡い緑の気配だけ(モックDay1: #5C7643 一律)
-    canopyPrims.push({
-      kind: 'ellipse', cx: wx(cx), cy, rx, ry,
-      paint: solid(w < 2 ? C.canopyLight : color), opacity: w < 2 ? 0.95 : op,
-    });
-  });
-  if (w >= 3) {
-    for (const [cx, cy, rx, ry, color, op] of WINGS.canopyExtra) {
-      canopyPrims.push({ kind: 'ellipse', cx, cy, rx, ry, paint: solid(color), opacity: op });
-    }
-  }
-  const leafPrims: Prim[] =
-    w >= 10
-      ? CANOPY_LEAVES.map(([cx, cy, rx, ry, rot]) => ({
-          kind: 'ellipse', cx: wx(cx), cy, rx, ry, rotateDeg: rot,
-          paint: solid(C.canopyLight), opacity: 0.7,
-        }))
-      : [];
-  push('bamboo-mid', 0.45, [
-    {
-      opacity: midOp,
-      prims: [
-        ...MID_CULMS.flatMap((s) => midCulmGroup(s, false, withNodes)),
-        ...WINGS.midCulmsL.flatMap((s) => midCulmGroup(s, true, withNodes)),
-        ...WINGS.midCulmsR.flatMap((s) => midCulmGroup(s, true, withNodes)),
-      ],
-    },
-    { wobble: 'strong', opacity: canopyOp, prims: canopyPrims },
-    { opacity: canopyOp, prims: leafPrims },
+  // ---- 朝靄 (0.6)。借景の空気遠近(霞)。竹林と同じく完成形で固定(north-star Day84)。
+  // 靄奥へ続く道のゴーストは削除(§変更3)。
+  push('mist', 0.6, [
+    { prims: [{ kind: 'rect', x: 0, y: 330, w: WORLD_W, h: 150, paint: ref('mist'), blur: 6 }] },
   ]);
-
-  // ---- 朝靄 (0.6)。序盤ほど厚い
-  const mistY = ramp(w, [[0, 290], [6, 320], [12, 330]]);
-  const mistH = ramp(w, [[0, 200], [6, 160], [12, 150]]);
-  const mistPrims: Prim[] = [
-    { kind: 'rect', x: 0, y: mistY, w: WORLD_W, h: mistH, paint: ref('mist'), blur: 6 },
-  ];
-  if (p >= 0.8) {
-    // 靄の奥へ続く道の気配(道がほぼ届いてから)
-    mistPrims.push({
-      kind: 'polygon',
-      points: [wx(580), 382, wx(598), 382, wx(601), 396, wx(577), 396],
-      paint: solid(C.mistRoad), opacity: 0.4 * clamp01((p - 0.8) / 0.2), blur: 1.2,
-    });
-  }
-  push('mist', 0.6, [{ prims: mistPrims }]);
 
   // ---- 苔の大地 + 遠中景の房 + 光だまり (0.8)
   const fieldGroups: SceneGroup[] = [
@@ -683,63 +578,41 @@ export function buildScene(g: GrowthParams): Scene {
     ([x, y, r]) => ({ kind: 'circle', cx: wx(x), cy: y, r, paint: solid(C.mossPatch) }) as Prim,
   );
   fieldGroups.push({ prims: patchDots });
-  // 光だまり(w の節目で増える)
+  // 光だまり(§変更2): cy(奥ほど早い)に応じて手前へ滲み広がる。先端は feather で柔らかく
   const poolPrims: Prim[] = [];
-  LIGHT_POOLS.forEach(([cx, cy, rx, ry, rot, color, opFull, op42]) => {
-    const op = op42 != null
-      ? ramp(w, [[3, 0], [4, op42 * 0.4], [6, op42], [12, opFull]])
-      : ramp(w, [[7, 0], [8, opFull * 0.4], [12, opFull]]);
+  LIGHT_POOLS.forEach(([cx, cy, rx, ry, rot, color, opFull]) => {
+    const op = opFull * lightVisAt(frontY, cy);
     if (op <= 0.005) return;
-    const k = ramp(w, [[4, 0.88], [12, 1]]);
-    poolPrims.push({ kind: 'ellipse', cx: wx(cx), cy, rx: rx * k, ry: ry * k, rotateDeg: rot, paint: solid(color), opacity: op });
+    poolPrims.push({ kind: 'ellipse', cx: wx(cx), cy, rx, ry, rotateDeg: rot, paint: solid(color), opacity: op });
   });
-  if (w >= 8) {
+  {
     const [cx, cy, rx, ry, rot] = WINGS.poolL;
-    poolPrims.push({ kind: 'ellipse', cx, cy, rx, ry, rotateDeg: rot, paint: solid(C.lightPool), opacity: ramp(w, [[8, 0.08], [12, 0.22]]) });
+    const op = 0.22 * lightVisAt(frontY, cy);
+    if (op > 0.005) poolPrims.push({ kind: 'ellipse', cx, cy, rx, ry, rotateDeg: rot, paint: solid(C.lightPool), opacity: op });
   }
   fieldGroups.push({ blur: 6, prims: poolPrims });
   push('field', 0.8, fieldGroups);
 
-  // ---- 手前の太竹 (0.8)。庭の縁に立つ
-  const nearOp = ramp(w, [[3, 0], [4, 0.35], [6, 0.5], [12, 1]]);
-  const nearPrims: Prim[] = [];
-  for (const spec of NEAR_CULMS) {
-    if (!spec.early && w < 9) continue;
-    const rotate = { deg: spec.rot, cx: wx(spec.rcx), cy: spec.rcy };
-    nearPrims.push({ kind: 'rect', x: wx(spec.x), y: spec.y, w: spec.w, h: spec.h, paint: ref('culmNear'), rotate });
-    for (const ny of spec.nodes) {
-      nearPrims.push({ kind: 'rect', x: wx(spec.x), y: ny, w: spec.w, h: spec.nh, paint: solid(C.nodeNear), opacity: 0.65, rotate });
-    }
-  }
-  push('bamboo-near', 0.8, [{ opacity: nearOp, prims: nearPrims }]);
+  // ---- 手前の太竹 (0.8)。庭の縁に立つ。完成形で固定(§変更1)
+  layers.push(bambooNear);
 
   // ---- 参道 + 石 (1.0)
   const pathGroups: SceneGroup[] = [];
-  // 道の気配(Day 1): 薄いリボン + 破線の縁。目地が敷かれるにつれて消える
-  const hintOp = clamp01(1 - p / 0.5);
-  if (hintOp > 0.01) {
+  // 道のゴースト(S字の薄いリボン+破線の縁)は削除(§変更3)。
+  // 未解放の小道は「存在しない」。目地・敷石は記録が進んで初めて現れる。
+  // 目地(§変更3): 全長のS字を薄く見せる「ゴースト」はしない。
+  // 敷かれた敷石の到達点(最奥の石)までを前→奥にクリップして現す。未敷設部は存在しない。
+  const nCobbles = cobbleCount(n);
+  if (nCobbles > 0) {
+    const builtBackY = COBBLES[nCobbles - 1][1]; // 最後に敷いた(最奥の)石の y
     pathGroups.push({
-      wobble: 'soft', opacity: hintOp,
-      prims: [{ kind: 'path', d: JOINT_D, transform: { tx: FRAME_X }, paint: solid(C.pathHint), opacity: 0.28 }],
-    });
-    pathGroups.push({
-      opacity: hintOp,
-      prims: [{
-        kind: 'path', d: JOINT_D, transform: { tx: FRAME_X },
-        stroke: { color: C.pathHintEdge, width: 1.5, dash: [5, 6], opacity: 0.35 },
-      }],
-    });
-  }
-  // 目地
-  const jointOp = ramp(p, [[0, 0], [0.1, 0.3], [0.5, 0.75], [1, 1]]);
-  if (jointOp > 0.01) {
-    pathGroups.push({
-      wobble: 'soft', opacity: jointOp,
+      wobble: 'soft',
+      clip: { x: 0, y: builtBackY, w: WORLD_W, h: WORLD_H + 20 - builtBackY },
       prims: [{ kind: 'path', d: JOINT_D, transform: { tx: FRAME_X }, paint: ref('joint') }],
     });
   }
   // 敷石(記録の歩み)
-  const cobbles = COBBLES.slice(0, cobbleCount(n)).map(([cx, cy, rx, ry, rot, pt]) => ({
+  const cobbles = COBBLES.slice(0, nCobbles).map(([cx, cy, rx, ry, rot, pt]) => ({
     kind: 'ellipse', cx: wx(cx), cy, rx, ry, rotateDeg: rot, paint: ref(`cobble${pt}`),
   }) as Prim);
   pathGroups.push({ wobble: 'cobble', prims: cobbles });
@@ -839,35 +712,35 @@ export function buildScene(g: GrowthParams): Scene {
   pathGroups.push({ wobble: 'soft', prims: stonePrims });
   push('path', 1.0, pathGroups);
 
-  // ---- 竹の長い影 (0.8)。石畳を渡るため道の上に描く
+  // ---- 竹の長い影 (0.8)。§変更2: 影は光が届いた所にだけ落ちる(前端yで判定)。
+  // 石畳を渡るため道の上に描く。
+  const shadowFrontY = (pts: number[]) => Math.max(...pts.filter((_, i) => i % 2 === 1));
   const shadowPrims: Prim[] = [];
-  TRUNK_SHADOWS.forEach(([pts, opFull, op42]) => {
-    const op = op42 != null
-      ? ramp(w, [[2, 0], [3, op42 * 0.45], [6, op42], [12, opFull]])
-      : ramp(w, [[6, 0], [7, opFull * 0.35], [12, opFull]]);
+  TRUNK_SHADOWS.forEach(([pts, opFull]) => {
+    const op = opFull * lightVisAt(frontY, shadowFrontY(pts));
     if (op <= 0.005) return;
     shadowPrims.push({
       kind: 'polygon', points: pts.map((v, i) => (i % 2 === 0 ? wx(v) : v)),
       paint: solid(C.trunkShadow), opacity: op,
     });
   });
-  if (w >= 7) {
-    for (const pts of WINGS.shadowsR) {
-      shadowPrims.push({ kind: 'polygon', points: pts, paint: solid(C.trunkShadow), opacity: ramp(w, [[7, 0.09], [12, 0.24]]) });
-    }
+  for (const pts of WINGS.shadowsR) {
+    const op = 0.24 * lightVisAt(frontY, shadowFrontY(pts));
+    if (op > 0.005) shadowPrims.push({ kind: 'polygon', points: pts, paint: solid(C.trunkShadow), opacity: op });
   }
-  if (w >= 8) {
-    for (const pts of WINGS.shadowL) {
-      shadowPrims.push({ kind: 'polygon', points: pts, paint: solid(C.trunkShadow), opacity: ramp(w, [[8, 0.08], [12, 0.22]]) });
-    }
+  for (const pts of WINGS.shadowL) {
+    const op = 0.22 * lightVisAt(frontY, shadowFrontY(pts));
+    if (op > 0.005) shadowPrims.push({ kind: 'polygon', points: pts, paint: solid(C.trunkShadow), opacity: op });
   }
-  const branchPrims: Prim[] =
-    w >= 9
-      ? BRANCH_SHADOWS.map(([pts, opFull]) => ({
+  const branchPrims: Prim[] = BRANCH_SHADOWS.flatMap(([pts, opFull]) => {
+    const op = opFull * lightVisAt(frontY, shadowFrontY(pts));
+    return op > 0.005
+      ? [{
           kind: 'polygon', points: pts.map((v, i) => (i % 2 === 0 ? wx(v) : v)),
-          paint: solid(C.branchShadow), opacity: ramp(w, [[9, opFull * 0.5], [12, opFull]]),
-        }) as Prim)
+          paint: solid(C.branchShadow), opacity: op,
+        } as Prim]
       : [];
+  });
   push('trunk-shadows', 0.8, [
     { blur: 2.2, prims: shadowPrims },
     { blur: 2.2, prims: branchPrims },
@@ -917,12 +790,12 @@ export function buildScene(g: GrowthParams): Scene {
   }
   push('fore', 1.1, foreGroups);
 
-  // ---- 光条 (0.45)。右上の光源から斜めに
+  // ---- 光条 (0.45)。右上の光源から斜めに。§変更2: overhead の光なので reach 全体で強まる
+  // (Week0 でもごく淡く点る=光がある世界。手前への到達は光だまり・影が担う)
+  const shaftK = 0.12 + 0.88 * reach;
   const shaftPrims: Prim[] = [];
-  LIGHT_SHAFTS.forEach(([pts, opFull, op42]) => {
-    const op = op42 != null
-      ? ramp(w, [[4, 0], [5, op42 * 0.45], [6, op42], [12, opFull]])
-      : ramp(w, [[7, 0], [8, opFull * 0.5], [12, opFull]]);
+  LIGHT_SHAFTS.forEach(([pts, opFull]) => {
+    const op = opFull * shaftK;
     if (op <= 0.005) return;
     shaftPrims.push({
       kind: 'polygon', points: pts.map((v, i) => (i % 2 === 0 ? wx(v) : v)),

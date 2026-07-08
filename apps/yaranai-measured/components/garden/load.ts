@@ -16,6 +16,27 @@ import {
 } from '../../lib/garden/growth';
 
 const keyFor = (userId: string) => `garden-high-water:v1:${userId}`;
+// 最後に庭を表示した時点の描画パラメータ(§変更4 入庭時の差分演出)
+const seenKey = (userId: string) => `garden_last_seen_state:${userId}`;
+
+/** 前回庭を表示した時点の状態(なければ null=初回) */
+export async function loadLastSeen(userId: string): Promise<GrowthParams | null> {
+  try {
+    const raw = await AsyncStorage.getItem(seenKey(userId));
+    return raw ? (JSON.parse(raw) as GrowthParams) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 庭の表示完了時に、現在状態をスナップショットとして保存する */
+export async function saveLastSeen(userId: string, g: GrowthParams): Promise<void> {
+  try {
+    await AsyncStorage.setItem(seenKey(userId), JSON.stringify(g));
+  } catch {
+    // 保存失敗は無視(次回は初回扱いで演出なし)
+  }
+}
 
 export async function loadGrowth(userId: string): Promise<GrowthParams> {
   const [savedRes, daysRes] = await Promise.all([
