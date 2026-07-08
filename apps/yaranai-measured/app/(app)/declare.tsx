@@ -18,6 +18,7 @@ export default function Declare() {
   const [baseline, setBaseline] = useState<BaselineResult | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
 
   // 基準線は宣言時スナップショット。この画面で見た平均が、そのまま固定される。
   useEffect(() => {
@@ -46,8 +47,26 @@ export default function Declare() {
       }
       return;
     }
-    router.replace('/(app)');
+    // 宣言の完了。世界観の一文を添えた完了画面を挟んでから庭へ戻る(§変更5)
+    setDone(true);
   };
+
+  // 宣言(断つ)の儀式の完了画面
+  if (done) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.doneBody}>
+          <Text style={styles.doneLede}>{label}を、手放しました。</Text>
+          <Text style={styles.worldview}>
+            この庭は、あなたが取り戻した時間とともに、{'\n'}ゆっくり姿を変えていきます。
+          </Text>
+          <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)')}>
+            <Text style={styles.doneActionText}>庭へ</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   if (!packageName) {
     return (
@@ -174,4 +193,24 @@ const styles = StyleSheet.create({
   secondary: { paddingVertical: 10, alignItems: 'center' },
   secondaryText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
   message: { color: colors.shu, fontSize: 12, textAlign: 'center', marginTop: 8 },
+
+  // 宣言完了画面(§変更5)。世界観の語りと同じ体裁: 明朝・中央寄せ・余白多め
+  doneBody: { alignItems: 'center', gap: 40 },
+  doneLede: {
+    fontFamily: fonts.serif,
+    fontSize: 16,
+    letterSpacing: 2,
+    color: colors.sumi,
+    textAlign: 'center',
+  },
+  worldview: {
+    fontFamily: fonts.serif,
+    fontSize: 16,
+    lineHeight: 34,
+    letterSpacing: 2,
+    color: colors.sumi,
+    textAlign: 'center',
+  },
+  doneAction: { marginTop: 24, paddingVertical: 12, paddingHorizontal: 24, alignItems: 'center' },
+  doneActionText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 6 },
 });

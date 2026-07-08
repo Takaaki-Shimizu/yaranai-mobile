@@ -10,8 +10,9 @@ import { recordDateDaysAgo } from '../../lib/dates';
 import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { HomeGarden } from '../../components/garden/HomeGarden';
-import { loadGrowth } from '../../components/garden/load';
+import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
 import { isEngawaOpen } from '../../lib/garden/gate';
+import { changedCategories, changeNote } from '../../lib/garden/diff';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -35,6 +36,9 @@ export default function Home() {
   const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
   const [totals, setTotals] = useState<Totals | null>(null);
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
+  // 入庭時の差分演出(§変更4): 前回表示時の状態と、変化があった場合の一行
+  const [prevGrowth, setPrevGrowth] = useState<GrowthParams | null>(null);
+  const [gardenNote, setGardenNote] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAll = useCallback(async () => {
@@ -59,6 +63,19 @@ export default function Home() {
       new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
     );
     setGrowth(growthRes);
+
+    // §変更4: 前回表示時の状態と比べ、変化があれば差分演出+一行を用意し、現在状態を保存する。
+    // 初回(スナップショットなし)は演出をスキップし、現在状態をそのまま保存する。
+    if (session && growthRes) {
+      const prev = await loadLastSeen(session.user.id);
+      const cats = changedCategories(prev, growthRes);
+      setPrevGrowth(cats.length ? prev : null);
+      setGardenNote(changeNote(cats));
+      saveLastSeen(session.user.id, growthRes);
+    } else {
+      setPrevGrowth(null);
+      setGardenNote(null);
+    }
   }, [session]);
 
   useFocusEffect(
@@ -105,7 +122,7 @@ export default function Home() {
       {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
       {growth && growth.stones > 0 ? (
         <Pressable onPress={onGardenPress}>
-          <HomeGarden growth={growth} height={gardenHeight} />
+          <HomeGarden growth={growth} height={gardenHeight} prevGrowth={prevGrowth} />
         </Pressable>
       ) : (
         <View style={styles.empty}>
@@ -119,6 +136,8 @@ export default function Home() {
           <Text style={styles.headline}>
             {totals.longest_days}日で、{formatMinutes(totalSavedMinutes)}が{'\n'}戻ってきました。
           </Text>
+          {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
+          {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
         </View>
       )}
 
@@ -162,6 +181,15 @@ const styles = StyleSheet.create({
 
   empty: { paddingVertical: 72, alignItems: 'center' },
   stats: { paddingVertical: 40, paddingHorizontal: 28, alignItems: 'center' },
+  changeNote: {
+    fontFamily: fonts.serif,
+    fontSize: 15,
+    lineHeight: 28,
+    letterSpacing: 2,
+    color: colors.usuzumi,
+    textAlign: 'center',
+    marginTop: 24,
+  },
   headline: {
     fontFamily: fonts.serif,
     fontSize: 22,

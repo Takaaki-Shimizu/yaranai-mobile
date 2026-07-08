@@ -5,6 +5,7 @@
 
 import {
   BlurStyle,
+  ClipOp,
   ColorChannel,
   PaintStyle,
   Skia,
@@ -181,6 +182,20 @@ function drawPrim(canvas: SkCanvas, scene: Scene, prim: Prim, groupOpacity: numb
 }
 
 function drawGroup(canvas: SkCanvas, scene: Scene, group: SceneGroup): void {
+  if (group.clip) {
+    canvas.save();
+    canvas.clipRect(
+      { x: group.clip.x, y: group.clip.y, width: group.clip.w, height: group.clip.h },
+      ClipOp.Intersect, true,
+    );
+    drawGroupInner(canvas, scene, group);
+    canvas.restore();
+    return;
+  }
+  drawGroupInner(canvas, scene, group);
+}
+
+function drawGroupInner(canvas: SkCanvas, scene: Scene, group: SceneGroup): void {
   const needsLayer = group.wobble != null || group.blur != null;
   if (needsLayer) {
     const layerPaint = Skia.Paint();

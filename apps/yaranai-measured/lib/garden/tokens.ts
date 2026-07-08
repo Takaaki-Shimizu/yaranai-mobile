@@ -37,7 +37,6 @@ export const GARDEN_COLORS = {
   culmNear: ['#8FA765', '#62804A', '#40552F'],
   culmMid: ['#9DB07C', '#6E8557'],
   culmFar: '#A3B183',
-  culmGhost: '#A8B18E', // Day 1 の気配
   nodeNear: '#334524',
   nodeMid: '#4E6438',
   canopyDark: '#4E6A3C',
@@ -61,9 +60,6 @@ export const GARDEN_COLORS = {
   fieldFull: ['#93A76B', '#71854D', '#54663C'], // Day 84
   dryGrain: '#B4A582',
   dryPatch: '#D8CCA9',
-  pathHint: '#D5C9AC',
-  pathHintEdge: '#8D8778',
-  mistRoad: '#CFC3A6',
 
   // 杭と縄
   post: '#4A3B2C',

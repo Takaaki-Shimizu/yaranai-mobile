@@ -35,6 +35,8 @@ export type SceneGroup = {
   wobble?: Wobble;
   blur?: number;
   opacity?: number;
+  /** 世界座標の矩形でクリップ(参道の目地を敷石の到達点まで前→奥に現す等)。省略で無制限 */
+  clip?: { x: number; y: number; w: number; h: number };
   prims: Prim[];
 };
 
