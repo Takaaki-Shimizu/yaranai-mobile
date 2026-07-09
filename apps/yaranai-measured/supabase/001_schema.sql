@@ -110,13 +110,14 @@ from measured_vows v
 left join measured_daily d on d.vow_id = v.id
 group by v.id;
 
--- 3-2. 庭の状態 (720時間 = 1.0 / 初期はほぼ荒れた 0.05。申告版と同一規則)
+-- 3-2. 庭の状態 (210時間 = 1.0 / 初期はほぼ荒れた 0.05。申告版と同一規則)
+--       210 = 2.5h/日 × 7日 × 12週(標準像)。growth.ts の MOSS_FULL_HOURS と一致させること
 create or replace view garden_state
 with (security_invoker = true) as
 select
   user_id,
   round(sum(saved_minutes)::numeric / 60, 1) as total_saved_hours,
   max(((now() at time zone 'Asia/Tokyo'))::date - declared_on) as longest_days,
-  greatest(0.05, least(1.0, round((sum(saved_minutes)::numeric / 60) / 720, 3))) as phase
+  greatest(0.05, least(1.0, round((sum(saved_minutes)::numeric / 60) / 210, 3))) as phase
 from measured_saved
 group by user_id;

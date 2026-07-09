@@ -11,8 +11,12 @@
 export const FULL_DAYS = 84; // 12週
 export const FULL_WEEKS = 12;
 
-// 苔の満開基準。garden_state ビューの規則(720時間 = 1.0)と同一。
-export const MOSS_FULL_HOURS = 720;
+// 苔の満開基準。garden_state ビューの規則(210時間 = 1.0)と同一。
+// 標準像: 対象3アプリを1日合計3時間 → Yaranai 開始後に1日合計30分まで削減した
+// ユーザーを基準とする。取り戻し 2.5h/日 × 7日 × 12週 = 210時間。
+// 苔は累計取り戻し時間のみで駆動し日数には依存しない。210 は「標準的なユーザーが
+// およそ12週で満開に達する」速度感の基準値であって、日数トリガーではない。
+export const MOSS_FULL_HOURS = 210;
 
 // 庭に効く生データのスナップショット。単調非減少ガードの単位でもある。
 export type GardenSnapshot = {
@@ -33,7 +37,7 @@ export type GrowthParams = {
   path: number;
   /** 継続週数 0〜12 */
   weeks: number;
-  /** 苔の充実 0〜1(累計時間 / 720h) */
+  /** 苔の充実 0〜1(累計時間 / 210h) */
   moss: number;
   /** 朱のひとひら(Day 84 到達) */
   redLeaf: boolean;

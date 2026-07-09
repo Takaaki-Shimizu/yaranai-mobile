@@ -138,14 +138,15 @@ select
   round((greatest(0, elapsed_days - broken_days) * minutes_per_day)::numeric / 60, 1) as saved_hours
 from base;
 
--- 3-2. 庭の状態 (720時間 = 1.0 / 初期はほぼ荒れた 0.05)
+-- 3-2. 庭の状態 (210時間 = 1.0 / 初期はほぼ荒れた 0.05)
+--       210 = 2.5h/日 × 7日 × 12週(標準像)。実測版 growth.ts の MOSS_FULL_HOURS と一致
 create or replace view garden_state
 with (security_invoker = true) as
 select
   user_id,
   round(sum(saved_minutes)::numeric / 60, 1) as total_saved_hours,
   max(elapsed_days) as longest_days,
-  greatest(0.05, least(1.0, round((sum(saved_minutes)::numeric / 60) / 720, 3))) as phase
+  greatest(0.05, least(1.0, round((sum(saved_minutes)::numeric / 60) / 210, 3))) as phase
 from vow_saved_hours
 group by user_id;
 
