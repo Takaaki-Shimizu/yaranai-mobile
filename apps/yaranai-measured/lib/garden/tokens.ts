@@ -95,6 +95,8 @@ export const WOBBLE_PARAMS = {
 } as const;
 
 // 紙の粒子(全面ノイズ)。§変更3: 現行より弱く、暖色寄りのカラーマトリクス(mock v4 grainF)。
-// RGB を暖色の砂色(.21/.19/.15)に固定し、アルファを輝度から作る。opacity 0.10。
-export const GRAIN = { baseFrequency: 0.9, octaves: 2, opacity: 0.1 } as const;
+// RGB を暖色の砂色(.21/.19/.15)に固定し、アルファを輝度から作る。
+// opacity は 0.10 だと実機のパネルサイズで淡い空・土の上に暗い斑点が乗って画面がくすむため、
+// 質感は残しつつ 0.06 まで下げて全面を持ち上げる(初期段階=土色の地面で最も効く)。
+export const GRAIN = { baseFrequency: 0.9, octaves: 2, opacity: 0.06 } as const;
 export const GRAIN_RGB = [0.21, 0.19, 0.15] as const;
