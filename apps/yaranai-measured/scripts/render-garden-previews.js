@@ -19,7 +19,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const days = {
   day1: { stoneCount: 2, recordedDays: 1, savedMinutes: 30 },
   day42: { stoneCount: 2, recordedDays: 42, savedMinutes: 360 * 60 },
-  day84: { stoneCount: 2, recordedDays: 84, savedMinutes: 720 * 60 },
+  day84: { stoneCount: 2, recordedDays: 84, savedMinutes: 210 * 60 }, // 210h = 満開(m=1.0)
 };
 
 const HOME_W = Math.round(FRAME_W * HOME_CROP); // 90% クロップ幅
