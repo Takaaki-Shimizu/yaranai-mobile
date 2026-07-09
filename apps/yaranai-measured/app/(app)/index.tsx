@@ -10,10 +10,12 @@ import { recordDateDaysAgo } from '../../lib/dates';
 import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { HomeGarden } from '../../components/garden/HomeGarden';
+import { DevGarden } from '../../components/garden/DevGarden';
 import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
 import { HOME_ASPECT } from '../../lib/garden/scene';
 import { isEngawaOpen } from '../../lib/garden/gate';
 import { changedCategories, changeNote } from '../../lib/garden/diff';
+import { useIsDeveloper } from '../../lib/developer';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -30,6 +32,7 @@ type Totals = {
 
 export default function Home() {
   const session = useSession();
+  const isDeveloper = useIsDeveloper();
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const [vows, setVows] = useState<VowSummary[]>([]);
@@ -81,18 +84,21 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
+      // 開発者モード(§5): 実測パイプラインには触れない。
+      // 許可も促さず、Supabase の読み込みもしない。庭はスライダーで組む。
+      if (isDeveloper) return;
       // 許可がなければ、まず許可の画面へ
       if (!isUsageStatsAvailable || !hasUsageAccess()) {
         router.replace('/(app)/permission');
         return;
       }
       loadAll();
-    }, [loadAll, router])
+    }, [isDeveloper, loadAll, router])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (session) await syncAll(session.user.id);
+    if (session && !isDeveloper) await syncAll(session.user.id);
     await loadAll();
     setRefreshing(false);
   };
@@ -121,6 +127,11 @@ export default function Home() {
         </Pressable>
       </View>
 
+      {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
+      {isDeveloper ? (
+        <DevGarden />
+      ) : (
+      <>
       {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
       {growth && growth.stones > 0 ? (
         <Pressable onPress={onGardenPress}>
@@ -163,6 +174,8 @@ export default function Home() {
           <Text style={styles.observeText}>時間の行き先を見る</Text>
         </Pressable>
       </View>
+      </>
+      )}
     </ScrollView>
   );
 }

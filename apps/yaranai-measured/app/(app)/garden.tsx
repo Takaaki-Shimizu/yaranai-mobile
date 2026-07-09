@@ -11,10 +11,12 @@ import { useSession, colors, fonts } from '@yaranai/core';
 import { GardenScroll } from '../../components/garden/GardenScroll';
 import { loadGrowth } from '../../components/garden/load';
 import { isEngawaOpen } from '../../lib/garden/gate';
+import { useIsDeveloper } from '../../lib/developer';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 export default function GardenMode() {
   const session = useSession();
+  const isDeveloper = useIsDeveloper();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
@@ -31,9 +33,13 @@ export default function GardenMode() {
   }));
 
   useEffect(() => {
-    if (session && open) loadGrowth(session.user.id).then(setGrowth);
-  }, [session, open]);
+    // 開発者モード(§3): loadGrowth を呼ばない(高水位の読み書きで本番マークを汚さない)。
+    // デバッグの庭確認はホームのスライダーUIで行う。
+    if (session && open && !isDeveloper) loadGrowth(session.user.id).then(setGrowth);
+  }, [session, open, isDeveloper]);
 
+  // 開発者モードでは絵巻モードへ入らない(実測・高水位に触れないため)
+  if (isDeveloper) return <Redirect href="/(app)" />;
   if (!open) return <Redirect href="/(app)" />;
 
   return (

@@ -38,6 +38,19 @@ export async function saveLastSeen(userId: string, g: GrowthParams): Promise<voi
   }
 }
 
+// 開発者モード専用(§3): スライダー入力から直接 GrowthParams を組む。
+// 高水位マージ(mergeHighWater)も AsyncStorage の high-water も通さない。
+// デバッグ値で本番の高水位マークを汚染しないため、読み書きは一切しない。
+// 石は Day1 完成・育たない要素なので固定 3。
+export function buildGrowthFromDebug(days: number, savedHours: number): GrowthParams {
+  const snapshot: GardenSnapshot = {
+    stoneCount: 3,
+    recordedDays: days,
+    savedMinutes: savedHours * 60,
+  };
+  return deriveGrowth(snapshot);
+}
+
 export async function loadGrowth(userId: string): Promise<GrowthParams> {
   const [savedRes, daysRes] = await Promise.all([
     supabase.from('measured_saved').select('saved_minutes'),
