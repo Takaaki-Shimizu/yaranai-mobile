@@ -121,6 +121,36 @@ test('週次集計: 同じ暦日に複数の日次バケットがあれば合算
   ]);
 });
 
+test('日次集計: 日をまたいで伸びる未ロールバケットを前日へ丸ごと足さない', () => {
+  // 端末が0時に起きとらんと、OSは [前日0時, now] の1本に前日+当日を混ぜて返す。
+  // これを前日へ丸ごと足すと、当日を使うほど前日の実測が水増しされ、
+  // 「戻ってきた時間」が減る(この誓いの表示が減る不具合の再現)。
+  const targetDates = targetDatesFrom([2026, 6, 30], 7); // 6/30〜7/6(7/6視点)
+  const nowMs = ms(2026, 7, 6) + 15 * 3600000; // 7/6 15:00
+  const buckets: UsageBucket[] = [
+    // 7/5(前日)0時に始まり、まだ閉じず now まで伸びとる混合バケット。
+    // 中身は前日90分 + 当日ぶんが混ざっとる(ここでは合計200分)。
+    bucket(YT, ms(2026, 7, 5), nowMs, 200),
+  ];
+  const byDay = aggregateBucketsByDay(buckets, targetDates);
+  // 前日(7/5)へ200分を計上してはいけない。混合バケットは捨てる。
+  assert.equal(byDay.has('2026-07-05'), false);
+  assert.equal(totalMinutesFor(byDay, YT), 0);
+});
+
+test('日次集計: 翌0時ちょうど(や数分のズレ)で閉じた確定バケットは通す', () => {
+  const targetDates = targetDatesFrom([2026, 6, 30], 7);
+  const buckets: UsageBucket[] = [
+    // ロールが5分遅れて 7/6 00:05 に閉じた 7/5 の確定バケット。
+    bucket(YT, ms(2026, 7, 5), ms(2026, 7, 6) + 5 * 60000, 90),
+    // 当日(7/6)の進行中バケット(翌0時前なので日内)。
+    bucket(YT, ms(2026, 7, 6), ms(2026, 7, 6) + 15 * 3600000, 40),
+  ];
+  const byDay = aggregateBucketsByDay(buckets, targetDates);
+  assert.deepEqual(byDay.get('2026-07-05'), [{ packageName: YT, totalForegroundMs: min(90) }]);
+  assert.deepEqual(byDay.get('2026-07-06'), [{ packageName: YT, totalForegroundMs: min(40) }]);
+});
+
 test('基準線: 窓の外から始まる月次バケットを混入させず、重複なしで継ぎ足す', () => {
   const now = ms(2026, 7, 6);
   const beginMs = now - 84 * DAY_MS; // = 2026-04-13
