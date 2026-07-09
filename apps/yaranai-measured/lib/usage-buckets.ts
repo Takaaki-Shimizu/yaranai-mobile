@@ -1,4 +1,12 @@
-import { DAY_MS, toRecordDate } from './dates';
+import { DAY_MS, dayRange, toRecordDate } from './dates';
+
+// 日次バケットの lastTimeStamp が、その暦日の終端(翌0時)からこの猶予を超えて
+// はみ出しとったら「その日1日ぶんの計測」として信用せん。端末が0時に起きとらんと
+// OSの日次ロールが遅れ、[前日0時, now] の1本に前日と当日が混ざった生バケットが返る。
+// これを firstTimeStamp の暦日(=前日)へ丸ごと足すと、前日の実測が当日ぶんだけ
+// 水増しされ、当日を使うほど「戻ってきた時間(基準線−実測)」が減っていく。
+// ロール直後の微妙なズレ(数分〜十数分)は正規の確定バケットなので許容する。
+const DAY_END_SLACK_MS = 30 * 60 * 1000;
 
 // UsageStatsManager が返す生バケット。firstTimeStamp/lastTimeStamp はバケット期間。
 // queryUsageStats は「範囲に重なるバケットを丸ごと」返すため(公式Docの既知挙動)、
@@ -28,6 +36,13 @@ export function aggregateBucketsByDay(
     if (b.totalForegroundMs <= 0) continue;
     const recordDate = toRecordDate(new Date(b.firstTimeStamp));
     if (!targetDates.has(recordDate)) continue;
+    // その暦日の終端を大きく越えて伸びとるバケットは、当日ぶんが混ざった
+    // 未確定バケットとみなして捨てる(前日への水増しを防ぐ)。lastTimeStamp が
+    // 無い/0の古い端末は判定できんけん従来どおり通す。
+    if (b.lastTimeStamp > 0) {
+      const { endMs } = dayRange(recordDate);
+      if (b.lastTimeStamp > endMs + DAY_END_SLACK_MS) continue;
+    }
     const perApp = byDay.get(recordDate) ?? new Map<string, number>();
     perApp.set(b.packageName, (perApp.get(b.packageName) ?? 0) + b.totalForegroundMs);
     byDay.set(recordDate, perApp);
