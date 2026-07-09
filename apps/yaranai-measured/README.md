@@ -63,7 +63,7 @@ npx expo start --dev-client
   12週平均(基準線と同じ計算)の大きい順に表示する。数字は宣言時に
   固定される基準線と必ず一致する。履歴が28日未満の間は「集めています」表示
 - その日の取り戻し時間 = `max(0, 基準線(分) − 実測(分))`
-- 庭のphase = 累計取り戻し時間(時間) ÷ 720、下限0.05、上限1.0(申告版と同一)
+- 庭のphase = 累計取り戻し時間(時間) ÷ 210、下限0.05、上限1.0(`MOSS_FULL_HOURS` と一致)
 - 実測が取得できなかった日(端末未起動・履歴切れ等)は行を作らない = 獲得0
 
 ## セットアップ(人間の残作業)
@@ -78,14 +78,22 @@ npx expo start --dev-client
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx
+# 開発者モード(任意)。ログイン中の email がこれと一致すると庭デバッグモードになる。
+# 未設定なら常に本番挙動。個人メールはソースに直書きせずこの変数経由でのみ渡す。
+EXPO_PUBLIC_DEV_EMAIL=
 ```
+
+> 注意: `.env` に個人メールを入れる。`.env` が git 追跡から外れている(=`.gitignore` 済み)ことを
+> 必ず確認してからコミットすること。キー名の存在は値なしで `.env.example` に控えてある。
 
 ### 2. EAS(ビルドは人間が実行する)
 
 1. expo.dev のアカウントを用意し、`npm i -g eas-cli` → `eas login`
 2. `apps/yaranai-measured` で `eas init` を実行し、発行された projectId が
    `app.json` に追記されることを確認する
-3. 環境変数をEASに登録する(`eas env:create` または expo.dev のダッシュボード)
+3. 環境変数をEASに登録する(`eas env:create` または expo.dev のダッシュボード)。
+   `EXPO_PUBLIC_DEV_EMAIL` も忘れず登録する(登録漏れだと preview/development
+   ビルドで開発者モードが効かない)。
 4. 内部配布用APK: `eas build --profile preview --platform android`
 5. 開発クライアント: `eas build --profile development --platform android`
 
@@ -135,7 +143,7 @@ scripts/render-garden-previews.js  Day1/42/84のSVGプレビュー出力
 ```
 
 データ対応(§4): 石=宣言(最大3・育たない) / 敷石・杭縄=記録日数 n /
-苔=累計取り戻し時間(720h=満開、既存phase規則と同一) / 竹・靄・光・影=継続週数 w=floor(n/7) /
+苔=累計取り戻し時間(210h=満開、`MOSS_FULL_HOURS` と同一) / 竹・靄・光・影=継続週数 w=floor(n/7) /
 朱のひとひら=w=12。崩れた日は「増えない」だけで、どの要素も後退しない。
 
 性能: 揺らぎ(DisplacementMap+FractalNoise)とぼかしはベイク時に一度だけ評価し、
@@ -149,3 +157,21 @@ npx tsc -p tsconfig.test.json
 node scripts/render-garden-previews.js /tmp/garden-previews
 # 出力されたSVGをブラウザで開いて docs/mocks/reference/ と見比べる
 ```
+
+## 開発者モード(庭デバッグ)
+
+実機で庭の見た目を素早く検証するための開発者専用モード。日数と累計取り戻し時間を
+スライダー/数値で手動注入し、庭をリアルタイムに再描画する。**本番ユーザーの挙動は一切
+変えない。**
+
+- 判定: `EXPO_PUBLIC_DEV_EMAIL` とログイン中セッションの email が一致したら開発者
+  (`lib/developer.ts`)。未設定なら常に本番挙動。個人メールはソースに直書きしない。
+- 開発者モードでは Android の利用統計(`UsageStatsManager`)を一切取得しない。
+  起動時同期(`syncAll`)も使用状況アクセスの許可要求もスキップする(§5)。
+- 庭のデータソースはスライダー入力だけ。`buildGrowthFromDebug` が
+  `GardenSnapshot`(石=固定3)を組んで `deriveGrowth` に直接渡す。高水位マージ
+  (`mergeHighWater`)も high-water の読み書きも通さない(§3)。
+- 差分演出(`changedCategories`/`changeNote`/`diffStages`)も
+  `garden_last_seen_state` も触らない。常に現在のスライダー値に対応する一枚だけを描く(§4)。
+- 苔スライダーの上限は `MOSS_FULL_HOURS`(=210時間で満開)を import して使う。
+- 本番ユーザーからは到達不可能(email 不一致なら UI 自体が現れない)。
