@@ -16,6 +16,10 @@ import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats
 
 const MAX_VOWS = 3;
 
+// 候補の表示上限。並びは12週平均やけん、使い始めて日が浅いアプリは平均が
+// 希釈されて下位に沈む。直近7日に使っとる習慣を切り落とさんよう余裕を持たせる。
+const MAX_CANDIDATES = 30;
+
 // 一覧の1行。数字は基準線と同じ12週平均(宣言すると、この数字がそのまま固定される)。
 type ObserveRow = {
   packageName: string;
@@ -44,17 +48,35 @@ export default function Observe() {
     const baseline = measureBaselineWindow();
     setAvailableDays(baseline.availableDays);
     if (baseline.availableDays >= BASELINE_MIN_DAYS) {
-      setRows(
-        recent
-          .filter((r) => !isNoisePackage(r.packageName))
-          .map((r) => ({
-            packageName: r.packageName,
-            avgMinutesPerDay: averageMinutesPerDay(baseline.window, r.packageName),
-          }))
-          .filter((r) => r.avgMinutesPerDay > 0)
-          .sort((a, b) => b.avgMinutesPerDay - a.avgMinutesPerDay)
-          .slice(0, 15),
+      const candidates = recent
+        .filter((r) => !isNoisePackage(r.packageName))
+        .map((r) => ({
+          packageName: r.packageName,
+          avgMinutesPerDay: averageMinutesPerDay(baseline.window, r.packageName),
+          weeklyAvgMinutesPerDay: r.avgMinutesPerDay,
+        }))
+        .sort((a, b) => b.avgMinutesPerDay - a.avgMinutesPerDay);
+      const shown = candidates
+        .filter((r) => r.avgMinutesPerDay > 0)
+        .slice(0, MAX_CANDIDATES);
+      setRows(shown);
+      // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
+      // (adb logcat -s ReactNativeJS UsageStats)。端末の外には出ない。
+      const shownSet = new Set(shown.map((r) => r.packageName));
+      console.log(
+        `[observe] recent7d=${recent.length} candidates=${candidates.length} ` +
+          `shown=${shown.length} availableDays=${baseline.availableDays}`,
       );
+      for (const c of candidates) {
+        const state = shownSet.has(c.packageName)
+          ? 'show'
+          : c.avgMinutesPerDay > 0
+            ? 'drop:limit'
+            : 'drop:avg0';
+        console.log(
+          `[observe] ${state} ${c.packageName} 7d=${c.weeklyAvgMinutesPerDay}m/d 12w=${c.avgMinutesPerDay}m/d`,
+        );
+      }
     } else {
       setRows([]);
     }

@@ -215,6 +215,47 @@ test('基準線: 窓の外から始まる月次バケットを混入させず、
   assert.equal(averageMinutesPerDay(stitched, YT), 51.2);
 });
 
+test('基準線: 同じ日でパッケージごとに期間がずれた日次バケットを丸ごと捨てない', () => {
+  // 端末によっては、同じ日次ファイルでもパッケージごとに first/last が
+  // 「その日に実際に使った時間帯」でずれて返ることがある。
+  // 旧実装は最初の期間(いちばん早く使い始めたアプリ)だけを数え、
+  // 重なる残りの期間を丸ごと捨てとったけん、TikTok などの実測が0になり、
+  // 直近7日に使っとるのに観測画面の候補から消えとった(この不具合の再現)。
+  const now = ms(2026, 7, 6);
+  const beginMs = now - 84 * DAY_MS;
+  const LINE = 'jp.naver.line.android';
+  const TIKTOK = 'com.ss.android.ugc.trill';
+  const h = 3600000;
+  const daily: UsageBucket[] = [
+    bucket(LINE, ms(2026, 7, 5) + 6 * h, ms(2026, 7, 5) + 23 * h, 25),
+    bucket(TIKTOK, ms(2026, 7, 5) + 7 * h, ms(2026, 7, 5) + 22 * h, 90),
+    bucket(YT, ms(2026, 7, 5) + 12 * h, ms(2026, 7, 5) + 18 * h, 60),
+  ];
+  const stitched = stitchBaselineWindow({ daily, weekly: [], monthly: [] }, beginMs, now);
+  assert.equal((stitched.totalMsByPackage.get(LINE) ?? 0) / 60000, 25);
+  assert.equal((stitched.totalMsByPackage.get(TIKTOK) ?? 0) / 60000, 90);
+  assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 60);
+  // 覆っとる時間は期間の和集合(6時〜23時)。併合しても二重には数えない。
+  assert.equal(stitched.coveredMs, 17 * h);
+});
+
+test('基準線: ロール遅延で前日バケットと重なって始まる当日バケットも数える', () => {
+  // ロールが朝まで遅れた端末では、前日バケットが翌朝に締まる一方、
+  // 当日バケットは0時起点へ遡って作られ、期間が重なることがある。
+  // 旧実装やと当日バケットが「二重」とみなされ丸ごと捨てられとった。
+  const h = 3600000;
+  const now = ms(2026, 7, 6) + 15 * h;
+  const beginMs = now - 84 * DAY_MS;
+  const daily: UsageBucket[] = [
+    bucket(YT, ms(2026, 7, 5), ms(2026, 7, 6) + 7 * h + 45 * 60000, 90), // 前日、翌朝7:45締め
+    bucket(YT, ms(2026, 7, 6), now, 40), // 当日、0時起点で前日と重なる
+  ];
+  const stitched = stitchBaselineWindow({ daily, weekly: [], monthly: [] }, beginMs, now);
+  assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 130);
+  // 和集合 = 7/5 0:00 〜 7/6 15:00 の39時間
+  assert.equal(stitched.coveredMs, 39 * h);
+});
+
 test('12週平均: 記録が無いアプリと空の窓は0分になる(観測画面の除外条件)', () => {
   const now = ms(2026, 7, 6);
   const beginMs = now - 84 * DAY_MS;
