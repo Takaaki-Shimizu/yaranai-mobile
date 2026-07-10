@@ -1,11 +1,17 @@
 import { DAY_MS, dayRange, toRecordDate } from './dates';
 
-// 日次バケットの lastTimeStamp が、その暦日の終端(翌0時)からこの猶予を超えて
-// はみ出しとったら「その日1日ぶんの計測」として信用せん。端末が0時に起きとらんと
+// 最新期間の日次バケットの lastTimeStamp が、その暦日の終端(翌0時)からこの猶予を
+// 超えてはみ出しとったら「その日1日ぶんの計測」として信用せん。端末が0時に起きとらんと
 // OSの日次ロールが遅れ、[前日0時, now] の1本に前日と当日が混ざった生バケットが返る。
 // これを firstTimeStamp の暦日(=前日)へ丸ごと足すと、前日の実測が当日ぶんだけ
 // 水増しされ、当日を使うほど「戻ってきた時間(基準線−実測)」が減っていく。
 // ロール直後の微妙なズレ(数分〜十数分)は正規の確定バケットなので許容する。
+//
+// この除外は「まだ伸び続けとる進行中バケット」だけが対象。進行中バケットは必ず
+// firstTimeStamp が最大の期間やけん、それより古い期間のバケットには適用せん。
+// ロールが朝まで遅れた端末では、確定済みの前日バケットも lastTimeStamp が翌朝
+// (=翌0時+30分よりずっと後)で締まるのが正規の挙動で、これを終端だけ見て捨てると
+// 前日のデータが恒久的に消え、「昨日の実測を待っています」から永遠に進まんくなる。
 const DAY_END_SLACK_MS = 30 * 60 * 1000;
 
 // UsageStatsManager が返す生バケット。firstTimeStamp/lastTimeStamp はバケット期間。
@@ -31,15 +37,22 @@ export function aggregateBucketsByDay(
   buckets: UsageBucket[],
   targetDates: ReadonlySet<string>,
 ): Map<string, DailyAppUsage[]> {
+  // 進行中(未ロール)でありうるのは最新の期間だけ。期間はパッケージ共通で
+  // firstTimeStamp を境界に持つけん、最大の firstTimeStamp で判定する。
+  let latestPeriodStart = -Infinity;
+  for (const b of buckets) {
+    if (b.firstTimeStamp > latestPeriodStart) latestPeriodStart = b.firstTimeStamp;
+  }
   const byDay = new Map<string, Map<string, number>>();
   for (const b of buckets) {
     if (b.totalForegroundMs <= 0) continue;
     const recordDate = toRecordDate(new Date(b.firstTimeStamp));
     if (!targetDates.has(recordDate)) continue;
-    // その暦日の終端を大きく越えて伸びとるバケットは、当日ぶんが混ざった
-    // 未確定バケットとみなして捨てる(前日への水増しを防ぐ)。lastTimeStamp が
-    // 無い/0の古い端末は判定できんけん従来どおり通す。
-    if (b.lastTimeStamp > 0) {
+    // 最新期間のバケットがその暦日の終端を大きく越えて伸びとったら、当日ぶんが
+    // 混ざった未確定バケットとみなして捨てる(前日への水増しを防ぐ)。より新しい
+    // 期間が始まっとるバケットは締め済み(もう伸びん)やけん、遅れて締まって
+    // 終端がはみ出しとっても通す。lastTimeStamp が無い/0の古い端末も従来どおり通す。
+    if (b.lastTimeStamp > 0 && b.firstTimeStamp === latestPeriodStart) {
       const { endMs } = dayRange(recordDate);
       if (b.lastTimeStamp > endMs + DAY_END_SLACK_MS) continue;
     }

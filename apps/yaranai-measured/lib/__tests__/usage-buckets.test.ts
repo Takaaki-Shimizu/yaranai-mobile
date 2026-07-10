@@ -151,6 +151,38 @@ test('日次集計: 翌0時ちょうど(や数分のズレ)で閉じた確定バ
   assert.deepEqual(byDay.get('2026-07-06'), [{ packageName: YT, totalForegroundMs: min(40) }]);
 });
 
+test('日次集計: ロールが朝まで遅れて締まった前日の確定バケットは捨てない', () => {
+  // 端末が0時に寝とると、前日バケットは翌朝(最初に統計が更新された時刻)に
+  // 締まり、lastTimeStamp が翌0時を数時間越えるのが正規の挙動。
+  // これを終端だけ見て捨てると前日のデータが恒久的に消え、ホームが
+  // 「昨日の実測を待っています」から永遠に進まんくなる(この不具合の再現)。
+  const targetDates = targetDatesFrom([2026, 6, 30], 7); // 6/30〜7/6(7/6視点)
+  const rollMs = ms(2026, 7, 6) + 7 * 3600000 + 45 * 60000; // 7/6 07:45 に締まった
+  const buckets: UsageBucket[] = [
+    // 7/5 の確定バケット。翌朝 07:45 締め(猶予30分を大きく超える)。
+    bucket(YT, ms(2026, 7, 5), rollMs, 90),
+    // ロール後に始まった当日(7/6)の進行中バケット。
+    bucket(YT, rollMs, rollMs + 30 * 60000, 10),
+  ];
+  const byDay = aggregateBucketsByDay(buckets, targetDates);
+  assert.deepEqual(byDay.get('2026-07-05'), [{ packageName: YT, totalForegroundMs: min(90) }]);
+  assert.deepEqual(byDay.get('2026-07-06'), [{ packageName: YT, totalForegroundMs: min(10) }]);
+});
+
+test('日次集計: 再起動で割れた前日の後半バケットも、ロール後は通す', () => {
+  const targetDates = targetDatesFrom([2026, 6, 30], 7);
+  const rollMs = ms(2026, 7, 6) + 8 * 3600000; // 7/6 08:00 に締まった
+  const buckets: UsageBucket[] = [
+    // 7/5 前半(再起動前)と後半(再起動後、翌朝締め)。
+    bucket(YT, ms(2026, 7, 5), ms(2026, 7, 5) + 14 * 3600000, 40),
+    bucket(YT, ms(2026, 7, 5) + 14 * 3600000, rollMs, 50),
+    // ロール後の当日バケット。
+    bucket(YT, rollMs, rollMs + 3600000, 5),
+  ];
+  const byDay = aggregateBucketsByDay(buckets, targetDates);
+  assert.deepEqual(byDay.get('2026-07-05'), [{ packageName: YT, totalForegroundMs: min(90) }]);
+});
+
 test('基準線: 窓の外から始まる月次バケットを混入させず、重複なしで継ぎ足す', () => {
   const now = ms(2026, 7, 6);
   const beginMs = now - 84 * DAY_MS; // = 2026-04-13
