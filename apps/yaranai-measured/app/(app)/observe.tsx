@@ -20,6 +20,15 @@ const MAX_VOWS = 3;
 // 希釈されて下位に沈む。直近7日に使っとる習慣を切り落とさんよう余裕を持たせる。
 const MAX_CANDIDATES = 30;
 
+// 「使った」とみなす直近7日の合計の下限。システムが一瞬だけ前面に出す部品
+// (検索セレクタ・動画プレイヤー・Wellbeing など)やアラーム解除だけの時計が
+// 候補に並ぶと、本人が使っとる認識のないアプリだらけになるけん足切りする。
+const MIN_WEEKLY_TOTAL_MINUTES = 10;
+
+// 12週平均がこれ未満(四捨五入で表示が「0分」になる)のアプリは、
+// 宣言しても取り戻せる時間がないけん候補に出さない。
+const MIN_AVG_MINUTES = 0.5;
+
 // 一覧の1行。数字は基準線と同じ12週平均(宣言すると、この数字がそのまま固定される)。
 type ObserveRow = {
   packageName: string;
@@ -53,11 +62,15 @@ export default function Observe() {
         .map((r) => ({
           packageName: r.packageName,
           avgMinutesPerDay: averageMinutesPerDay(baseline.window, r.packageName),
-          weeklyAvgMinutesPerDay: r.avgMinutesPerDay,
+          weeklyTotalMinutes: r.totalMinutes,
         }))
         .sort((a, b) => b.avgMinutesPerDay - a.avgMinutesPerDay);
       const shown = candidates
-        .filter((r) => r.avgMinutesPerDay > 0)
+        .filter(
+          (r) =>
+            r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
+            r.avgMinutesPerDay >= MIN_AVG_MINUTES,
+        )
         .slice(0, MAX_CANDIDATES);
       setRows(shown);
       // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
@@ -70,11 +83,13 @@ export default function Observe() {
       for (const c of candidates) {
         const state = shownSet.has(c.packageName)
           ? 'show'
-          : c.avgMinutesPerDay > 0
-            ? 'drop:limit'
-            : 'drop:avg0';
+          : c.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES
+            ? 'drop:weekly'
+            : c.avgMinutesPerDay < MIN_AVG_MINUTES
+              ? 'drop:avg'
+              : 'drop:limit';
         console.log(
-          `[observe] ${state} ${c.packageName} 7d=${c.weeklyAvgMinutesPerDay}m/d 12w=${c.avgMinutesPerDay}m/d`,
+          `[observe] ${state} ${c.packageName} 7d合計=${c.weeklyTotalMinutes}m 12w=${c.avgMinutesPerDay}m/d`,
         );
       }
     } else {
