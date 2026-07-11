@@ -1,21 +1,32 @@
-import { hasUsageAccess, isUsageStatsAvailable, queryUsageBuckets } from '../modules/usage-stats';
+import {
+  hasUsageAccess,
+  isUsageStatsAvailable,
+  queryUsageBuckets,
+  queryUsageEvents,
+} from '../modules/usage-stats';
 import { dayRange, getTodayRecordDate, recordDateDaysAgo } from './dates';
 import { supabase } from './supabase';
 import { aggregateBucketsByDay } from './usage-buckets';
-import { getMinutesForPackage, replaceDay } from './usage-db';
+import { aggregateEventsByDay } from './usage-events';
+import { getMinutesForPackage, hasAnyDataForDate, replaceDay } from './usage-db';
 
 // 同期は二層。
 //   1) syncLocalUsage: OSの利用統計 → 端末内DB(全アプリ、外に出さない)
 //   2) syncMeasuredDaily: 端末内DB → Supabase(誓い対象アプリの日次合計のみ)
 
-const LOCAL_SYNC_DAYS = 7; // OSの日次バケット保持期間に合わせる
+const LOCAL_SYNC_DAYS = 7; // OSの日次統計・イベントの保持期間に合わせる
 
-// 起動時に直近7日の日次バケットを取り直して端末内DBを埋める。
+// 起動時に直近7日の実測を取り直して端末内DBを埋める。
 // 当日は増え続け、昨日以前も遅延集計で変わりうるけん、毎回洗い替える。
 //
-// クエリは INTERVAL_DAILY の生バケットで取り、firstTimeStamp が直近7日(暦日)に
-// 入るものだけを日ごとに合算する。以前の queryAndAggregateUsageStats は範囲に
-// 重なる週次バケットを丸ごと返すことがあり、週合計が実際より膨らんどった。
+// 一次ソースは UsageEvents からの自前積み上げ(usage-events.ts)。日次バケットは
+// ロールが0時に起きん端末で前日と当日が混ざったまま翌日も開き続け、「昨日」を
+// 正確に切り出せんかった(前日へ計上すれば水増し、除外すれば昨日が永遠に未確定)。
+// イベント積み上げなら前景区間を0時で割れるけん、日付が変わった瞬間に昨日が確定する。
+//
+// 日次バケット(INTERVAL_DAILY)は、イベントが残っとらん日の埋め草としてだけ使う。
+// イベント由来の正確な値を、日をまたいで混ざりうるバケット値で後から上書きせんよう、
+// バケットで書くのは端末DBにまだデータが無い日に限る。
 export async function syncLocalUsage(): Promise<void> {
   if (!isUsageStatsAvailable || !hasUsageAccess()) return;
   const now = Date.now();
@@ -24,14 +35,20 @@ export async function syncLocalUsage(): Promise<void> {
     targetDates.push(recordDateDaysAgo(i));
   }
   const { beginMs } = dayRange(targetDates[targetDates.length - 1]);
-  const buckets = queryUsageBuckets('daily', beginMs, now);
-  const byDay = aggregateBucketsByDay(buckets, new Set(targetDates));
+  const targetSet = new Set(targetDates);
+  const byDayFromEvents = aggregateEventsByDay(queryUsageEvents(beginMs, now), targetSet, now);
+  const byDayFromBuckets = aggregateBucketsByDay(queryUsageBuckets('daily', beginMs, now), targetSet);
   for (const recordDate of targetDates) {
-    const rows = byDay.get(recordDate);
     // 空の日は書かない: 「データが無い日」と「使わなかった日」を区別できんため。
     // 行が一切ない日は同期対象外(=獲得0)として、嘘をつかない側に倒す。
-    if (rows && rows.length > 0) {
-      await replaceDay(recordDate, rows);
+    const eventRows = byDayFromEvents.get(recordDate);
+    if (eventRows && eventRows.length > 0) {
+      await replaceDay(recordDate, eventRows);
+      continue;
+    }
+    const bucketRows = byDayFromBuckets.get(recordDate);
+    if (bucketRows && bucketRows.length > 0 && !(await hasAnyDataForDate(recordDate))) {
+      await replaceDay(recordDate, bucketRows);
     }
   }
 }
