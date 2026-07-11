@@ -1,7 +1,8 @@
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import type { UsageBucket } from '../../lib/usage-buckets';
+import type { UsageEvent } from '../../lib/usage-events';
 
-export type { UsageBucket };
+export type { UsageBucket, UsageEvent };
 
 // UsageStatsManager の INTERVAL_DAILY / WEEKLY / MONTHLY に対応
 const INTERVAL_CODE = { daily: 0, weekly: 1, monthly: 2 } as const;
@@ -11,6 +12,7 @@ type UsageStatsNativeModule = {
   hasUsageAccess(): boolean;
   openUsageAccessSettings(): void;
   queryUsageBuckets(intervalType: number, beginMs: number, endMs: number): UsageBucket[];
+  queryUsageEvents(beginMs: number, endMs: number): UsageEvent[];
 };
 
 // Android実機(dev client)以外ではネイティブモジュールが存在せんけん、
@@ -36,4 +38,10 @@ export function queryUsageBuckets(
   endMs: number,
 ): UsageBucket[] {
   return NativeUsageStats?.queryUsageBuckets(INTERVAL_CODE[interval], beginMs, endMs) ?? [];
+}
+
+// 前景イベントの生列をそのまま返す。日ごとの積み上げは lib/usage-events.ts の
+// 純粋関数に任せる(バケットと同じ分担)。
+export function queryUsageEvents(beginMs: number, endMs: number): UsageEvent[] {
+  return NativeUsageStats?.queryUsageEvents(beginMs, endMs) ?? [];
 }

@@ -1,6 +1,7 @@
 package expo.modules.usagestats
 
 import android.app.AppOpsManager
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
@@ -91,6 +92,46 @@ class UsageStatsModule : Module() {
           "totalForegroundMs" to it.totalTimeInForeground,
         )
       }
+    }
+
+    // 前景イベントの生列をそのまま返す。日次バケット(queryUsageStats)はロールが
+    // 0時に起きん端末で前日と当日が混ざったまま何時間も開き続けるけん、日ごとの
+    // 実測はイベントから自前で積み上げる。集計はここではしない(JS側の純粋関数)。
+    // ACTIVITY_RESUMED/PAUSED は API 29 未満の MOVE_TO_FOREGROUND/BACKGROUND と
+    // 同じ値(1/2)やけん、この比較は旧端末が発するイベントもそのまま拾う。
+    Function("queryUsageEvents") { beginMs: Double, endMs: Double ->
+      val usageStatsManager =
+        context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+      val events = usageStatsManager.queryEvents(beginMs.toLong(), endMs.toLong())
+      val out = mutableListOf<Map<String, Any?>>()
+      val event = UsageEvents.Event()
+      while (events.hasNextEvent()) {
+        events.getNextEvent(event)
+        when (event.eventType) {
+          UsageEvents.Event.ACTIVITY_RESUMED,
+          UsageEvents.Event.ACTIVITY_PAUSED,
+          UsageEvents.Event.ACTIVITY_STOPPED,
+          UsageEvents.Event.SCREEN_NON_INTERACTIVE,
+          UsageEvents.Event.DEVICE_SHUTDOWN -> {
+            out.add(
+              mapOf(
+                "packageName" to event.packageName,
+                "className" to event.className,
+                "eventType" to event.eventType,
+                "timestampMs" to event.timeStamp,
+              )
+            )
+          }
+        }
+      }
+      val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+      Log.d(
+        TAG,
+        "queryUsageEvents " +
+          "range=${fmt.format(Date(beginMs.toLong()))}..${fmt.format(Date(endMs.toLong()))} " +
+          "events=${out.size}"
+      )
+      out
     }
   }
 }
