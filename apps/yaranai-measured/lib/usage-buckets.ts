@@ -84,6 +84,15 @@ export type StitchedWindow = {
 //   - firstTimeStamp が窓の外のバケットは使わない(丸ごと混入する膨張を防ぐ)
 //   - 細かい粒度で数えた期間に重なる粗いバケットも使わない(二重計上を防ぐ)
 // 重なりで捨てた期間は coveredMs にも入らんけん、平均(合計÷coveredMs)は偏らない。
+//
+// 同じレベルの中で期間が重なるバケットは、捨てずに1つの期間へ併合して全行を数える。
+// バケット期間は本来パッケージ共通やけど、端末によっては同じ日でもパッケージごとに
+// first/last がずれて返ったり、ロール遅延のあと当日バケットが0時起点へ遡って作られて
+// 前日バケットと重なったりする。以前の実装は firstTimeStamp の完全一致で期間を作り、
+// 重なった期間を「二重」とみなして先勝ちで丸ごと捨てとったけん、2番目以降の期間に
+// しか載っとらんアプリの実測が黙って消え、直近7日に使っとるのに12週平均が0になって
+// 観測画面の候補から消えることがあった。併合なら coveredMs は和集合のまま増えず、
+// どのバケットもちょうど1回だけ数えられる。
 export function stitchBaselineWindow(
   buckets: { daily: UsageBucket[]; weekly: UsageBucket[]; monthly: UsageBucket[] },
   beginMs: number,
@@ -94,19 +103,21 @@ export function stitchBaselineWindow(
   let coveredMs = 0;
 
   for (const level of [buckets.daily, buckets.weekly, buckets.monthly]) {
-    // バケット期間は全パッケージ共通やけん、firstTimeStamp で期間にまとめてから判定する
-    const periods = new Map<number, { start: number; end: number; rows: UsageBucket[] }>();
-    for (const b of level) {
+    const sorted = [...level].sort((a, b) => a.firstTimeStamp - b.firstTimeStamp);
+    const periods: { start: number; end: number; rows: UsageBucket[] }[] = [];
+    for (const b of sorted) {
       const end = Math.min(b.lastTimeStamp, endMs);
-      const period = periods.get(b.firstTimeStamp) ?? { start: b.firstTimeStamp, end, rows: [] };
-      period.end = Math.max(period.end, end);
-      period.rows.push(b);
-      periods.set(b.firstTimeStamp, period);
+      if (end <= b.firstTimeStamp) continue;
+      const last = periods[periods.length - 1];
+      if (last && b.firstTimeStamp < last.end) {
+        last.end = Math.max(last.end, end);
+        last.rows.push(b);
+      } else {
+        periods.push({ start: b.firstTimeStamp, end, rows: [b] });
+      }
     }
-    const sorted = [...periods.values()].sort((a, b) => a.start - b.start);
-    for (const period of sorted) {
+    for (const period of periods) {
       if (period.start < beginMs || period.start >= endMs) continue;
-      if (period.end <= period.start) continue;
       if (covered.some((c) => period.start < c.end && c.start < period.end)) continue;
       covered.push({ start: period.start, end: period.end });
       coveredMs += period.end - period.start;
