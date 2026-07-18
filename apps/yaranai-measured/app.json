@@ -29,6 +29,13 @@
         "projectId": "77df197f-a51a-430b-ae45-033d565a4fd7"
       }
     },
-    "owner": "ssstaka"
+    "owner": "ssstaka",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/77df197f-a51a-430b-ae45-033d565a4fd7"
+    },
+    "ios": {}
   }
 }
