@@ -16,6 +16,10 @@ import { HOME_ASPECT } from '../../lib/garden/scene';
 import { isEngawaOpen } from '../../lib/garden/gate';
 import { changedCategories, changeNote } from '../../lib/garden/diff';
 import { useIsDeveloper } from '../../lib/developer';
+import { evaluateCrashedDay } from '../../lib/articles/evaluate';
+import { loadArticlesState } from '../../lib/articles/storage';
+import { newestUnread, type ArticleListItem } from '../../lib/articles/select';
+import { AppMenu } from '../../components/AppMenu';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -44,6 +48,9 @@ export default function Home() {
   const [prevGrowth, setPrevGrowth] = useState<GrowthParams | null>(null);
   const [gardenNote, setGardenNote] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // 読みもの(§5.1): 未読の帯に出す1本と、ハンバーガーメニューの開閉。
+  const [unreadArticle, setUnreadArticle] = useState<ArticleListItem | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const loadAll = useCallback(async () => {
     // 累計はやめた誓いも含めた全体。行の表示はアクティブな誓いだけ。
@@ -80,6 +87,12 @@ export default function Home() {
       setPrevGrowth(null);
       setGardenNote(null);
     }
+
+    // 読みもの(§5.1): 発火判定を回してから状態を読み、未読の帯を1本だけ出す。
+    // 起動時の判定(_layout)と競合しても冪等・単調なので二重発火にはならない。
+    // 既読になった帯は次の focus でここから消える(演出は入れない)。
+    await evaluateCrashedDay();
+    setUnreadArticle(newestUnread(await loadArticlesState()));
   }, [session]);
 
   useFocusEffect(
@@ -122,10 +135,17 @@ export default function Home() {
     >
       <View style={styles.header}>
         <Text style={styles.wordmark}>Yaranai</Text>
-        <Pressable onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.signOut}>退出</Text>
+        {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
+        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel="メニュー">
+          <View style={styles.hamburger}>
+            <View style={styles.hbLine} />
+            <View style={styles.hbLine} />
+            <View style={styles.hbLine} />
+          </View>
         </Pressable>
       </View>
+
+      <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
       {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
       {isDeveloper ? (
@@ -152,6 +172,22 @@ export default function Home() {
           {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
           {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
         </View>
+      )}
+
+      {/* 読みもの: 未読の帯(§5.1)。累計の一文の直下・アプリ行の上。
+          罫線2本のみ・カード化しない。未読の印は点1個。タップで記事へ。
+          既読になった帯はここから消える(演出なし) */}
+      {unreadArticle && (
+        <Pressable
+          style={styles.strip}
+          onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
+        >
+          <View>
+            <Text style={styles.stripLabel}>読みもの</Text>
+            <Text style={styles.stripTitle}>{unreadArticle.title}</Text>
+          </View>
+          <View style={styles.dot} />
+        </Pressable>
       )}
 
       {/* 誓い */}
@@ -192,7 +228,31 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   wordmark: { fontFamily: fonts.serif, fontSize: 16, letterSpacing: 6, color: colors.sumi },
-  signOut: { fontSize: 11, color: colors.usuzumi, letterSpacing: 2 },
+  hamburger: { width: 20, height: 14, justifyContent: 'space-between' },
+  hbLine: { height: 1, backgroundColor: colors.usuzumi },
+
+  // 読みものの帯(§5.1): 上下1pxの罫線のみ。背景色・影・角丸なし。
+  strip: {
+    marginHorizontal: 28,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.suna,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stripLabel: { fontSize: 10, color: colors.usuzumi, letterSpacing: 3 },
+  stripTitle: {
+    marginTop: 5,
+    fontFamily: fonts.serif,
+    fontSize: 14,
+    color: colors.sumi,
+    letterSpacing: 1,
+  },
+  // 未読の点(6px・生成りに沈む茶灰。モックの --tensen)。点以外の未読表現は使わない。
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#A9A28B' },
 
   empty: { paddingVertical: 72, alignItems: 'center' },
   stats: { paddingVertical: 40, paddingHorizontal: 28, alignItems: 'center' },
