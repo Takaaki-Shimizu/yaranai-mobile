@@ -7,19 +7,22 @@ import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
+import { useIsDeveloper } from '../../../lib/developer';
 import { getArticle } from '../../../lib/articles/registry';
 import { parseArticleBody } from '../../../lib/articles/markdown';
 import { recordRead } from '../../../lib/articles/storage';
 
 export default function ArticleScreen() {
   const router = useRouter();
+  const isDeveloper = useIsDeveloper();
   const { id } = useLocalSearchParams<{ id: string }>();
   const article = id ? getArticle(id) : undefined;
 
   // 開いた時点で既読(§5.2)。単調ガード(state.ts)で二度目以降は何もしない。
+  // 開発者モードは本番の記事状態を汚さない(DevGarden 同様)ため既読を記録しない。
   useEffect(() => {
-    if (article) recordRead(article.id, new Date().toISOString());
-  }, [article]);
+    if (article && !isDeveloper) recordRead(article.id, new Date().toISOString());
+  }, [article, isDeveloper]);
 
   // 未知の id は静かにホームへ戻す。
   if (!article) return <Redirect href="/(app)" />;

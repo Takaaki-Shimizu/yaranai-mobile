@@ -18,7 +18,7 @@ import { changedCategories, changeNote } from '../../lib/garden/diff';
 import { useIsDeveloper } from '../../lib/developer';
 import { evaluateCrashedDay } from '../../lib/articles/evaluate';
 import { loadArticlesState } from '../../lib/articles/storage';
-import { newestUnread, type ArticleListItem } from '../../lib/articles/select';
+import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
 import { AppMenu } from '../../components/AppMenu';
 import type { GrowthParams } from '../../lib/garden/growth';
 
@@ -120,6 +120,9 @@ export default function Home() {
   // 例: 幅390pt → 高さ≈289pt(縦画面844ptの約34%)。スクロール不要で全体が見える。
   const gardenHeight = Math.round(windowWidth / HOME_ASPECT);
 
+  // 開発者モードのホームに常設する読みものの帯(発火判定を通らないため常に表示)。
+  const devStripArticle = previewStripArticle();
+
   const onGardenPress = () => {
     // 庭モード(絵巻)は週の節目にのみ開く。閉扉中は静かに何もしない
     if (isEngawaOpen(new Date())) {
@@ -149,7 +152,17 @@ export default function Home() {
 
       {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
       {isDeveloper ? (
-        <DevGarden />
+        <>
+          <DevGarden />
+          {/* 開発者モードは計測しないため発火条件を満たさない。読みものは常に表示する
+              (登録簿の先頭)。永続状態は参照せず、タップで記事画面を確認できる */}
+          {devStripArticle && (
+            <ReadingStrip
+              article={devStripArticle}
+              onPress={() => router.push(`/(app)/reading/${devStripArticle.id}`)}
+            />
+          )}
+        </>
       ) : (
       <>
       {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
@@ -178,16 +191,10 @@ export default function Home() {
           罫線2本のみ・カード化しない。未読の印は点1個。タップで記事へ。
           既読になった帯はここから消える(演出なし) */}
       {unreadArticle && (
-        <Pressable
-          style={styles.strip}
+        <ReadingStrip
+          article={unreadArticle}
           onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
-        >
-          <View>
-            <Text style={styles.stripLabel}>読みもの</Text>
-            <Text style={styles.stripTitle}>{unreadArticle.title}</Text>
-          </View>
-          <View style={styles.dot} />
-        </Pressable>
+        />
       )}
 
       {/* 誓い */}
@@ -213,6 +220,19 @@ export default function Home() {
       </>
       )}
     </ScrollView>
+  );
+}
+
+// 読みものの帯(§5.1)。通常モード(未読の1本)と開発者モード(常設)で共用する。
+function ReadingStrip({ article, onPress }: { article: ArticleListItem; onPress: () => void }) {
+  return (
+    <Pressable style={styles.strip} onPress={onPress}>
+      <View>
+        <Text style={styles.stripLabel}>読みもの</Text>
+        <Text style={styles.stripTitle}>{article.title}</Text>
+      </View>
+      {article.unread && <View style={styles.dot} />}
+    </Pressable>
   );
 }
 

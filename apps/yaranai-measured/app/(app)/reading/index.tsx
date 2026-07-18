@@ -6,16 +6,24 @@ import { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
+import { useIsDeveloper } from '../../../lib/developer';
 import { loadArticlesState } from '../../../lib/articles/storage';
-import { firedArticles, type ArticleListItem } from '../../../lib/articles/select';
+import { firedArticles, previewArticles, type ArticleListItem } from '../../../lib/articles/select';
 
 export default function ReadingList() {
   const router = useRouter();
+  const isDeveloper = useIsDeveloper();
   const [items, setItems] = useState<ArticleListItem[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      // 開発者モードは計測しないため発火状態を持たない。登録簿の全記事を常に見せる。
+      if (isDeveloper) {
+        setItems(previewArticles());
+        setLoaded(true);
+        return;
+      }
       let active = true;
       loadArticlesState().then((state) => {
         if (!active) return;
@@ -25,7 +33,7 @@ export default function ReadingList() {
       return () => {
         active = false;
       };
-    }, []),
+    }, [isDeveloper]),
   );
 
   return (
