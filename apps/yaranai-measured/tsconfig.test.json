@@ -14,6 +14,11 @@
     "lib/dates.ts",
     "lib/usage-buckets.ts",
     "lib/garden/**/*.ts",
-    "lib/__tests__/**/*.ts"
+    "lib/__tests__/**/*.ts",
+    "lib/articles/trigger.ts",
+    "lib/articles/state.ts",
+    "lib/articles/types.ts",
+    "lib/articles/markdown.ts",
+    "lib/articles/__tests__/**/*.ts"
   ]
 }
