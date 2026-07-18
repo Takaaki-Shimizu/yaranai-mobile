@@ -32,3 +32,14 @@ export function firedArticles(state: ArticlesState): ArticleListItem[] {
 export function newestUnread(state: ArticlesState): ArticleListItem | null {
   return firedArticles(state).find((a) => a.unread) ?? null;
 }
+
+// 開発者モード用: 発火判定を通らない(計測しない)ため、登録簿の記事をそのまま見せる。
+// 永続状態(発火・既読)は参照しない ── 常に「読める」状態として並べる。registry 順。
+export function previewArticles(): ArticleListItem[] {
+  return ARTICLES.map((a) => ({ id: a.id, title: a.title, unread: true, firedAt: '' }));
+}
+
+// 開発者モードのホームの帯に出す1本(登録簿の先頭)。無ければ null。
+export function previewStripArticle(): ArticleListItem | null {
+  return previewArticles()[0] ?? null;
+}
