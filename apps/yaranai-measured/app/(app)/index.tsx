@@ -125,7 +125,7 @@ export default function Home() {
   const devStripArticle = previewStripArticle();
 
   const onGardenPress = () => {
-    // 庭モード(絵巻)は週の節目にのみ開く。閉扉中は静かに何もしない
+    // 庭モード(絵巻)は週の節目(土曜・日曜)にのみ開く。閉扉中は静かに何もしない
     if (isEngawaOpen(new Date())) {
       router.push('/(app)/garden');
     }
