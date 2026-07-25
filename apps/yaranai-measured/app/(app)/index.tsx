@@ -20,6 +20,7 @@ import { evaluateCrashedDay } from '../../lib/articles/evaluate';
 import { loadArticlesState } from '../../lib/articles/storage';
 import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
 import { AppMenu } from '../../components/AppMenu';
+import { IdealHeader } from '../../components/IdealHeader';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -149,6 +150,10 @@ export default function Home() {
       </View>
 
       <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {/* 理想(WHAT)は庭の直上に常設する。開発者モードでも同じ枠を使い、
+          未入力でも高さを確保するので庭の描画開始位置は動かない */}
+      <IdealHeader />
 
       {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
       {isDeveloper ? (
