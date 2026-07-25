@@ -59,14 +59,26 @@ test('mergeHighWater: どの成分も後退しない', () => {
 
 // ---------------------------------------------------------------- 週次開扉
 
-test('週次開扉: 日曜の暦日だけ開く', () => {
-  // 2026-07-05 は日曜
+test('週次開扉: 土曜・日曜の暦日だけ開く', () => {
+  // 2026-07-04 は土曜、2026-07-05 は日曜
+  assert.equal(isEngawaOpen(new Date(2026, 6, 4, 0, 0)), true);
+  assert.equal(isEngawaOpen(new Date(2026, 6, 4, 23, 59)), true);
   assert.equal(isEngawaOpen(new Date(2026, 6, 5, 0, 0)), true);
   assert.equal(isEngawaOpen(new Date(2026, 6, 5, 23, 59)), true);
+  assert.equal(isEngawaOpen(new Date(2026, 6, 3, 23, 59)), false); // 金曜23:59
   assert.equal(isEngawaOpen(new Date(2026, 6, 6, 0, 0)), false); // 月曜0:00
   assert.equal(isEngawaOpen(new Date(2026, 6, 7)), false);
-  assert.equal(isEngawaOpen(new Date(2026, 6, 11)), false); // 土曜
+  assert.equal(isEngawaOpen(new Date(2026, 6, 11)), true); // 土曜
   assert.equal(isEngawaOpen(new Date(2026, 6, 12)), true);
+});
+
+test('週次開扉: 祝日は対象外(平日の祝日は開かない)', () => {
+  // 2026-09-21(月・敬老の日)/ 2026-09-22(火・国民の休日)/ 2026-11-23(月・勤労感謝の日)
+  assert.equal(isEngawaOpen(new Date(2026, 8, 21)), false);
+  assert.equal(isEngawaOpen(new Date(2026, 8, 22)), false);
+  assert.equal(isEngawaOpen(new Date(2026, 10, 23)), false);
+  // 土日に重なる祝日は曜日どおり開く: 2026-05-03(日・憲法記念日)
+  assert.equal(isEngawaOpen(new Date(2026, 4, 3)), true);
 });
 
 // ---------------------------------------------------------------- 敷石・杭
