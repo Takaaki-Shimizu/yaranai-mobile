@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildConfirmedDay,
   isCrashedDay,
+  hasCrashedVow,
   reclaimedMinutes,
   activeVowsOn,
   calendarDaysBetween,
@@ -32,13 +33,33 @@ test('合計0分の確定日 → 崩れた日', () => {
   assert.equal(isCrashedDay(day), true);
 });
 
-test('1誓いだけ1分取り戻し → 崩れた日ではない', () => {
+test('1誓いだけ1分取り戻し、もう1誓いは0 → 崩れた日', () => {
   const daily: DailyRecord[] = [
     { vowId: 'a', date: '2026-07-17', actualMinutes: 53 }, // 54-53 = 1分取り戻し
-    { vowId: 'b', date: '2026-07-17', actualMinutes: 61 },
+    { vowId: 'b', date: '2026-07-17', actualMinutes: 61 }, // 56-61 → 取り戻し0
   ];
   const day = buildConfirmedDay('2026-07-17', VOWS, daily);
   assert.equal(reclaimedMinutes(day.activeVows), 1);
+  assert.equal(hasCrashedVow(day.activeVows), true);
+  assert.equal(isCrashedDay(day), true);
+});
+
+test('基準線ちょうど(取り戻し0分)の誓いがある → 崩れた日', () => {
+  const daily: DailyRecord[] = [
+    { vowId: 'a', date: '2026-07-17', actualMinutes: 54 }, // 54-54 = 0分
+    { vowId: 'b', date: '2026-07-17', actualMinutes: 10 }, // 46分取り戻し
+  ];
+  const day = buildConfirmedDay('2026-07-17', VOWS, daily);
+  assert.equal(isCrashedDay(day), true);
+});
+
+test('全誓いが取り戻しあり → 崩れた日ではない', () => {
+  const daily: DailyRecord[] = [
+    { vowId: 'a', date: '2026-07-17', actualMinutes: 53 }, // 1分取り戻し
+    { vowId: 'b', date: '2026-07-17', actualMinutes: 30 }, // 26分取り戻し
+  ];
+  const day = buildConfirmedDay('2026-07-17', VOWS, daily);
+  assert.equal(hasCrashedVow(day.activeVows), false);
   assert.equal(isCrashedDay(day), false);
 });
 
@@ -125,7 +146,7 @@ test('崩れていない確定日 → 発火しない', () => {
     '2026-07-17',
     VOWS,
     [{ vowId: 'a', date: '2026-07-17', actualMinutes: 10 }, // 取り戻しあり
-     { vowId: 'b', date: '2026-07-17', actualMinutes: 61 }],
+     { vowId: 'b', date: '2026-07-17', actualMinutes: 20 }], // こちらも取り戻しあり
   );
   assert.equal(
     shouldFireCrashedDay({
