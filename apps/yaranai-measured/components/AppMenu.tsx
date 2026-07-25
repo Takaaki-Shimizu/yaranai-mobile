@@ -6,7 +6,7 @@
 // supabase.auth.signOut() は認証ストレージだけを消し、庭の高水位(garden-high-water:*)や
 // 記事状態(yaranai.articles.state.v1)には触れないため、再ログインで無傷に戻る。
 
-import { Modal, Pressable, View, Text, StyleSheet, Alert } from 'react-native';
+import { Modal, Pressable, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../lib/supabase';
@@ -38,6 +38,11 @@ export function AppMenu({ visible, onClose }: Props) {
     );
   };
 
+  const goIdeal = () => {
+    onClose();
+    router.push('/(app)/ideal');
+  };
+
   const goReading = () => {
     onClose();
     router.push('/(app)/reading');
@@ -48,10 +53,10 @@ export function AppMenu({ visible, onClose }: Props) {
       {/* 背景タップで閉じる。演出は控えめ(フェードのみ) */}
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
-          {/* 理想を入力: 宣言機能の既存予定エントリ。未実装のためプレースホルダ(§5.3) */}
-          <View style={[styles.item, styles.itemDisabled]}>
-            <Text style={[styles.itemText, styles.itemTextDisabled]}>理想を入力</Text>
-          </View>
+          {/* 理想を入力(§5.3)。ホームヘッダーの表示枠タップと同じ編集画面へ入る */}
+          <Pressable style={styles.item} onPress={goIdeal}>
+            <Text style={styles.itemText}>理想を入力</Text>
+          </Pressable>
 
           <Pressable style={styles.item} onPress={goReading}>
             <Text style={styles.itemText}>読みもの</Text>
@@ -84,9 +89,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   item: { paddingVertical: 16, paddingHorizontal: 24 },
-  itemDisabled: { opacity: 1 },
   itemText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 2 },
-  itemTextDisabled: { color: colors.usuzumi },
   logout: {
     marginTop: 6,
     borderTopWidth: 1,

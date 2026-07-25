@@ -117,9 +117,8 @@ export function DevGarden() {
 
   return (
     <View>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>開発者モード · 実測は取得しません</Text>
-      </View>
+      {/* 開発者モードであることは、下の日数/時間スライダーの存在で判別できる。
+          バッジは置かない(その位置はホームの理想の表示枠が使う) */}
 
       {/* 現在のスライダー値に対応する一枚だけを描く(差分演出なし: prevGrowth 未指定) */}
       <HomeGarden growth={growth} height={gardenHeight} />
@@ -152,18 +151,6 @@ export function DevGarden() {
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    alignSelf: 'center',
-    marginBottom: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: colors.usuzumi,
-    borderStyle: 'dashed',
-    borderRadius: 2,
-  },
-  badgeText: { fontSize: 11, letterSpacing: 2, color: colors.usuzumi },
-
   panel: { paddingHorizontal: 28, paddingTop: 32, gap: 28 },
   control: { gap: 12 },
   controlHead: {

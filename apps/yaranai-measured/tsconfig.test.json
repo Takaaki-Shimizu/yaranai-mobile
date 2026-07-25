@@ -19,6 +19,8 @@
     "lib/articles/state.ts",
     "lib/articles/types.ts",
     "lib/articles/markdown.ts",
-    "lib/articles/__tests__/**/*.ts"
+    "lib/articles/__tests__/**/*.ts",
+    "lib/ideal/validate.ts",
+    "lib/ideal/__tests__/**/*.ts"
   ]
 }
