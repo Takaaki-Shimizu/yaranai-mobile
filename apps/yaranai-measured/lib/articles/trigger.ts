@@ -46,9 +46,20 @@ export function activeVowsOn(date: string, vows: VowRecord[]): VowRecord[] {
   );
 }
 
-// その日の全誓い合計の取り戻し時間(分)。取り戻し = max(0, 基準線 − 実測)。
+// 誓い1本の取り戻し時間(分)。取り戻し = max(0, 基準線 − 実測)。
+export function vowReclaimedMinutes(vow: VowMeasurement): number {
+  return Math.max(0, vow.baselineMinutes - vow.actualMinutes);
+}
+
+// その日の全誓い合計の取り戻し時間(分)。
 export function reclaimedMinutes(vows: VowMeasurement[]): number {
-  return vows.reduce((sum, v) => sum + Math.max(0, v.baselineMinutes - v.actualMinutes), 0);
+  return vows.reduce((sum, v) => sum + vowReclaimedMinutes(v), 0);
+}
+
+// その日、取り戻し 0分の誓いが1本でもあるか。
+// 他の誓いで取り戻せていても、崩れた誓いが1本でもあれば「崩れた日」とみなす。
+export function hasCrashedVow(vows: VowMeasurement[]): boolean {
+  return vows.some((v) => vowReclaimedMinutes(v) === 0);
 }
 
 // 素データから確定日1日ぶんを組む。integration 層が Supabase から集めた行を渡す。
@@ -71,11 +82,12 @@ export function buildConfirmedDay(
 // D が「崩れた日」か(§4.2)。以下をすべて満たすとき true。
 //   1. D に実測の行が存在する(データ欠損の日は対象外)
 //   2. D 時点で有効な誓いが1本以上ある(宣言前・宣言当日は対象外)
-//   3. D の全誓い合計の取り戻し時間が 0分
+//   3. D の取り戻し時間が 0分の誓いが1本以上ある
+//      (全誓い合計が 0分でなくとも、崩れた誓いが1本でもあれば崩れた日)
 export function isCrashedDay(day: ConfirmedDay): boolean {
   if (!day.hasRow) return false;
   if (day.activeVows.length === 0) return false;
-  return reclaimedMinutes(day.activeVows) === 0;
+  return hasCrashedVow(day.activeVows);
 }
 
 // 2つの record_date(YYYY-MM-DD)の暦日差 to − from。UTC 正午基準で丸めて DST を避ける。
