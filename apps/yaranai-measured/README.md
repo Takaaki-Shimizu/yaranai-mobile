@@ -182,4 +182,6 @@ node scripts/render-garden-previews.js /tmp/garden-previews
 - 差分演出(`changedCategories`/`changeNote`/`diffStages`)も
   `garden_last_seen_state` も触らない。常に現在のスライダー値に対応する一枚だけを描く(§4)。
 - 苔スライダーの上限は `MOSS_FULL_HOURS`(=210時間で満開)を import して使う。
+- 庭モード(絵巻)は週末に限らず365日、庭のタップで開ける。スライダー値を
+  ルートパラメータ(`days`/`hours`)で渡し、絵巻も同じ庭を描く(高水位・実測には触れない)。
 - 本番ユーザーからは到達不可能(email 不一致なら UI 自体が現れない)。

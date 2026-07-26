@@ -9,8 +9,9 @@
 
 import { useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, useWindowDimensions,
+  View, Text, TextInput, Pressable, StyleSheet, useWindowDimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { colors, fonts } from '@yaranai/core';
@@ -109,6 +110,7 @@ function DebugSlider({ label, value, min, max, step, unit, onChange }: SliderPro
 
 export function DevGarden() {
   const { width } = useWindowDimensions();
+  const router = useRouter();
   const [days, setDays] = useState(42);
   const [savedHours, setSavedHours] = useState(Math.round(MOSS_FULL_HOURS / 2));
 
@@ -120,8 +122,19 @@ export function DevGarden() {
       {/* 開発者モードであることは、下の日数/時間スライダーの存在で判別できる。
           バッジは置かない(その位置はホームの理想の表示枠が使う) */}
 
-      {/* 現在のスライダー値に対応する一枚だけを描く(差分演出なし: prevGrowth 未指定) */}
-      <HomeGarden growth={growth} height={gardenHeight} />
+      {/* 現在のスライダー値に対応する一枚だけを描く(差分演出なし: prevGrowth 未指定)。
+          週末に限らず365日、タップで絵巻(庭モード)を開ける。スライダー値を
+          ルートパラメータで渡し、絵巻も同じ庭を描く(実測・高水位には触れない) */}
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: '/(app)/garden',
+            params: { days: String(days), hours: String(savedHours) },
+          })
+        }
+      >
+        <HomeGarden growth={growth} height={gardenHeight} />
+      </Pressable>
 
       <View style={styles.panel}>
         <DebugSlider
