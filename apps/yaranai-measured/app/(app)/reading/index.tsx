@@ -69,9 +69,11 @@ export default function ReadingList() {
         {sections.standing.map(renderRow)}
 
         {/* standing と conditional の間の罫線1本(v1.1 §5.2)。
-            片方しか無いときは区切るものが無いため出さない */}
+            その罫線は standing 最終行の下罫線が兼ねる ── ここに線を足すと2本になって
+            余計に見えるため、足すのは息をつける余白だけ。
+            片方しか無いときは区切るものが無いので余白も出さない */}
         {sections.standing.length > 0 && sections.conditional.length > 0 && (
-          <View style={styles.divider} />
+          <View style={styles.sectionGap} />
         )}
 
         {sections.conditional.map(renderRow)}
@@ -109,8 +111,8 @@ const styles = StyleSheet.create({
   rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.sumi, letterSpacing: 1, flex: 1 },
   // 未読の点(6px・生成りに沈む茶灰。モックの --tensen)
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#A9A28B', marginLeft: 12 },
-  // 節の罫線(v1.1 §5.2)。行の下罫線と同じ1px・砂色。上下に息をつける余白だけ足す。
-  divider: { height: 1, backgroundColor: colors.suna, marginVertical: 14 },
+  // 節の間(v1.1 §5.2)。区切りの線は standing 最終行の下罫線が担うので、ここは余白のみ。
+  sectionGap: { height: 24 },
   empty: {
     fontSize: 13,
     lineHeight: 24,

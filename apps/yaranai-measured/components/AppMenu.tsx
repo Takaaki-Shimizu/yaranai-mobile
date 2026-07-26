@@ -63,7 +63,8 @@ export function AppMenu({ visible, onClose }: Props) {
             <Text style={styles.itemText}>{t.menu.ideal}</Text>
           </Pressable>
 
-          <Pressable style={styles.item} onPress={goReading}>
+          {/* 項目の間はすべて同じ1本の罫線で区切る(ここだけ無いと束ねて見える) */}
+          <Pressable style={[styles.item, styles.separated]} onPress={goReading}>
             <Text style={styles.itemText}>{t.menu.reading}</Text>
           </Pressable>
 
