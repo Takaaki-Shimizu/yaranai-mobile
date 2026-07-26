@@ -32,12 +32,22 @@ export const GARDEN_COLORS = {
   stoneHighlight: '#8C8471',
   shadowInk: '#1F1D19',
 
-  // 敷石3階調 + 目地(north-star v3)
+  // 敷石3階調(north-star v3)。これは基準色で、実際の一枚ごとの色は
+  // scene.ts が明度と色味を決定論的に振って作る(cobbleTintWarm/Cool)
   cobbleA: ['#B3AB97', '#948C79', '#6B6454'],
   cobbleB: ['#A8A69A', '#87857A', '#5F5D52'],
   cobbleC: ['#9A9078', '#7C725C', '#564F40'],
-  jointTop: '#8A8271',
-  jointBottom: '#6E6656',
+  // 敷石の個体差。石ごとの色味を暖/寒どちらかへ寄せる先(西芳寺の敷石は
+  // 赤茶の石と青灰の石が隣り合っていて、その差が「本物の石」を作る)
+  cobbleTintWarm: '#8A7452',
+  cobbleTintCool: '#6F757C',
+  // 目地は石より確実に暗いこと。石と同明度(north-star の #8A8271)だと一枚ずつの
+  // 輪郭が消えて参道が一枚の面に潰れる。ただし敷石は路面を覆いきらないので、
+  // 闇まで落とすと今度は参道が黒い川になる。石の間に踏み固められた土、の暗さに置く
+  jointTop: '#7B7261',
+  jointBottom: '#5C5445',
+  // 敷石の接地影。石は苔と土の面に「沈んでいる」ように見せる
+  cobbleShadow: '#211E17',
 
   // 苔(3系統×3階調。north-star v3)
   mossLight: ['#CCDC8E', '#9CB964', '#6C8A45'],

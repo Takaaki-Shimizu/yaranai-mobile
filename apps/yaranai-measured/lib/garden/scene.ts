@@ -69,6 +69,13 @@ function hexLerp(a: string, b: string, t: number): string {
   return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
 }
 
+/** RGB を一律 k 倍(0〜255 でクランプ)。敷石の明度ジッターに使う */
+function shade(hex: string, k: number): string {
+  const p = parseInt(hex.slice(1), 16);
+  const ch = (sh: number) => Math.min(255, Math.max(0, Math.round((((p >> sh) & 0xff) * k))));
+  return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
+}
+
 /** 土→Day42→Day84 の3アンカー色補間(m: 苔の充実 0〜1) */
 const lerp3 = (dry: string, mid: string, full: string, m: number) =>
   m <= 0.5 ? hexLerp(dry, mid, m / 0.5) : hexLerp(mid, full, (m - 0.5) / 0.5);
@@ -156,9 +163,8 @@ function buildPaints(g: GrowthParams): Record<string, Paint> {
       type: 'radial', center: [0.5, 0.4], radius: 0.8,
       stops: [{ offset: 0, color: C.water[0] }, { offset: 1, color: C.water[1] }],
     },
-    cobbleA: radial(C.cobbleA),
-    cobbleB: radial(C.cobbleB),
-    cobbleC: radial(C.cobbleC),
+    // 敷石は一枚ごとに色を持つ(COBBLE_PAINTS)。3階調のパレット直参照はしない
+    ...COBBLE_PAINTS,
     mossLight: radial(C.mossLight, true),
     mossMid: radial(C.mossMid, true),
     mossDeep: radial(C.mossDeep, true),
@@ -203,6 +209,37 @@ const COBBLES: CobbleSpec[] = [
   [585, 455, 9, 5, -7, 'B'], [606, 453, 9, 5, 5, 'C'],
   [582, 436, 7.5, 4, 6, 'A'], [598, 435, 8, 4.5, -6, 'B'],
 ];
+
+// 敷石の個体差。3階調のパレットをそのまま使うと35枚が同じ石に見え、参道が
+// 一枚の面に潰れる。写真の敷石は「白っぽい石・赤茶の石・黒い石が隣り合っている」こと
+// そのものが本物の signal なので、一枚ごとに明度と色味を決定論的に振る。
+// ハイライトの位置も少し振る(石の傾きの差)が、光は上から、の原則は崩さない
+// (光源方向そのものを右上へ揃えるのは敷石プリミティブ化の回で扱う)。
+const COBBLE_JITTER_SEED = 0x0c0b1e;
+const cobblePaintName = (i: number) => `cobble${i}`;
+
+const COBBLE_PAINTS: Record<string, Paint> = (() => {
+  const rng = mulberry32(COBBLE_JITTER_SEED);
+  const out: Record<string, Paint> = {};
+  COBBLES.forEach(([, , , , , pt], i) => {
+    const base = pt === 'A' ? C.cobbleA : pt === 'B' ? C.cobbleB : C.cobbleC;
+    const k = range(rng, 0.78, 1.22); // 明度: 最明の石と最暗の石で 1.5 倍以上開く
+    const t = range(rng, -0.2, 0.2); // 色味: + が暖(赤茶)、- が寒(青灰)
+    const tint = t >= 0 ? C.cobbleTintWarm : C.cobbleTintCool;
+    const colors = base.map((c) => hexLerp(shade(c, k), tint, Math.abs(t)));
+    out[cobblePaintName(i)] = {
+      type: 'radial',
+      center: [range(rng, 0.26, 0.44), range(rng, 0.18, 0.34)],
+      radius: 1.1,
+      stops: [
+        { offset: 0, color: colors[0] },
+        { offset: 0.5, color: colors[1] },
+        { offset: 1, color: colors[2] },
+      ],
+    };
+  });
+  return out;
+})();
 
 /** 記録日数 → 敷石の枚数。Day1=3 / Day42=24 / Day84=全35。単調非減少 */
 export function cobbleCount(recordedDays: number): number {
@@ -628,10 +665,20 @@ export function buildScene(g: GrowthParams): Scene {
       prims: [{ kind: 'path', d: JOINT_D, transform: nsPath(), paint: ref('joint') }],
     });
   }
-  // 敷石(記録の歩み)
-  const cobbles = COBBLES.slice(0, nCobbles).map(([cx, cy, rx, ry, rot, pt]) =>
-    nsEllipse(cx, cy, rx, ry, ref(`cobble${pt}`), { rotateDeg: rot }));
-  pathGroups.push({ wobble: 'cobble', prims: cobbles });
+  // 敷石(記録の歩み)。接地影 → 石 の順に積む。影は石と同じ揺らぎを受ける必要が
+  // あるので同一グループに入れ、かつ全部の影を先に描く(石ごとに影→石と交互に積むと、
+  // 手前の石の影が一列奥の石の上に乗ってしまう)。
+  // 影は光源(右上)の反対=左下へずらし、石の大きさに比例させる
+  const laid = COBBLES.slice(0, nCobbles);
+  const cobbleShadows = laid.map(([cx, cy, rx, ry, rot]) =>
+    nsEllipse(cx - rx * 0.1, cy + ry * 0.3, rx * 1.04, ry * 1.08, solid(C.cobbleShadow), {
+      rotateDeg: rot,
+      opacity: 0.34,
+      blur: Math.max(1, Math.round(ry * SY * 0.18)),
+    }));
+  const cobbles = laid.map(([cx, cy, rx, ry, rot], i) =>
+    nsEllipse(cx, cy, rx, ry, ref(cobblePaintName(i)), { rotateDeg: rot }));
+  pathGroups.push({ wobble: 'cobble', prims: [...cobbleShadows, ...cobbles] });
   // 杭と縄(結界。参道の両脇に沿う。§変更5)
   const pairs = postPairCount(n);
   const postPrims: Prim[] = [];
