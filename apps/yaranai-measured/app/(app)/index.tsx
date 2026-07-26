@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, useWindowDimensions,
+  type StyleProp, type ViewStyle,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
@@ -177,29 +178,32 @@ export default function Home() {
         </Pressable>
       ) : (
         <View style={styles.empty}>
-          <Text style={styles.headline}>ここから、始まる。</Text>
+          <Text style={styles.headline}>ここから、変わる。</Text>
         </View>
+      )}
+
+      {/* 読みもの: 未読の帯(§5.1)。庭と累計の一文の間に置く。
+          「戻ってきました。」とアプリ行の間に挟むと文意が切れるため、庭の直下に出す。
+          罫線2本のみ・カード化しない。未読の印は点1個。タップで記事へ。
+          庭からは 28、下は累計ブロックの余白 40 で挟み、帯が窮屈に見えないようにする。
+          既読になった帯は次の focus でここから消える(演出なし) */}
+      {unreadArticle && (
+        <ReadingStrip
+          style={styles.stripHome}
+          article={unreadArticle}
+          onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
+        />
       )}
 
       {/* 蓄積 */}
       {totals && Math.round(totalSavedMinutes) > 0 && (
-        <View style={styles.stats}>
+        <View style={[styles.stats, unreadArticle && styles.statsUnderStrip]}>
           <Text style={styles.headline}>
             {totals.longest_days}日で、{formatMinutes(totalSavedMinutes)}が{'\n'}戻ってきました。
           </Text>
           {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
           {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
         </View>
-      )}
-
-      {/* 読みもの: 未読の帯(§5.1)。累計の一文の直下・アプリ行の上。
-          罫線2本のみ・カード化しない。未読の印は点1個。タップで記事へ。
-          既読になった帯はここから消える(演出なし) */}
-      {unreadArticle && (
-        <ReadingStrip
-          article={unreadArticle}
-          onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
-        />
       )}
 
       {/* 誓い */}
@@ -229,9 +233,18 @@ export default function Home() {
 }
 
 // 読みものの帯(§5.1)。通常モード(未読の1本)と開発者モード(常設)で共用する。
-function ReadingStrip({ article, onPress }: { article: ArticleListItem; onPress: () => void }) {
+// 置き場所ごとの余白は style で外から足す(帯そのものの見た目は変えない)。
+function ReadingStrip({
+  article,
+  onPress,
+  style,
+}: {
+  article: ArticleListItem;
+  onPress: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
-    <Pressable style={styles.strip} onPress={onPress}>
+    <Pressable style={[styles.strip, style]} onPress={onPress}>
       <View>
         <Text style={styles.stripLabel}>読みもの</Text>
         <Text style={styles.stripTitle}>{article.title}</Text>
@@ -268,6 +281,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  // ホームでは庭と累計の一文の間に挟むので、上下に息をつける余白を持たせる。
+  // 下の 40 は、累計ブロック非表示(戻り時間が 0)のときも帯がアプリ行に貼りつかないため。
+  stripHome: { marginTop: 28, marginBottom: 40 },
   stripLabel: { fontSize: 10, color: colors.usuzumi, letterSpacing: 3 },
   stripTitle: {
     marginTop: 5,
@@ -281,6 +297,8 @@ const styles = StyleSheet.create({
 
   empty: { paddingVertical: 72, alignItems: 'center' },
   stats: { paddingVertical: 40, paddingHorizontal: 28, alignItems: 'center' },
+  // 帯が上にあるときは、帯の下余白(40)と二重にしない。
+  statsUnderStrip: { paddingTop: 0 },
   changeNote: {
     fontFamily: fonts.serif,
     fontSize: 15,

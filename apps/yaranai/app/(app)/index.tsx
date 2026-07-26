@@ -132,7 +132,7 @@ export default function Home() {
             </View>
           </>
         ) : (
-          <Text style={styles.headline}>ここから、始まる。</Text>
+          <Text style={styles.headline}>ここから、変わる。</Text>
         )}
       </View>
 
