@@ -1,8 +1,10 @@
 // 記事状態 + registry から画面用の並びを組む(実装仕様書 §5.1 / §5.4)。
 // 「発火が新しい順」は firedAt の降順。registry に無い id(将来削除された記事)は無視する。
+// タイトルは表示言語(lang)で引く。既読・発火の状態は言語をまたいで共通(id がキー)。
 
 import { ARTICLES, getArticle } from './registry';
 import type { ArticlesState } from './types';
+import type { Lang } from '../i18n/types';
 
 export type ArticleListItem = {
   id: string;
@@ -12,12 +14,17 @@ export type ArticleListItem = {
 };
 
 // 発火済みの記事を発火が新しい順に。読みもの一覧(§5.4)で使う。
-export function firedArticles(state: ArticlesState): ArticleListItem[] {
+export function firedArticles(state: ArticlesState, lang: Lang): ArticleListItem[] {
   const items: ArticleListItem[] = [];
   for (const [id, entry] of Object.entries(state)) {
     const article = getArticle(id);
     if (!article) continue;
-    items.push({ id, title: article.title, unread: entry.readAt === null, firedAt: entry.firedAt });
+    items.push({
+      id,
+      title: article.title[lang],
+      unread: entry.readAt === null,
+      firedAt: entry.firedAt,
+    });
   }
   // firedAt(ISO)の降順。同時刻は registry の並び順で安定させる。
   const order = new Map(ARTICLES.map((a, i) => [a.id, i]));
@@ -29,17 +36,17 @@ export function firedArticles(state: ArticlesState): ArticleListItem[] {
 }
 
 // ホームの帯に出す1本(未読のうち発火が最新のもの)。無ければ null(§5.1)。
-export function newestUnread(state: ArticlesState): ArticleListItem | null {
-  return firedArticles(state).find((a) => a.unread) ?? null;
+export function newestUnread(state: ArticlesState, lang: Lang): ArticleListItem | null {
+  return firedArticles(state, lang).find((a) => a.unread) ?? null;
 }
 
 // 開発者モード用: 発火判定を通らない(計測しない)ため、登録簿の記事をそのまま見せる。
 // 永続状態(発火・既読)は参照しない ── 常に「読める」状態として並べる。registry 順。
-export function previewArticles(): ArticleListItem[] {
-  return ARTICLES.map((a) => ({ id: a.id, title: a.title, unread: true, firedAt: '' }));
+export function previewArticles(lang: Lang): ArticleListItem[] {
+  return ARTICLES.map((a) => ({ id: a.id, title: a.title[lang], unread: true, firedAt: '' }));
 }
 
 // 開発者モードのホームの帯に出す1本(登録簿の先頭)。無ければ null。
-export function previewStripArticle(): ArticleListItem | null {
-  return previewArticles()[0] ?? null;
+export function previewStripArticle(lang: Lang): ArticleListItem | null {
+  return previewArticles(lang)[0] ?? null;
 }

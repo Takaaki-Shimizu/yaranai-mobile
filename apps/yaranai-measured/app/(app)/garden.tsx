@@ -12,12 +12,14 @@ import { GardenScroll } from '../../components/garden/GardenScroll';
 import { loadGrowth } from '../../components/garden/load';
 import { isEngawaOpen } from '../../lib/garden/gate';
 import { useIsDeveloper } from '../../lib/developer';
+import { useT } from '../../lib/i18n/context';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 export default function GardenMode() {
   const session = useSession();
   const isDeveloper = useIsDeveloper();
   const router = useRouter();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
   const open = isEngawaOpen(new Date());
@@ -50,7 +52,7 @@ export default function GardenMode() {
         hitSlop={16}
         onPress={() => router.back()}
       >
-        <Text style={styles.closeText}>とじる</Text>
+        <Text style={styles.closeText}>{t.garden.close}</Text>
       </Pressable>
     </Animated.View>
   );

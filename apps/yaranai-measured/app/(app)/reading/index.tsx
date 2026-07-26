@@ -9,10 +9,13 @@ import { colors, fonts } from '@yaranai/core';
 import { useIsDeveloper } from '../../../lib/developer';
 import { loadArticlesState } from '../../../lib/articles/storage';
 import { firedArticles, previewArticles, type ArticleListItem } from '../../../lib/articles/select';
+import { useLang, useT } from '../../../lib/i18n/context';
 
 export default function ReadingList() {
   const router = useRouter();
   const isDeveloper = useIsDeveloper();
+  const { lang } = useLang();
+  const t = useT();
   const [items, setItems] = useState<ArticleListItem[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -20,25 +23,25 @@ export default function ReadingList() {
     useCallback(() => {
       // 開発者モードは計測しないため発火状態を持たない。登録簿の全記事を常に見せる。
       if (isDeveloper) {
-        setItems(previewArticles());
+        setItems(previewArticles(lang));
         setLoaded(true);
         return;
       }
       let active = true;
       loadArticlesState().then((state) => {
         if (!active) return;
-        setItems(firedArticles(state));
+        setItems(firedArticles(state, lang));
         setLoaded(true);
       });
       return () => {
         active = false;
       };
-    }, [isDeveloper]),
+    }, [isDeveloper, lang]),
   );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>読みもの</Text>
+      <Text style={styles.title}>{t.reading.listTitle}</Text>
 
       <View style={styles.list}>
         {items.map((item) => (
@@ -53,12 +56,12 @@ export default function ReadingList() {
         ))}
 
         {loaded && items.length === 0 && (
-          <Text style={styles.empty}>まだ、読みものはありません。</Text>
+          <Text style={styles.empty}>{t.reading.empty}</Text>
         )}
       </View>
 
       <Pressable style={styles.back} onPress={() => router.back()}>
-        <Text style={styles.backText}>戻る</Text>
+        <Text style={styles.backText}>{t.reading.back}</Text>
       </Pressable>
     </ScrollView>
   );

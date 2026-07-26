@@ -13,6 +13,7 @@ import { averageMinutesPerDay } from '../../lib/usage-buckets';
 import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
 import { formatMinutes } from '../../lib/format';
 import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
+import { useLang, useT } from '../../lib/i18n/context';
 
 const MAX_VOWS = 3;
 
@@ -37,6 +38,8 @@ type ObserveRow = {
 
 export default function Observe() {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = useT();
   const [rows, setRows] = useState<ObserveRow[]>([]);
   const [vowedPackages, setVowedPackages] = useState<Set<string>>(new Set());
   const [availableDays, setAvailableDays] = useState(0);
@@ -114,12 +117,9 @@ export default function Observe() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>時間の行き先</Text>
-      <Text style={styles.subtitle}>この12週、あなたの時間はここへ。</Text>
-      <Text style={styles.note}>
-        直近7日に使ったアプリを、12週の1日平均で。{'\n'}
-        宣言すると、この平均がそのまま、あなたの「ふだん」になります。
-      </Text>
+      <Text style={styles.title}>{t.observe.title}</Text>
+      <Text style={styles.subtitle}>{t.observe.subtitle}</Text>
+      <Text style={styles.note}>{t.observe.note}</Text>
 
       <View style={styles.list}>
         {rows.map((row) => {
@@ -128,11 +128,13 @@ export default function Observe() {
             <View key={row.packageName} style={styles.row}>
               <View style={styles.rowHead}>
                 <Text style={styles.label}>{labelForPackage(row.packageName)}</Text>
-                <Text style={styles.minutes}>1日 平均{formatMinutes(row.avgMinutesPerDay)}</Text>
+                <Text style={styles.minutes}>
+                  {t.observe.avgPerDay(formatMinutes(row.avgMinutesPerDay, lang))}
+                </Text>
               </View>
               <View style={styles.rowFoot}>
                 {vowed ? (
-                  <Text style={styles.vowed}>誓いのなか</Text>
+                  <Text style={styles.vowed}>{t.observe.vowed}</Text>
                 ) : (
                   slotsOpen && (
                     <Pressable
@@ -146,7 +148,7 @@ export default function Observe() {
                         })
                       }
                     >
-                      <Text style={styles.declareLink}>これをやらない、と宣言する</Text>
+                      <Text style={styles.declareLink}>{t.observe.declareLink}</Text>
                     </Pressable>
                   )
                 )}
@@ -157,21 +159,16 @@ export default function Observe() {
 
         {gathering && (
           <Text style={styles.empty}>
-            まだ記録を集めています。{'\n'}
-            この端末の記録が{BASELINE_MIN_DAYS}日ぶんに満ちると、{'\n'}
-            時間の行き先が見えるようになります。{'\n'}
-            いまは{availableDays}日ぶんです。
+            {t.observe.gathering(BASELINE_MIN_DAYS, availableDays)}
           </Text>
         )}
         {loaded && !gathering && rows.length === 0 && (
-          <Text style={styles.empty}>
-            まだ観測が集まっていません。{'\n'}この端末を使ううちに、静かに集まります。
-          </Text>
+          <Text style={styles.empty}>{t.observe.empty}</Text>
         )}
       </View>
 
       <Pressable style={styles.back} onPress={() => router.back()}>
-        <Text style={styles.backText}>戻る</Text>
+        <Text style={styles.backText}>{t.observe.back}</Text>
       </Pressable>
     </ScrollView>
   );

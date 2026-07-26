@@ -6,8 +6,10 @@ import { Link } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
 import { colors, fonts } from '@yaranai/core';
+import { useT } from '../../lib/i18n/context';
 
 export default function ForgotPassword() {
+  const t = useT();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [notice, setNotice] = useState('');
@@ -15,7 +17,7 @@ export default function ForgotPassword() {
 
   const sendReset = async () => {
     if (!email.trim()) {
-      setMessage('メールアドレスを入れてください。');
+      setMessage(t.auth.emailMissing);
       return;
     }
     setBusy(true);
@@ -28,9 +30,9 @@ export default function ForgotPassword() {
       redirectTo,
     });
     if (error) {
-      setMessage('送れませんでした。少し時間をおいてもう一度。');
+      setMessage(t.auth.sendFailed);
     } else {
-      setNotice('パスワード再設定のメールを送りました。メールのリンクを開いてください。');
+      setNotice(t.auth.resetSent);
     }
     setBusy(false);
   };
@@ -43,14 +45,12 @@ export default function ForgotPassword() {
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
-        <Text style={styles.title}>パスワードの再設定</Text>
-        <Text style={styles.description}>
-          ご登録のメールアドレスに、再設定用のリンクをお送りします。
-        </Text>
+        <Text style={styles.title}>{t.auth.resetTitle}</Text>
+        <Text style={styles.description}>{t.auth.resetDescription}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="メールアドレス"
+          placeholder={t.auth.emailPlaceholder}
           placeholderTextColor={colors.usuzumi}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -59,7 +59,7 @@ export default function ForgotPassword() {
         />
 
         <Pressable style={styles.primary} onPress={sendReset} disabled={busy}>
-          <Text style={styles.primaryText}>送 る</Text>
+          <Text style={styles.primaryText}>{t.auth.send}</Text>
         </Pressable>
 
         {notice !== '' && <Text style={styles.notice}>{notice}</Text>}
@@ -67,7 +67,7 @@ export default function ForgotPassword() {
 
         <Link href="/(auth)/sign-in" asChild>
           <Pressable style={styles.link}>
-            <Text style={styles.linkText}>ログインにもどる</Text>
+            <Text style={styles.linkText}>{t.auth.backToSignIn}</Text>
           </Pressable>
         </Link>
       </View>

@@ -11,10 +11,12 @@ import { useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { IDEAL_MAX_LENGTH, idealLength, validateIdeal } from '../../lib/ideal/validate';
 import { loadIdeal, saveIdeal } from '../../lib/ideal/storage';
+import { useT } from '../../lib/i18n/context';
 
 export default function Ideal() {
   const session = useSession();
   const router = useRouter();
+  const t = useT();
   const userId = session?.user?.id;
 
   const [text, setText] = useState('');
@@ -48,14 +50,14 @@ export default function Ideal() {
     const result = validateIdeal(text);
     if (!result.ok) {
       // エラーは静かなインライン表示にとどめる(アラート・ダイアログは使わない)
-      setError(`${IDEAL_MAX_LENGTH}文字以内にしてください。`);
+      setError(t.ideal.tooLong(IDEAL_MAX_LENGTH));
       return;
     }
     setBusy(true);
     const ok = await saveIdeal(userId, result.value);
     setBusy(false);
     if (!ok) {
-      setError('保存できませんでした。');
+      setError(t.ideal.saveFailed);
       return;
     }
     router.back();
@@ -63,10 +65,10 @@ export default function Ideal() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>理想を、書く。</Text>
+      <Text style={styles.title}>{t.ideal.title}</Text>
 
       <View style={styles.form}>
-        <Text style={styles.lede}>なぜ、時間を取り戻すのか。</Text>
+        <Text style={styles.lede}>{t.ideal.lede}</Text>
 
         <TextInput
           style={styles.input}
@@ -78,19 +80,17 @@ export default function Ideal() {
           maxLength={Math.max(text.length, IDEAL_MAX_LENGTH * 2)}
           returnKeyType="done"
           autoCorrect={false}
-          accessibilityLabel="理想"
+          accessibilityLabel={t.ideal.inputA11y}
         />
 
-        <Text style={styles.note}>
-          {IDEAL_MAX_LENGTH}文字まで。いつでも書き直せます。
-        </Text>
+        <Text style={styles.note}>{t.ideal.note(IDEAL_MAX_LENGTH)}</Text>
 
         <Pressable style={styles.primary} onPress={save} disabled={busy}>
-          <Text style={styles.primaryText}>保存する</Text>
+          <Text style={styles.primaryText}>{t.ideal.save}</Text>
         </Pressable>
 
         <Pressable style={styles.secondary} onPress={() => router.back()}>
-          <Text style={styles.secondaryText}>戻る</Text>
+          <Text style={styles.secondaryText}>{t.ideal.back}</Text>
         </Pressable>
 
         {error !== '' && <Text style={styles.error}>{error}</Text>}

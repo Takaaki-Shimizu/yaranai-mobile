@@ -4,14 +4,18 @@
 
 import type { Article } from './types';
 import { TSUNDA_MONO_BODY } from './content/tsunda-mono';
+import { TSUNDA_MONO_BODY_EN } from './content/tsunda-mono-en';
 
 export const TSUNDA_MONO_ID = 'tsunda-mono';
 
 export const ARTICLES: Article[] = [
   {
     id: TSUNDA_MONO_ID,
-    title: '積んだものは、崩れない',
-    body: TSUNDA_MONO_BODY,
+    title: {
+      ja: '積んだものは、崩れない',
+      en: "What you've built doesn't crumble",
+    },
+    body: { ja: TSUNDA_MONO_BODY, en: TSUNDA_MONO_BODY_EN },
     trigger: { kind: 'crashedDay' },
   },
 ];

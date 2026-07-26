@@ -7,9 +7,11 @@ import {
   isUsageStatsAvailable,
   openUsageAccessSettings,
 } from '../../modules/usage-stats';
+import { useT } from '../../lib/i18n/context';
 
 export default function Permission() {
   const router = useRouter();
+  const t = useT();
 
   const checkAndLeave = useCallback(() => {
     if (isUsageStatsAvailable && hasUsageAccess()) {
@@ -35,9 +37,7 @@ export default function Permission() {
     return (
       <View style={styles.container}>
         <Text style={styles.wordmark}>Yaranai</Text>
-        <Text style={styles.body}>
-          この計測は、Androidの端末でだけ働きます。
-        </Text>
+        <Text style={styles.body}>{t.permission.androidOnly}</Text>
       </View>
     );
   }
@@ -47,16 +47,11 @@ export default function Permission() {
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
-        <Text style={styles.body}>
-          あなたの時間の記録は、この端末の中にあります。{'\n'}
-          Yaranaiはそれを読むだけです。外には送りません。
-        </Text>
-        <Text style={styles.note}>
-          設定で「使用状況へのアクセス」をYaranaiに許すと、計測が始まります。
-        </Text>
+        <Text style={styles.body}>{t.permission.body}</Text>
+        <Text style={styles.note}>{t.permission.note}</Text>
 
         <Pressable style={styles.primary} onPress={openUsageAccessSettings}>
-          <Text style={styles.primaryText}>設定を開く</Text>
+          <Text style={styles.primaryText}>{t.permission.openSettings}</Text>
         </Pressable>
       </View>
     </View>
