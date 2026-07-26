@@ -544,6 +544,49 @@ function wingTuftPrim(t: WT, m: number): Prim | null {
   return { kind: 'tuft', x: t.x, y: wy(t.y), scale: t.s * SX * k, rotateDeg: t.rot };
 }
 
+// 翼の光: 中央パネルの光の語彙(光だまり・竹の落ち影・光条・日なた苔)を左右の翼にも
+// 同じ規則で敷く。中央にだけ光が差すと、絵巻を歩いたとき翼が「別の天気の土地」に見える。
+// op と到達距離のルール(lightVisAt / shaftK)は中央の LIGHT_POOLS / TRUNK_SHADOWS /
+// LIGHT_SHAFTS と共有する。x は世界座標、y は north-star 800系(wy() で新世界へ)。
+// ホームの窓(世界 [PAN_CENTER, PAN_CENTER+VIEW_LOGICAL_W] = [975,2325])に掛からない
+// 位置にだけ置き、ホームの静止画は変えない。
+// 光だまり [cx, cy, rx, ry, rot, 最終op]
+const WING_LIGHT_POOLS: [number, number, number, number, number, number][] = [
+  // 左翼
+  [300, 452, 190, 22, -13, 0.32],
+  [560, 620, 150, 38, -15, 0.42],
+  [430, 726, 170, 44, -14, 0.4],
+  // 右翼
+  [2520, 455, 170, 21, -13, 0.32],
+  [2820, 610, 180, 44, -15, 0.42],
+  [3010, 690, 150, 40, -12, 0.38],
+];
+// 竹の長い影(右上光源→左下)。[点8つ, 最終op]
+const WING_TRUNK_SHADOWS: [number[], number][] = [
+  // 左翼
+  [[520, 444, 538, 444, 345, 582, 311, 570], 0.22],
+  [[710, 446, 728, 446, 535, 584, 501, 572], 0.24],
+  [[300, 442, 316, 442, 130, 570, 100, 560], 0.2],
+  // 右翼
+  [[2560, 444, 2578, 444, 2385, 582, 2351, 570], 0.22],
+  [[2770, 446, 2788, 446, 2595, 584, 2561, 572], 0.24],
+  [[2985, 442, 3001, 442, 2815, 570, 2785, 560], 0.2],
+];
+// 光条(右上の光源から斜めに)。傾きは中央の光条と揃える(光源は一本)。[点8つ, 最終op]
+// 光条はぼかしが大きい(blur 16 ≒ 48px 滲む)ので、窓の境界からその分だけ離す
+const WING_LIGHT_SHAFTS: [number[], number][] = [
+  // 左翼
+  [[860, 30, 930, 30, 560, 560, 495, 535], 0.24],
+  [[690, 20, 742, 20, 528, 430, 488, 415], 0.14],
+  // 右翼
+  [[2680, 60, 2735, 60, 2430, 540, 2383, 520], 0.18],
+  [[2740, 20, 2790, 20, 2578, 430, 2538, 415], 0.14],
+];
+/** 翼テーブルの点列(世界x・north-star y)→ 世界座標(y だけ wy) */
+const wingPts = (pts: number[]) => pts.map((v, i) => (i % 2 === 0 ? v : wy(v)));
+/** 影の最も手前(下端)の y。光の到達判定はここで取る(中央と同じ) */
+const wingShadowFrontY = (pts: number[]) => Math.max(...pts.filter((_, i) => i % 2 === 1));
+
 // 石(north-star 品質。world 座標)。§変更2 の三尊石で共用。
 // 中央パネルの石と同じ光(右上)に揃える: 落ち影 → 縁の光 → 本体 → 天端 → 陰 → 苔の照り返し
 function worldStone(cx: number, cy: number, rx: number, ry: number, m: number): Prim[] {
@@ -570,23 +613,38 @@ function steppingStone(x: number, y: number, sz: number, op: number): Prim[] {
  * 開扉時にこれらだけをフェードインさせる(差分演出とは別系統、イージング/時間は共有)。
  * 苔は中央と同じく m で育つ。motif(三尊石・蹲踞・飛び石・庭の竹)は完成形固定=借景。
  * 左翼: 三尊石+苔。右翼: 参道から分かれる飛び石+蹲踞(水鉢・水面・柄杓)+苔。庭の竹 左2右3。
+ * 光(光だまり・落ち影・光条・日なた苔)は中央と同じ規則で敷く(絵巻全体で一つの朝)。
  */
-function buildWingLayers(m: number, frontY: number): SceneLayer[] {
+function buildWingLayers(m: number, frontY: number, reach: number): SceneLayer[] {
   const layers: SceneLayer[] = [];
   const tufts = (list: WT[]) => list.map((t) => wingTuftPrim(t, m)).filter((p): p is Prim => p != null);
 
-  // wing-field (0.8): 遠中景の苔 + 光だまり
-  const poolOp = 0.22 * lightVisAt(frontY, 620);
+  // wing-field (0.8): 遠中景の苔 + 光だまり(中央 field と同じく reach で手前へ滲む)
+  const poolPrims: Prim[] = [];
+  WING_LIGHT_POOLS.forEach(([cx, cy, rx, ry, rot, opFull]) => {
+    const op = opFull * lightVisAt(frontY, cy);
+    if (op <= 0.005) return;
+    poolPrims.push(wingEllipse(cx, cy, rx, ry, solid(C.lightPool), { rotateDeg: rot, opacity: op }));
+  });
   layers.push({
     id: 'wing-field', parallax: 0.8,
     groups: [
       { blur: 1.2, opacity: 0.85, prims: tufts(WING.far) },
       { wobble: 'soft', prims: tufts(WING.mid) },
-      ...(poolOp > 0.005
-        ? [{ blur: 6, prims: [{ kind: 'ellipse', cx: 560, cy: wy(620), rx: 150, ry: 38 * SY, rotateDeg: -15, paint: solid(C.lightPool), opacity: poolOp } as Prim] }]
-        : []),
+      ...(poolPrims.length ? [{ blur: 4, prims: poolPrims } as SceneGroup] : []),
     ],
   });
+
+  // wing-shadows (0.8): 竹の長い落ち影。中央と同じく、光が届いた所にだけ落ちる
+  const shadowPrims: Prim[] = [];
+  WING_TRUNK_SHADOWS.forEach(([pts, opFull]) => {
+    const op = opFull * lightVisAt(frontY, wingShadowFrontY(pts));
+    if (op <= 0.005) return;
+    shadowPrims.push({ kind: 'polygon', points: wingPts(pts), paint: solid(C.trunkShadow), opacity: op });
+  });
+  if (shadowPrims.length) {
+    layers.push({ id: 'wing-shadows', parallax: 0.8, groups: [{ blur: 5, prims: shadowPrims }] });
+  }
 
   // wing-motif (1.0): 三尊石(左) / 飛び石+蹲踞(右)
   const motif: Prim[] = [];
@@ -619,6 +677,31 @@ function buildWingLayers(m: number, frontY: number): SceneLayer[] {
       { wobble: 'strong', prims: blobPrims },
       { wobble: 'soft', prims: tufts(WING.fore) },
     ],
+  });
+
+  // wing-moss-glow (1.1): 手前の光だまりを翼の苔の上にもう一度淡く重ねる(中央 moss-glow と同じ規則)
+  const glowPrims: Prim[] = [];
+  WING_LIGHT_POOLS.forEach(([cx, cy, rx, ry, rot, opFull]) => {
+    if (cy < 520) return; // 苔と重なる手前の光だまりのみ
+    const op = opFull * 0.55 * lightVisAt(frontY, cy);
+    if (op <= 0.005) return;
+    glowPrims.push(wingEllipse(cx, cy, rx * 0.92, ry * 0.92, solid(C.mossSunGlow), { rotateDeg: rot, opacity: op }));
+  });
+  if (glowPrims.length) {
+    layers.push({ id: 'wing-moss-glow', parallax: 1.1, groups: [{ blur: 5, prims: glowPrims }] });
+  }
+
+  // wing-shafts (0.45): 右上からの光条。中央 light-shafts と同じ reach 連動。
+  // 翼の竹(wing-bamboo)より先に積み、竹が光条の手前に立つ順序も中央と揃える
+  const shaftK = 0.12 + 0.88 * reach;
+  layers.push({
+    id: 'wing-shafts', parallax: 0.45,
+    groups: [{
+      blur: 16,
+      prims: WING_LIGHT_SHAFTS.map(([pts, opFull]) => ({
+        kind: 'polygon', points: wingPts(pts), paint: solid(C.lightShaft), opacity: opFull * shaftK,
+      }) as Prim),
+    }],
   });
 
   // wing-bamboo (1.0): 庭に立つ竹 左2・右3(奥行きをばらす。§変更6 の開扉分)
@@ -975,7 +1058,7 @@ export function buildScene(g: GrowthParams): Scene {
 
   // ---- 翼(左右の拡張。§変更2)。id 'wing-' 始まり = 絵巻で開扉時にフェードイン。
   // ホームの窓(中央パネル)には現れず、絵巻でスワイプすると視界に入る。
-  for (const wl of buildWingLayers(m, frontY)) {
+  for (const wl of buildWingLayers(m, frontY, reach)) {
     const nonEmpty = wl.groups.filter((gr) => gr.prims.length > 0);
     if (nonEmpty.length) layers.push({ ...wl, groups: nonEmpty });
   }

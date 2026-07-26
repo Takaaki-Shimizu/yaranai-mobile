@@ -3,6 +3,7 @@
 // 2026-07-07 に確認済み: 当日のみ開扉。
 // 祝日は対象外(暦の曜日だけを見る)。土日に重なる祝日はそのまま開く。
 // 閉扉中はホームの窓を静かに保つだけで、カウントダウンや案内文は出さない。
+// 開発者モードはこの判定を通さず365日開く(DevGarden のタップ → garden.tsx 側で分岐)。
 
 export function isEngawaOpen(now: Date): boolean {
   const day = now.getDay();
