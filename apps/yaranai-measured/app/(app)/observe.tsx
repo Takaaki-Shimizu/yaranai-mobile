@@ -12,7 +12,7 @@ import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../lib/baseline';
 import { averageMinutesPerDay } from '../../lib/usage-buckets';
 import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
 import { formatMinutes } from '../../lib/format';
-import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
+import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { useLang, useT } from '../../lib/i18n/context';
 
 const MAX_VOWS = 3;
@@ -41,6 +41,8 @@ export default function Observe() {
   const { lang } = useLang();
   const t = useT();
   const [rows, setRows] = useState<ObserveRow[]>([]);
+  // 端末に登録された正式なアプリ名。引けんパッケージはキーが無く、表示は整形へ倒れる。
+  const [officialLabels, setOfficialLabels] = useState<Record<string, string>>({});
   const [vowedPackages, setVowedPackages] = useState<Set<string>>(new Set());
   const [availableDays, setAvailableDays] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -76,6 +78,7 @@ export default function Observe() {
         )
         .slice(0, MAX_CANDIDATES);
       setRows(shown);
+      setOfficialLabels(getAppLabels(shown.map((r) => r.packageName)));
       // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
       // (adb logcat -s ReactNativeJS UsageStats)。端末の外には出ない。
       const shownSet = new Set(shown.map((r) => r.packageName));
@@ -97,6 +100,7 @@ export default function Observe() {
       }
     } else {
       setRows([]);
+      setOfficialLabels({});
     }
     setVowedPackages(new Set((vowsRes.data ?? []).map((v) => v.package_name)));
     setLoaded(true);
@@ -124,10 +128,11 @@ export default function Observe() {
       <View style={styles.list}>
         {rows.map((row) => {
           const vowed = vowedPackages.has(row.packageName);
+          const label = labelForPackage(row.packageName, officialLabels);
           return (
             <View key={row.packageName} style={styles.row}>
               <View style={styles.rowHead}>
-                <Text style={styles.label}>{labelForPackage(row.packageName)}</Text>
+                <Text style={styles.label}>{label}</Text>
                 <Text style={styles.minutes}>
                   {t.observe.avgPerDay(formatMinutes(row.avgMinutesPerDay, lang))}
                 </Text>
@@ -141,10 +146,7 @@ export default function Observe() {
                       onPress={() =>
                         router.push({
                           pathname: '/(app)/declare',
-                          params: {
-                            packageName: row.packageName,
-                            label: labelForPackage(row.packageName),
-                          },
+                          params: { packageName: row.packageName, label },
                         })
                       }
                     >

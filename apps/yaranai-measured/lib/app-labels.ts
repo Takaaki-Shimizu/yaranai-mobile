@@ -1,5 +1,9 @@
-// パッケージ名から表示名を引く。ネイティブの公開APIを3つに保つため、
-// PackageManagerには問い合わせず、JS側の対応表と整形で済ませる。
+// パッケージ名から表示名を引く。優先順は
+//   1. 端末に登録された正式なアプリ名(PackageManager。「みてね」「X」など)
+//   2. JS側の対応表(ネイティブが引けん場合の備え)
+//   3. パッケージ名からの整形(最後の手段。App54F7C05C のような名前も出る)
+// 1 の取得は modules/usage-stats の getAppLabels、ここは受け取った表を使うだけ。
+// この関数は純粋なまま保ち、ネイティブ呼び出しは画面側に置く。
 
 const KNOWN_LABELS: Record<string, string> = {
   'com.google.android.youtube': 'YouTube',
@@ -29,7 +33,12 @@ const GENERIC_SEGMENTS = new Set([
   'android', 'app', 'apps', 'mobile', 'client', 'free', 'jp', 'com',
 ]);
 
-export function labelForPackage(packageName: string): string {
+export function labelForPackage(
+  packageName: string,
+  officialLabels?: Record<string, string>,
+): string {
+  const official = officialLabels?.[packageName]?.trim();
+  if (official) return official;
   const known = KNOWN_LABELS[packageName];
   if (known) return known;
   const segments = packageName
