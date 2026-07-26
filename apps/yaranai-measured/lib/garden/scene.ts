@@ -122,13 +122,15 @@ function buildPaints(g: GrowthParams): Record<string, Paint> {
         { offset: 1, color: C.skyBottom },
       ],
     },
-    // 朝靄: 暖色(mock v4 mistG)。上端 0 → 帯 .52 → 地平近く .14。固定
+    // 朝靄: 暖色(mock v4 mistG)。上端 0 → 帯 .34 → 地平近く .10。固定。
+    // 全面に均一なベールが掛かると曇天に見えるため、靄は「奥だけ霞む」濃さに留めて
+    // 空気を澄ませる(厳か調整。mock v4 の .52 から引き下げ)
     mist: {
       type: 'linear', from: [0, 0], to: [0, 1],
       stops: [
         { offset: 0, color: C.mist, opacity: 0 },
-        { offset: 0.72, color: C.mist, opacity: 0.52 },
-        { offset: 1, color: C.mist, opacity: 0.14 },
+        { offset: 0.72, color: C.mist, opacity: 0.34 },
+        { offset: 1, color: C.mist, opacity: 0.1 },
       ],
     },
     // 地面: 苔の充実 m で 土色→中間の緑→完成の緑 へ補間(§変更3)。
@@ -271,27 +273,29 @@ const FORE_BLOBS: [number, number, number, number, boolean, number | null][] = [
   [810, 778, 140, 62, true, 0.79], [1080, 745, 160, 72, false, null],
 ];
 
-// 木漏れ日: 光だまり [cx, cy, rx, ry, rot, 最終op(Day84)]。暖色(§変更3)
+// 木漏れ日: 光だまり [cx, cy, rx, ry, rot, 最終op(Day84)]。暖色(§変更3)。
+// op は厳か調整で mock の約1.6倍。光だまりと竹の落ち影のペアが「差し込む光」を作り、
+// 明暗の対比を(全体の明度ではなく)光の側に担わせる
 const LIGHT_POOLS: [number, number, number, number, number, number][] = [
-  [230, 450, 160, 20, -14, 0.22],
-  [650, 452, 180, 22, -12, 0.2],
-  [1010, 448, 160, 20, -14, 0.22],
-  [150, 520, 120, 30, -18, 0.25],
-  [1010, 540, 130, 32, -15, 0.25],
-  [300, 600, 190, 46, -16, 0.3],
-  [860, 640, 210, 50, -14, 0.26],
-  [560, 700, 160, 40, -12, 0.22],
+  [230, 450, 160, 20, -14, 0.34],
+  [650, 452, 180, 22, -12, 0.32],
+  [1010, 448, 160, 20, -14, 0.34],
+  [150, 520, 120, 30, -18, 0.4],
+  [1010, 540, 130, 32, -15, 0.4],
+  [300, 600, 190, 46, -16, 0.46],
+  [860, 640, 210, 50, -14, 0.42],
+  [560, 700, 160, 40, -12, 0.36],
 ];
 // 竹の長い影(右上光源→左下)。[点8つ, 最終op]
 const TRUNK_SHADOWS: [number[], number][] = [
-  [[159, 446, 176, 446, 20, 586, -12, 574], 0.16],
-  [[260, 442, 274, 442, 108, 578, 78, 568], 0.15],
-  [[470, 440, 482, 440, 318, 572, 290, 562], 0.15],
-  [[640, 442, 653, 442, 476, 584, 446, 573], 0.16],
-  [[860, 442, 874, 442, 692, 592, 660, 580], 0.15],
-  [[1030, 442, 1043, 442, 862, 588, 832, 577], 0.15],
-  [[1122, 452, 1148, 452, 964, 640, 924, 624], 0.16],
-  [[1008, 448, 1026, 448, 850, 616, 818, 603], 0.14],
+  [[159, 446, 176, 446, 20, 586, -12, 574], 0.24],
+  [[260, 442, 274, 442, 108, 578, 78, 568], 0.22],
+  [[470, 440, 482, 440, 318, 572, 290, 562], 0.22],
+  [[640, 442, 653, 442, 476, 584, 446, 573], 0.24],
+  [[860, 442, 874, 442, 692, 592, 660, 580], 0.22],
+  [[1030, 442, 1043, 442, 862, 588, 832, 577], 0.22],
+  [[1122, 452, 1148, 452, 964, 640, 924, 624], 0.24],
+  [[1008, 448, 1026, 448, 850, 616, 818, 603], 0.2],
 ];
 const BRANCH_SHADOWS: [number[], number][] = [
   [[668, 700, 690, 688, 508, 760, 496, 776], 0.13],
@@ -299,9 +303,9 @@ const BRANCH_SHADOWS: [number[], number][] = [
 ];
 // 光条(右上の光源から斜めに)。[点8つ, 最終op]
 const LIGHT_SHAFTS: [number[], number][] = [
-  [[760, 30, 830, 30, 520, 560, 455, 535], 0.13],
-  [[950, 60, 1005, 60, 700, 540, 650, 520], 0.1],
-  [[560, 20, 610, 20, 430, 430, 390, 415], 0.08],
+  [[760, 30, 830, 30, 520, 560, 455, 535], 0.24],
+  [[950, 60, 1005, 60, 700, 540, 650, 520], 0.18],
+  [[560, 20, 610, 20, 430, 430, 390, 415], 0.14],
 ];
 
 // ---------------------------------------------------------------- 光の到達距離(§変更2、north-star 800系)
@@ -310,7 +314,9 @@ const LIGHT_FEET_Y = 452;
 const LIGHT_BOTTOM_Y = 900;
 const LIGHT_FEATHER = 180;
 function lightReach(weeks: number): number {
-  return clamp01(weeks / FULL_WEEKS);
+  // 光は Day1 から庭に差している(床 0.4)。成長は「光が生まれる」ではなく
+  // 「光の届く範囲が手前へ広がる」変化にする(厳かさは光と影の共存から生まれる)
+  return 0.4 + 0.6 * clamp01(weeks / FULL_WEEKS);
 }
 function lightFrontY(reach: number): number {
   return lerp(LIGHT_FEET_Y, LIGHT_BOTTOM_Y, reach);
@@ -561,7 +567,7 @@ export function buildScene(g: GrowthParams): Scene {
     {
       prims: [{
         kind: 'rect', x: 0, y: HORIZON_Y, w: WORLD_W, h: 110,
-        paint: solid(C.mistFloor), opacity: 0.5, blur: 6,
+        paint: solid(C.mistFloor), opacity: 0.35, blur: 6,
       }],
     },
   ];
@@ -608,7 +614,7 @@ export function buildScene(g: GrowthParams): Scene {
     if (op <= 0.005) return;
     poolPrims.push(nsEllipse(cx, cy, rx, ry, solid(C.lightPool), { rotateDeg: rot, opacity: op }));
   });
-  fieldGroups.push({ blur: 6, prims: poolPrims });
+  fieldGroups.push({ blur: 4, prims: poolPrims });
   push('field', 0.8, fieldGroups);
 
   // ---- 参道 + 石 (1.0)。構図中央にS字で(§変更5)
@@ -649,6 +655,28 @@ export function buildScene(g: GrowthParams): Scene {
   const shadowOp = ramp(w, [[0, 1], [12, 1.55]]);
   const stonePrims: Prim[] = [];
   const skirtOp = clamp01((m - 0.05) / 0.25);
+  // 石の根元の苔面: 宣言の日から連続した面で石の足元に敷き、m で緩やかに広がる。
+  // 点在する房より先に「小さくても完成した苔の面」があることが、序盤の庭を
+  // 「まだ何もない土地」ではなく「これから満ちていく整った庭」に見せる(借景と同じ思想)
+  const bedK = 0.6 + 0.4 * m;
+  if (g.stones >= 1) {
+    stonePrims.push(
+      nsEllipse(322, 606, 58 * bedK, 13 * bedK, ref('mossDeep')),
+      nsEllipse(396, 612, 44 * bedK, 11 * bedK, ref('mossMid')),
+    );
+  }
+  if (g.stones >= 2) {
+    stonePrims.push(
+      nsEllipse(852, 666, 46 * bedK, 10 * bedK, ref('mossMid')),
+      tuftPrim(868, 670, 0.4 * (0.8 + 0.2 * m), 4, m < 0.3),
+    );
+  }
+  if (g.stones >= 3) {
+    stonePrims.push(
+      nsEllipse(214, 750, 40 * bedK, 9 * bedK, ref('mossDeep')),
+      tuftPrim(200, 752, 0.35 * (0.8 + 0.2 * m), -5, m < 0.3),
+    );
+  }
   if (g.stones >= 1) {
     stonePrims.push(
       nsEllipse(ramp(w, [[0, 372], [6, 352], [12, 348]]), ramp(w, [[0, 598], [6, 600], [12, 600]]),
@@ -661,6 +689,8 @@ export function buildScene(g: GrowthParams): Scene {
       stonePrims.push({ kind: 'path', d: STONE_MAIN_SKIRT_D, transform: nsPath(), paint: solid(C.mossSkirt), opacity: skirtOp });
     }
     stonePrims.push(tuftPrim(352, 576, 0.7, undefined, m < 0.15));
+    stonePrims.push(tuftPrim(410, 610, 0.45 * (0.8 + 0.2 * m), undefined, m < 0.3));
+    stonePrims.push(tuftPrim(305, 602, 0.4 * (0.8 + 0.2 * m), -6, m < 0.3));
     for (const [dx, dy, r] of [[416, 586, 2.6], [300, 580, 2.2], [380, 606, 2]] as const) {
       stonePrims.push({ kind: 'circle', cx: wx(dx), cy: wy(dy), r: r * SX, paint: solid(C.mossPatch) });
     }
@@ -703,18 +733,19 @@ export function buildScene(g: GrowthParams): Scene {
     return op > 0.005 ? [{ kind: 'polygon', points: worldPts(pts), paint: solid(C.trunkShadow), opacity: op } as Prim] : [];
   });
   push('trunk-shadows', 0.8, [
-    { blur: 2.2, prims: shadowPrims },
-    { blur: 2.2, prims: branchPrims },
+    { blur: 5, prims: shadowPrims },
+    { blur: 5, prims: branchPrims },
   ]);
 
   // ---- 前景の苔 (1.1)
   const foreGroups: SceneGroup[] = [];
   const blobPrims: Prim[] = [];
+  // 前景の苔面は房より先に現れる(閾値 0.05/0.42)。「整った」印象は連続面が作る
   FORE_BLOBS.forEach(([cx, cy, rx, ry, deep, r42]) => {
-    const thr = r42 != null ? 0.18 : 0.62;
+    const thr = r42 != null ? 0.05 : 0.42;
     if (m < thr) return;
     const k = r42 != null
-      ? (m <= 0.5 ? lerp(0.6 * r42, r42, (m - thr) / (0.5 - thr)) : lerp(r42, 1, (m - 0.5) / 0.5))
+      ? (m <= 0.5 ? lerp(0.5 * r42, r42, (m - thr) / (0.5 - thr)) : lerp(r42, 1, (m - 0.5) / 0.5))
       : lerp(0.6, 1, (m - thr) / (1 - thr));
     blobPrims.push(nsEllipse(cx, cy, rx * k, ry * k, ref(deep ? 'mossDeep' : 'mossMid')));
   });
@@ -738,6 +769,17 @@ export function buildScene(g: GrowthParams): Scene {
     });
   }
   push('fore', 1.1, foreGroups);
+
+  // ---- 日なた苔 (1.1)。手前の光だまりを前景の苔の上にもう一度淡く重ね、
+  // 光の中の苔だけが黄緑に輝く(日なた=暖・明/日陰=冷・深の色温度分離。西芳寺の「光る苔」)
+  const glowPrims: Prim[] = [];
+  LIGHT_POOLS.forEach(([cx, cy, rx, ry, rot, opFull]) => {
+    if (cy < 520) return; // 苔と重なる手前の光だまりのみ
+    const op = opFull * 0.55 * lightVisAt(frontY, cy);
+    if (op <= 0.005) return;
+    glowPrims.push(nsEllipse(cx, cy, rx * 0.92, ry * 0.92, solid(C.mossSunGlow), { rotateDeg: rot, opacity: op }));
+  });
+  push('moss-glow', 1.1, [{ blur: 5, prims: glowPrims }]);
 
   // ---- 光条 (0.45)。右上の光源から斜めに(§変更3: 暖色 rayG)
   const shaftK = 0.12 + 0.88 * reach;

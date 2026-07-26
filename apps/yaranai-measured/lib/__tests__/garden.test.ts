@@ -131,9 +131,10 @@ test('Day 42: 中央パネルの房の数がモックと一致する', () => {
   assert.equal(tufts('fore'), 8);
 });
 
-test('Day 1: 房は主石の根元の一房だけ、敷石3枚、杭1対', () => {
+test('Day 1: 房は石の根元の苔面まわりだけ(主石3・添石1)、敷石3枚、杭1対', () => {
   const scene = buildScene(deriveGrowth(snap(1, 0.5)));
-  assert.equal(countPrims(scene, (p) => p.kind === 'tuft'), 1);
+  // 石の根元の苔面に添う房: 主石の一房+左右の二房、添石の一房。石元以外に房はまだ無い
+  assert.equal(countPrims(scene, (p) => p.kind === 'tuft'), 4);
   assert.equal(cobbleCount(1), 3);
 });
 

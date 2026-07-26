@@ -1,7 +1,9 @@
 // 庭のデザイントークン(§3.2)。
 // 大気・地面・光・粒子・竹の色は mock v4(yaranai-crop-mock-v4)の「晴れた朝、靄が残る」
-// 暖色仕様(§変更3)。苔・敷石・石の階調は north-star v3 の描画品質を保つため据え置き。
-// 変更するときは両モックと突き合わせること。
+// 暖色仕様(§変更3)を「厳か」調整で上書き: 印象が「暗い」に傾く原因は輝度ではなく
+// 低コントラスト・低彩度・光の無方向性なので、苔と地面は彩度を、石は最暗部を持ち上げ、
+// 明暗の落差は光(木漏れ日)と影に担わせる。西芳寺の「深い影の中で苔だけが光る」が基準。
+// 変更するときはモックと SVG プレビュー(scripts/render-garden-previews.js)+実機で突き合わせること。
 
 export const GARDEN_COLORS = {
   // 生成り系(UI 背景)
@@ -13,21 +15,21 @@ export const GARDEN_COLORS = {
   skyBottom: '#DAD1B6',
 
   // 朝靄(暖色。mock v4 mistG。無彩色グレーは廃止。§変更3)
-  mist: '#E9E1C9',
+  mist: '#F0E9D3',
   // 地平線直下に落ちる靄の帯
-  mistFloor: '#E2D8B8',
+  mistFloor: '#E8DFC2',
 
   // 地面のベース色。苔の充実 m で 土色(m=0)→中間の緑(Day42)→完成の緑(Day84)へ補間。
   // 初期〜中期は暖色の土で画面を暗くしない(§変更3)。Day84 は苔が地面全体を覆う(north-star)。
-  ground: ['#D9CDAB', '#D0C29D', '#C6B78F'] as const, // m=0(土)。mock v4 groundG
-  fieldMid: ['#AEB980', '#8F9C66', '#71804F'] as const, // Day42
-  fieldFull: ['#93A76B', '#71854D', '#54663C'] as const, // Day84(north-star gField)
+  ground: ['#DDD1AC', '#D4C69E', '#CABA8F'] as const, // m=0(土)。mock v4 groundG
+  fieldMid: ['#B2C17C', '#93A464', '#75884E'] as const, // Day42
+  fieldFull: ['#9BB56C', '#79924E', '#5A713E'] as const, // Day84(north-star gField)
 
   // 墨・石(north-star v3 の階調を維持)
-  sumi: '#2E2B26',
-  stoneDark: '#181612',
-  stoneLight: '#5A5448',
-  stoneHighlight: '#7A7261',
+  sumi: '#38342C',
+  stoneDark: '#262219',
+  stoneLight: '#6A6350',
+  stoneHighlight: '#8C8471',
   shadowInk: '#1F1D19',
 
   // 敷石3階調 + 目地(north-star v3)
@@ -38,13 +40,13 @@ export const GARDEN_COLORS = {
   jointBottom: '#6E6656',
 
   // 苔(3系統×3階調。north-star v3)
-  mossLight: ['#BCCB86', '#8CA05F', '#5F7340'],
-  mossMid: ['#A0B76F', '#6E824A', '#46572F'],
-  mossDeep: ['#84995A', '#54673A', '#313E23'],
-  mossGrainLight: '#C6D48F',
+  mossLight: ['#CCDC8E', '#9CB964', '#6C8A45'],
+  mossMid: ['#ACC475', '#7C9A4C', '#4F6B33'],
+  mossDeep: ['#8FAA5E', '#5C7A3E', '#375329'],
+  mossGrainLight: '#D8E69C',
   mossGrainDark: '#3A4A28',
-  mossSkirt: '#46572F',
-  mossPatch: '#8CA05F',
+  mossSkirt: '#4F6B33',
+  mossPatch: '#9CB964',
 
   // 竹の連続深度(§変更4)。稈のグラデ 3 ストップを靄色へ深度で混色する。
   // 全稈が t(0=最前〜1=最奥)を持ち、色は cg0..cg5 のバケツで生成する。
@@ -65,9 +67,10 @@ export const GARDEN_COLORS = {
   leafB: '#7E9468',
 
   // 木漏れ日(暖色。§変更3)
-  lightPool: '#F6ECC8', // 地面の光だまり(poolG 中心色)
-  lightShaft: '#F7EDC8', // 右上からの光条(rayG)
-  trunkShadow: '#544F3E', // 竹の長い落ち影(op 0.06 で使う)
+  lightPool: '#FAF2CC', // 地面の光だまり(poolG 中心色)
+  lightShaft: '#FAF1CA', // 右上からの光条(rayG)
+  mossSunGlow: '#F2EFA8', // 日なた苔: 光だまりに重なる苔を輝かせる黄緑の光
+  trunkShadow: '#544F3E', // 竹の長い落ち影(scene の TRUNK_SHADOWS が op 0.20〜0.24 で使う)
 
   // 朱(Day 84 のひとひらのみ)
   shu: '#B0472F',
@@ -96,7 +99,7 @@ export const WOBBLE_PARAMS = {
 
 // 紙の粒子(全面ノイズ)。§変更3: 現行より弱く、暖色寄りのカラーマトリクス(mock v4 grainF)。
 // RGB を暖色の砂色(.21/.19/.15)に固定し、アルファを輝度から作る。
-// opacity は 0.10 だと実機のパネルサイズで淡い空・土の上に暗い斑点が乗って画面がくすむため、
-// 質感は残しつつ 0.06 まで下げて全面を持ち上げる(初期段階=土色の地面で最も効く)。
-export const GRAIN = { baseFrequency: 0.9, octaves: 2, opacity: 0.06 } as const;
+// 粒は暗色側にしか働かず、強いと全面が一様にくすんで曇天の印象になる。
+// 木漏れ日を主役にする「厳か」調整では質感が判る下限の 0.035 まで下げる(0.10→0.06→0.035)。
+export const GRAIN = { baseFrequency: 0.9, octaves: 2, opacity: 0.035 } as const;
 export const GRAIN_RGB = [0.21, 0.19, 0.15] as const;
