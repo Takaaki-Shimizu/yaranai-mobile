@@ -17,7 +17,7 @@ import { HOME_ASPECT } from '../../lib/garden/scene';
 import { isEngawaOpen } from '../../lib/garden/gate';
 import { changedCategories, changeNote, type DiffCategory } from '../../lib/garden/diff';
 import { useIsDeveloper } from '../../lib/developer';
-import { evaluateCrashedDay } from '../../lib/articles/evaluate';
+import { evaluateCrashedDay, evaluateStanding } from '../../lib/articles/evaluate';
 import { loadArticlesState } from '../../lib/articles/storage';
 import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
 import type { ArticlesState } from '../../lib/articles/types';
@@ -96,8 +96,11 @@ export default function Home() {
     }
 
     // 読みもの(§5.1): 発火判定を回してから状態を読み、未読の帯を1本だけ出す。
+    // standing はホーム表示時に無条件で評価する(v1.1 §4.2)。usage-sync の完了を
+    // 待つ必要はないが、同一キーへの書き込みが重ならないよう crashedDay と直列に回す。
     // 起動時の判定(_layout)と競合しても冪等・単調なので二重発火にはならない。
     // 既読になった帯は次の focus でここから消える(演出は入れない)。
+    await evaluateStanding();
     await evaluateCrashedDay();
     setArticlesState(await loadArticlesState());
   }, [session]);

@@ -118,3 +118,17 @@ export function shouldFireCrashedDay(input: FireDecisionInput): boolean {
   const age = calendarDaysBetween(day.date, input.today);
   return age >= 0 && age <= CRASHED_DAY_MAX_AGE_DAYS;
 }
+
+// ---------------------------------------------------------------- 常設記事(standing・v1.1 §4.1)
+
+// standing の発火判定に使える入力は「未発火かどうか」だけ。
+// 宣言の有無・権限の有無・実測データ・経過日数を型ごと持たないことで、
+// 「一切参照しない」(v1.1 §4.1)を型で保証する。
+export type StandingFireInput = {
+  alreadyFired: boolean; // ArticlesState にその記事のエントリがあるか
+};
+
+// 常設記事を発火するか。条件なし: 未発火なら発火する(初回評価時に無条件・生涯1回)。
+export function shouldFireStanding(input: StandingFireInput): boolean {
+  return !input.alreadyFired;
+}

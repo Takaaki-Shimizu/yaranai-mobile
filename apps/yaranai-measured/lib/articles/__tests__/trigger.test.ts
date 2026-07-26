@@ -8,9 +8,11 @@ import {
   activeVowsOn,
   calendarDaysBetween,
   shouldFireCrashedDay,
+  shouldFireStanding,
   type ConfirmedDay,
   type VowRecord,
   type DailyRecord,
+  type StandingFireInput,
 } from '../trigger';
 
 // 「崩れた日」判定に使う素データ。宣言は D より前(§4.2-2)にしておく。
@@ -181,4 +183,41 @@ test('発火当日に再起動 → 発火しない(冪等)', () => {
   const day = crashedDay('2026-07-18');
   assert.equal(shouldFireCrashedDay({ today: '2026-07-18', latestConfirmedDay: day, alreadyFired: false }), true);
   assert.equal(shouldFireCrashedDay({ today: '2026-07-18', latestConfirmedDay: day, alreadyFired: true }), false);
+});
+
+// ---------------------------------------------------------------- 常設記事の発火判定(v1.1 §4.1)
+
+test('記事1(standing): 初回評価で発火する', () => {
+  assert.equal(shouldFireStanding({ alreadyFired: false }), true);
+});
+
+test('記事1(standing): 2回目以降の評価で再発火しない(冪等)', () => {
+  assert.equal(shouldFireStanding({ alreadyFired: true }), false);
+});
+
+test('記事1(standing): 判定は宣言・権限・実測データ・日数を参照できない(入力が未発火フラグのみ)', () => {
+  // 型が保証する事実の固定化: StandingFireInput のキーは alreadyFired だけ。
+  // 宣言前・権限なし・実測0件・Day 1 のどの状態でも、渡せる入力がこれしか無いため発火する。
+  const input: StandingFireInput = { alreadyFired: false };
+  assert.deepEqual(Object.keys(input), ['alreadyFired']);
+  assert.equal(shouldFireStanding(input), true);
+});
+
+test('記事1と記事2が両方未発火 → それぞれの条件が独立に評価される', () => {
+  // 実測データが1件も無い(確定日なし)状態: 記事2は発火せず、記事1だけ発火する。
+  assert.equal(shouldFireStanding({ alreadyFired: false }), true);
+  assert.equal(
+    shouldFireCrashedDay({ today: '2026-07-18', latestConfirmedDay: null, alreadyFired: false }),
+    false,
+  );
+  // 逆に、崩れた日がある状態でも記事1の判定には影響しない(両方発火する)。
+  assert.equal(
+    shouldFireCrashedDay({
+      today: '2026-07-18',
+      latestConfirmedDay: crashedDay('2026-07-18'),
+      alreadyFired: false,
+    }),
+    true,
+  );
+  assert.equal(shouldFireStanding({ alreadyFired: false }), true);
 });
