@@ -1,6 +1,8 @@
-// 起動フローの発火評価(実装仕様書 §4.1)。
-// usage-sync 完了後に1回だけ呼ぶ。Supabase から最新の確定日ぶんを引き、
-// 純関数(trigger.ts)で崩れた日か・発火すべきかを判定し、発火なら状態へ記録する。
+// 起動フローの発火評価(実装仕様書 §4.1 / v1.1 §4.2)。
+// conditional(crashedDay)は usage-sync 完了後に1回だけ呼ぶ。Supabase から最新の
+// 確定日ぶんを引き、純関数(trigger.ts)で崩れた日か・発火すべきかを判定し、
+// 発火なら状態へ記録する。standing は実測データに依存しないため、ホーム表示時に
+// evaluateStanding() を usage-sync を待たずに呼ぶ(v1.1 §4.2)。
 //
 // 当日データは未確定のため判定に使わない(§4.1)。measured_daily は昨日以前の
 // 確定分しか同期されない(usage-sync.ts)ため、最新 record_date = 最新の確定日。
@@ -11,6 +13,7 @@ import { ARTICLES } from './registry';
 import {
   buildConfirmedDay,
   shouldFireCrashedDay,
+  shouldFireStanding,
   type DailyRecord,
   type VowRecord,
 } from './trigger';
@@ -19,7 +22,29 @@ import { loadArticlesState, recordFired } from './storage';
 
 // crashedDay 発火の記事(v1 は記事2の1本)。将来 registry に増えても拾える。
 function crashedDayArticleIds(): string[] {
-  return ARTICLES.filter((a) => a.trigger.kind === 'crashedDay').map((a) => a.id);
+  return ARTICLES.filter((a) => a.kind === 'conditional' && a.trigger.kind === 'crashedDay').map(
+    (a) => a.id,
+  );
+}
+
+// 常設記事の発火評価(v1.1 §4.1)。ホーム(庭)画面の表示時に呼ぶ。
+// Supabase もユーザー状態も参照しない: 未発火の standing を無条件で発火するだけ。
+// 冪等・単調(発火は生涯1回)。失敗は静かに次の評価へ持ち越す。
+export async function evaluateStanding(): Promise<void> {
+  try {
+    const targetIds = ARTICLES.filter((a) => a.kind === 'standing').map((a) => a.id);
+    if (targetIds.length === 0) return;
+
+    const state = await loadArticlesState();
+    const firedAt = new Date().toISOString();
+    for (const id of targetIds) {
+      if (shouldFireStanding({ alreadyFired: isFired(state, id) })) {
+        await recordFired(id, firedAt);
+      }
+    }
+  } catch {
+    // 静かに次の評価へ持ち越す。利用者には何も言わない。
+  }
 }
 
 // 起動時に1回呼ぶ。失敗は静かに次の起動へ持ち越す(通信断・権限剥奪など)。
