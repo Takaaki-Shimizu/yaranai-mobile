@@ -32,6 +32,16 @@ export const GARDEN_COLORS = {
   stoneHighlight: '#8C8471',
   shadowInk: '#1F1D19',
 
+  // 石の面と光(光源は右上=木漏れ日と同じ)。単色の塊を「天端と側面を持つ岩」にする。
+  // 墨の暗さは保ったまま、明暗の差は面の分かれ目(稜線)と縁の光に担わせる
+  // 天端は陰の側まで含めて側面より明るいこと。そこで初めて稜線が一本の線として読める
+  stoneTopLight: '#A79C82', // 天端の光の側
+  stoneTopDark: '#5C5546', // 天端の陰の側(稜線で側面へ落ちる手前)
+  stoneRim: '#D6CBA4', // 右上の縁の光。暗い石を明るい苔の背景から切り離す
+  stoneBounce: '#7C9A4C', // 苔からの照り返し。左下の陰を緑で起こす
+  stoneMottleLight: '#7E7663',
+  stoneMottleDark: '#241F18',
+
   // 敷石3階調(north-star v3)。これは基準色で、実際の一枚ごとの色は
   // scene.ts が明度と色味を決定論的に振って作る(cobbleTintWarm/Cool)
   cobbleA: ['#B3AB97', '#948C79', '#6B6454'],
@@ -41,6 +51,9 @@ export const GARDEN_COLORS = {
   // 赤茶の石と青灰の石が隣り合っていて、その差が「本物の石」を作る)
   cobbleTintWarm: '#8A7452',
   cobbleTintCool: '#6F757C',
+  // 敷石の天端(光の側へ寄せた面)と、右上の縁に乗る陽の色
+  cobbleTopLight: '#D5CCB2',
+  cobbleRimSun: '#F5EBC4',
   // 目地は石より確実に暗いこと。石と同明度(north-star の #8A8271)だと一枚ずつの
   // 輪郭が消えて参道が一枚の面に潰れる。ただし敷石は路面を覆いきらないので、
   // 闇まで落とすと今度は参道が黒い川になる。石の間に踏み固められた土、の暗さに置く
