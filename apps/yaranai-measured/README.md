@@ -37,6 +37,8 @@ npx expo start --dev-client
 │  modules/usage-stats (Expo Modules API / Kotlin)         │
 │    hasUsageAccess() / openUsageAccessSettings()          │
 │    queryUsageBuckets(interval, beginMs, endMs)           │
+│    queryUsageEvents(beginMs, endMs)                      │
+│    getAppLabels(packageNames) 端末に登録された正式なアプリ名 │
 └──────────────┬──────────────────────────────────────────┘
                │ JSラッパー(非Androidでは利用不可へフォールバック)
 ┌──────────────▼──────────────────────────────────────────┐
@@ -117,8 +119,14 @@ EXPO_PUBLIC_DEV_EMAIL=
   履歴が28日未満の間は宣言できず「基準線を集めています」の待機になる。
 - Android限定。iOSはAPI制約(サンドボックス)により実測不可のため対象外。
 - 当日の実測は未確定のためSupabaseへ送らない(翌日以降の起動時に確定日として同期)。
-- アプリ表示名はJS側の対応表とパッケージ名の整形で決める
-  (ネイティブの公開APIを3つに保つため。PackageManagerには問い合わせない)。
+- アプリ表示名は端末に登録された正式名(PackageManager)を最優先にする。
+  「みてね」を Mitene、無名アプリを App54F7C05C と出さんため。引けんときだけ
+  JS側の対応表 → パッケージ名の整形へ倒れる(lib/app-labels.ts)。
+  正式名は端末のロケールに従うため、日本語端末では日本語名が出る。
+  Android 11以降の可視性制限に対しては `<queries>`(ランチャーに出るアプリ)だけを
+  宣言し、機微権限の QUERY_ALL_PACKAGES は使わない。
+  誓いの行も表示時に正式名を優先するため、宣言済みの誓いも名前が直る
+  (Supabaseの app_label は宣言時の記録として残す)。
 
 ## 庭(絵巻)アーキテクチャ — 2026-07 刷新
 

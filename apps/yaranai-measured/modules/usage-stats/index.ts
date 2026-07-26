@@ -13,6 +13,7 @@ type UsageStatsNativeModule = {
   openUsageAccessSettings(): void;
   queryUsageBuckets(intervalType: number, beginMs: number, endMs: number): UsageBucket[];
   queryUsageEvents(beginMs: number, endMs: number): UsageEvent[];
+  getAppLabels(packageNames: string[]): Record<string, string>;
 };
 
 // Android実機(dev client)以外ではネイティブモジュールが存在せんけん、
@@ -44,4 +45,16 @@ export function queryUsageBuckets(
 // 純粋関数に任せる(バケットと同じ分担)。
 export function queryUsageEvents(beginMs: number, endMs: number): UsageEvent[] {
   return NativeUsageStats?.queryUsageEvents(beginMs, endMs) ?? [];
+}
+
+// パッケージ名 → 端末に登録されとる正式なアプリ名。引けんパッケージはキーが
+// 落ちて返る(ネイティブ不在なら空)。落ちた分の表示は lib/app-labels.ts が補う。
+export function getAppLabels(packageNames: string[]): Record<string, string> {
+  if (packageNames.length === 0) return {};
+  try {
+    return NativeUsageStats?.getAppLabels(packageNames) ?? {};
+  } catch (e) {
+    console.warn('[usage-stats] getAppLabels failed', e);
+    return {};
+  }
 }

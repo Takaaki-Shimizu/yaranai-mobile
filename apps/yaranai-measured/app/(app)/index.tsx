@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { syncAll } from '../../lib/usage-sync';
 import { recordDateDaysAgo } from '../../lib/dates';
 import { formatMinutes } from '../../lib/format';
-import { hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
+import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { HomeGarden } from '../../components/garden/HomeGarden';
 import { DevGarden } from '../../components/garden/DevGarden';
 import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
@@ -28,6 +28,7 @@ import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
   vow_id: string;
+  package_name: string;
   app_label: string;
   baseline_minutes: number;
   saved_minutes: number;
@@ -47,6 +48,9 @@ export default function Home() {
   const { width: windowWidth } = useWindowDimensions();
   const [vows, setVows] = useState<VowSummary[]>([]);
   const [totalSavedMinutes, setTotalSavedMinutes] = useState(0);
+  // 誓いの行に出す名前は、宣言時に保存した app_label より端末の正式名を優先する
+  // (「Mitene」で宣言済みの誓いも、次の表示から「みてね」になる)。
+  const [officialLabels, setOfficialLabels] = useState<Record<string, string>>({});
   const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
   const [totals, setTotals] = useState<Totals | null>(null);
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
@@ -65,7 +69,7 @@ export default function Home() {
       supabase.from('garden_state').select('longest_days').maybeSingle(),
       supabase
         .from('measured_saved')
-        .select('vow_id, app_label, baseline_minutes, saved_minutes, discontinued_on')
+        .select('vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on')
         .order('declared_on', { ascending: true }),
       supabase
         .from('measured_daily')
@@ -75,7 +79,9 @@ export default function Home() {
     ]);
     const allVows = (vowsRes.data ?? []) as VowSummary[];
     setTotals(totalsRes.data ?? null);
-    setVows(allVows.filter((v) => v.discontinued_on === null));
+    const activeVows = allVows.filter((v) => v.discontinued_on === null);
+    setVows(activeVows);
+    setOfficialLabels(getAppLabels(activeVows.map((v) => v.package_name)));
     setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
     setYesterdayMinutes(
       new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
@@ -222,9 +228,11 @@ export default function Home() {
       <View style={styles.list}>
         {vows.map((vow) => {
           const actual = yesterdayMinutes.get(vow.vow_id);
+          // 正式名が引けんときは宣言時に保存した名前をそのまま出す。
+          const label = officialLabels[vow.package_name]?.trim() || vow.app_label;
           return (
             <View key={vow.vow_id} style={styles.row}>
-              <Text style={styles.label}>{vow.app_label}</Text>
+              <Text style={styles.label}>{label}</Text>
               <Text style={styles.saved}>
                 {actual != null
                   ? t.home.rowSaved(

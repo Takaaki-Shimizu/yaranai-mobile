@@ -5,6 +5,7 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
@@ -92,6 +93,38 @@ class UsageStatsModule : Module() {
           "totalForegroundMs" to it.totalTimeInForeground,
         )
       }
+    }
+
+    // パッケージ名 → 端末に登録されとる正式なアプリ名(ランチャーに出る名前)。
+    // 「みてね」を Mitene と出さんために、推測ではなく PackageManager に問う。
+    // 端末のロケールに従うけん、日本語端末なら日本語の正式名が返る。
+    // 引けんパッケージ(Android 11以降の可視性制限・アンインストール済み)は
+    // キーを落として返す。呼び側は落ちた分だけ整形フォールバックへ倒す。
+    Function("getAppLabels") { packageNames: List<String> ->
+      val pm = context.packageManager
+      val out = mutableMapOf<String, String>()
+      for (packageName in packageNames.distinct()) {
+        val label = try {
+          val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getApplicationInfo(
+              packageName,
+              PackageManager.ApplicationInfoFlags.of(0L),
+            )
+          } else {
+            @Suppress("DEPRECATION")
+            pm.getApplicationInfo(packageName, 0)
+          }
+          pm.getApplicationLabel(info).toString().trim()
+        } catch (e: PackageManager.NameNotFoundException) {
+          null
+        }
+        // 空文字やパッケージ名そのままが返る端末もあるけん、意味のある名前だけ採る。
+        if (!label.isNullOrEmpty() && label != packageName) {
+          out[packageName] = label
+        }
+      }
+      Log.d(TAG, "getAppLabels asked=${packageNames.size} resolved=${out.size}")
+      out
     }
 
     // 前景イベントの生列をそのまま返す。日次バケット(queryUsageStats)はロールが

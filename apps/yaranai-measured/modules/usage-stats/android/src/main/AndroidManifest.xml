@@ -4,4 +4,14 @@
   <uses-permission
       android:name="android.permission.PACKAGE_USAGE_STATS"
       tools:ignore="ProtectedPermissions" />
+
+  <!-- Android 11以降はほかのアプリが既定で見えん。正式なアプリ名(getAppLabels)を
+       引くために、ランチャーに出るアプリだけを可視にする。QUERY_ALL_PACKAGES
+       (機微権限)は使わん: 利用者が触るアプリはランチャーに出るもので足る。 -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.MAIN" />
+      <category android:name="android.intent.category.LAUNCHER" />
+    </intent>
+  </queries>
 </manifest>
