@@ -147,3 +147,10 @@ test('タイムライン: 総尺2000ms・帳は冒頭250ms完全な黒・順序(
   ];
   for (const e of ends) assert.ok(e <= TL.total + 100, `終端が総尺を超過: ${e}`);
 });
+
+test('タイムライン: 完了後ホールド — コールド起動は題字を読める1秒、復帰は静止画のみ', () => {
+  // 演出完了+ロード完了の後に最低1秒静止(コールド起動で題字とコピーを読み取る時間)
+  assert.equal(TL.holdAfterPlay, 1000);
+  // バックグラウンド復帰は演出なしの静止画。フル演出の静止より短くてよいが一瞬ではない
+  assert.ok(TL.stillHold >= 500 && TL.stillHold <= TL.holdAfterPlay);
+});
