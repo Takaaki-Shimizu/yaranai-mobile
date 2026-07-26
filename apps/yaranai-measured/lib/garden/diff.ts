@@ -5,6 +5,7 @@
 
 import type { GrowthParams } from './growth';
 import { cobbleCount } from './scene';
+import type { Lang } from '../i18n/types';
 
 /** 変化の種別。演出の出現順もこの順(苔→飛び石→光→石) */
 export type DiffCategory = 'moss' | 'cobble' | 'light' | 'stone';
@@ -26,15 +27,21 @@ export function changedCategories(prev: GrowthParams | null, cur: GrowthParams):
 /**
  * 変化に添える一行(過去形・断定・数字なし)。変化なしは null。
  * 複数種が変わったときは種別を明かさず「庭が、少し変わりました。」。
+ * 英語も同じ原則(past tense, no numbers, quiet)で言い換える。
  */
-export function changeNote(categories: DiffCategory[]): string | null {
+export function changeNote(categories: DiffCategory[], lang: Lang = 'ja'): string | null {
   if (categories.length === 0) return null;
-  if (categories.length >= 2) return '庭が、少し変わりました。';
+  const generic = lang === 'en' ? 'The garden has changed, a little.' : '庭が、少し変わりました。';
+  if (categories.length >= 2) return generic;
   switch (categories[0]) {
-    case 'moss': return '苔が、少し増えました。';
-    case 'cobble': return '石が、ひとつ置かれました。';
-    case 'light': return '光が、少し近づきました。';
-    case 'stone': return '庭が、少し変わりました。';
+    case 'moss':
+      return lang === 'en' ? 'The moss has spread, a little.' : '苔が、少し増えました。';
+    case 'cobble':
+      return lang === 'en' ? 'A stone has been set down.' : '石が、ひとつ置かれました。';
+    case 'light':
+      return lang === 'en' ? 'The light has drawn a little closer.' : '光が、少し近づきました。';
+    case 'stone':
+      return generic;
   }
 }
 

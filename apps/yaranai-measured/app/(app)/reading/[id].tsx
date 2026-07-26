@@ -11,10 +11,13 @@ import { useIsDeveloper } from '../../../lib/developer';
 import { getArticle } from '../../../lib/articles/registry';
 import { parseArticleBody } from '../../../lib/articles/markdown';
 import { recordRead } from '../../../lib/articles/storage';
+import { useLang, useT } from '../../../lib/i18n/context';
 
 export default function ArticleScreen() {
   const router = useRouter();
   const isDeveloper = useIsDeveloper();
+  const { lang } = useLang();
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const article = id ? getArticle(id) : undefined;
 
@@ -27,18 +30,19 @@ export default function ArticleScreen() {
   // 未知の id は静かにホームへ戻す。
   if (!article) return <Redirect href="/(app)" />;
 
-  const blocks = parseArticleBody(article.body);
+  // 本文・タイトルは表示言語で引く。既読状態は言語をまたいで共通(id がキー)。
+  const blocks = parseArticleBody(article.body[lang]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.back}>戻る</Text>
+          <Text style={styles.back}>{t.reading.back}</Text>
         </Pressable>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{article.title}</Text>
+        <Text style={styles.title}>{article.title[lang]}</Text>
         {blocks.map((block, i) =>
           block.type === 'h2' ? (
             <Text key={i} style={styles.h2}>

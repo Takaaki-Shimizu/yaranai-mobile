@@ -6,9 +6,11 @@ import { Link, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase, parseAuthTokensFromUrl } from '../../lib/supabase';
 import { colors, fonts } from '@yaranai/core';
+import { useT } from '../../lib/i18n/context';
 
 export default function ResetPassword() {
   const router = useRouter();
+  const t = useT();
   const url = Linking.useURL();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -32,11 +34,11 @@ export default function ResetPassword() {
 
   const updatePassword = async () => {
     if (password.length < 6) {
-      setMessage('パスワードは6文字以上にしてください。');
+      setMessage(t.auth.passwordTooShort);
       return;
     }
     if (password !== confirm) {
-      setMessage('パスワードが一致しません。');
+      setMessage(t.auth.passwordMismatch);
       return;
     }
     setBusy(true);
@@ -46,19 +48,19 @@ export default function ResetPassword() {
     // リカバリーリンク経由でセッションが張られている必要がある
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
-      setMessage('リンクの有効期限が切れているようです。もう一度メールを送ってください。');
+      setMessage(t.auth.linkExpired);
       setBusy(false);
       return;
     }
 
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      setMessage('変更できませんでした。もう一度お試しください。');
+      setMessage(t.auth.updateFailed);
       setBusy(false);
       return;
     }
     setDone(true);
-    setNotice('パスワードを変更しました。');
+    setNotice(t.auth.passwordChanged);
     setBusy(false);
   };
 
@@ -67,9 +69,9 @@ export default function ResetPassword() {
       <View style={styles.container}>
         <Text style={styles.wordmark}>Yaranai</Text>
         <View style={styles.form}>
-          <Text style={styles.notice}>パスワードを変更しました。</Text>
+          <Text style={styles.notice}>{t.auth.passwordChanged}</Text>
           <Pressable style={styles.primary} onPress={() => router.replace('/(app)')}>
-            <Text style={styles.primaryText}>入 る</Text>
+            <Text style={styles.primaryText}>{t.auth.enter}</Text>
           </Pressable>
         </View>
       </View>
@@ -84,11 +86,11 @@ export default function ResetPassword() {
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
-        <Text style={styles.title}>あたらしいパスワード</Text>
+        <Text style={styles.title}>{t.auth.newPasswordTitle}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="あたらしいパスワード"
+          placeholder={t.auth.newPasswordPlaceholder}
           placeholderTextColor={colors.usuzumi}
           secureTextEntry
           value={password}
@@ -96,7 +98,7 @@ export default function ResetPassword() {
         />
         <TextInput
           style={styles.input}
-          placeholder="もう一度入力"
+          placeholder={t.auth.confirmPlaceholder}
           placeholderTextColor={colors.usuzumi}
           secureTextEntry
           value={confirm}
@@ -104,7 +106,7 @@ export default function ResetPassword() {
         />
 
         <Pressable style={styles.primary} onPress={updatePassword} disabled={busy}>
-          <Text style={styles.primaryText}>変更する</Text>
+          <Text style={styles.primaryText}>{t.auth.update}</Text>
         </Pressable>
 
         {notice !== '' && <Text style={styles.notice}>{notice}</Text>}
@@ -112,7 +114,7 @@ export default function ResetPassword() {
 
         <Link href="/(auth)/sign-in" asChild>
           <Pressable style={styles.link}>
-            <Text style={styles.linkText}>ログインにもどる</Text>
+            <Text style={styles.linkText}>{t.auth.backToSignIn}</Text>
           </Pressable>
         </Link>
       </View>

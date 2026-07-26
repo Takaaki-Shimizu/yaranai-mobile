@@ -1,6 +1,11 @@
 // 読みもの機能 v1 の型定義(実装仕様書 §2 / §3)。
 // 記事はローカル同梱の静的コンテンツ。サーバー配信・リモート更新はしない(原則5)。
 
+import type { Lang } from '../i18n/types';
+
+// 言語ごとの本文・タイトル。日本語版が正本、英語版は翻案(逐語訳ではない)。
+export type LocalizedText = Record<Lang, string>;
+
 // 発火条件。v1 は「崩れた日の翌起動」だけ。将来は日数レンジ・節目駆動を union に足す。
 export type ArticleTrigger =
   | { kind: 'crashedDay' } // 記事2: 崩れた日の翌起動
@@ -9,12 +14,12 @@ export type ArticleTrigger =
 ;
 
 export type Article = {
-  // 'tsunda-mono' 等。既読状態のキーになるため、公開後は変更しない。
+  // 'tsunda-mono' 等。既読状態のキーになるため、公開後は変更しない(言語で分けない)。
   id: string;
-  // 「積んだものは、崩れない」
-  title: string;
-  // markdown。見出しは h2 まで。yaranai-column-02-tsunda-mono.md の本文部をそのまま使う。
-  body: string;
+  // 「積んだものは、崩れない」/ "What you've built doesn't crumble"
+  title: LocalizedText;
+  // markdown。見出しは h2 まで。日本語は yaranai-column-02-tsunda-mono.md の本文部をそのまま使う。
+  body: LocalizedText;
   trigger: ArticleTrigger;
 };
 

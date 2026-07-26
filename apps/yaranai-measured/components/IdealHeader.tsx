@@ -12,6 +12,7 @@ import { Pressable, Text, StyleSheet } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { loadIdeal } from '../lib/ideal/storage';
+import { useT } from '../lib/i18n/context';
 
 // 旧バッジの実測高さ(paddingVertical 4×2 + 1行ぶんの行高 15 + 罫線 1×2 ≒ 23)をそのまま採る。
 export const IDEAL_HEADER_HEIGHT = 23;
@@ -19,6 +20,7 @@ export const IDEAL_HEADER_HEIGHT = 23;
 export function IdealHeader() {
   const session = useSession();
   const router = useRouter();
+  const t = useT();
   const userId = session?.user?.id;
   const [ideal, setIdeal] = useState('');
 
@@ -45,7 +47,7 @@ export function IdealHeader() {
       style={({ pressed }) => [styles.frame, pressed && styles.pressed]}
       onPress={() => router.push('/(app)/ideal')}
       accessibilityRole="button"
-      accessibilityLabel="理想を編集"
+      accessibilityLabel={t.ideal.editA11y}
     >
       {ideal !== '' && (
         // 1行固定。既存の21文字以上のデータは末尾省略で耐える(保険)。

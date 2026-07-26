@@ -15,13 +15,15 @@ import { DevGarden } from '../../components/garden/DevGarden';
 import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
 import { HOME_ASPECT } from '../../lib/garden/scene';
 import { isEngawaOpen } from '../../lib/garden/gate';
-import { changedCategories, changeNote } from '../../lib/garden/diff';
+import { changedCategories, changeNote, type DiffCategory } from '../../lib/garden/diff';
 import { useIsDeveloper } from '../../lib/developer';
 import { evaluateCrashedDay } from '../../lib/articles/evaluate';
 import { loadArticlesState } from '../../lib/articles/storage';
 import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
+import type { ArticlesState } from '../../lib/articles/types';
 import { AppMenu } from '../../components/AppMenu';
 import { IdealHeader } from '../../components/IdealHeader';
+import { useLang, useT } from '../../lib/i18n/context';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -40,18 +42,21 @@ export default function Home() {
   const session = useSession();
   const isDeveloper = useIsDeveloper();
   const router = useRouter();
+  const { lang } = useLang();
+  const t = useT();
   const { width: windowWidth } = useWindowDimensions();
   const [vows, setVows] = useState<VowSummary[]>([]);
   const [totalSavedMinutes, setTotalSavedMinutes] = useState(0);
   const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
   const [totals, setTotals] = useState<Totals | null>(null);
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
-  // 入庭時の差分演出(§変更4): 前回表示時の状態と、変化があった場合の一行
+  // 入庭時の差分演出(§変更4): 前回表示時の状態と、変化した種別。
+  // 一行の文言はレンダー時に言語をかけて組む(切替が即時に効くように、文字列では持たない)。
   const [prevGrowth, setPrevGrowth] = useState<GrowthParams | null>(null);
-  const [gardenNote, setGardenNote] = useState<string | null>(null);
+  const [gardenCats, setGardenCats] = useState<DiffCategory[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  // 読みもの(§5.1): 未読の帯に出す1本と、ハンバーガーメニューの開閉。
-  const [unreadArticle, setUnreadArticle] = useState<ArticleListItem | null>(null);
+  // 読みもの(§5.1): 記事状態を素のまま持ち、未読の帯の1本はレンダー時に言語をかけて選ぶ。
+  const [articlesState, setArticlesState] = useState<ArticlesState | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const loadAll = useCallback(async () => {
@@ -83,18 +88,18 @@ export default function Home() {
       const prev = await loadLastSeen(session.user.id);
       const cats = changedCategories(prev, growthRes);
       setPrevGrowth(cats.length ? prev : null);
-      setGardenNote(changeNote(cats));
+      setGardenCats(cats);
       saveLastSeen(session.user.id, growthRes);
     } else {
       setPrevGrowth(null);
-      setGardenNote(null);
+      setGardenCats([]);
     }
 
     // 読みもの(§5.1): 発火判定を回してから状態を読み、未読の帯を1本だけ出す。
     // 起動時の判定(_layout)と競合しても冪等・単調なので二重発火にはならない。
     // 既読になった帯は次の focus でここから消える(演出は入れない)。
     await evaluateCrashedDay();
-    setUnreadArticle(newestUnread(await loadArticlesState()));
+    setArticlesState(await loadArticlesState());
   }, [session]);
 
   useFocusEffect(
@@ -122,8 +127,12 @@ export default function Home() {
   // 例: 幅390pt → 高さ≈289pt(縦画面844ptの約34%)。スクロール不要で全体が見える。
   const gardenHeight = Math.round(windowWidth / HOME_ASPECT);
 
+  // 言語依存の表示はレンダー時に組む(メニューでの切替が開いたままの画面にも即時に効く)。
+  const gardenNote = changeNote(gardenCats, lang);
+  const unreadArticle = articlesState ? newestUnread(articlesState, lang) : null;
+
   // 開発者モードのホームに常設する読みものの帯(発火判定を通らないため常に表示)。
-  const devStripArticle = previewStripArticle();
+  const devStripArticle = previewStripArticle(lang);
 
   const onGardenPress = () => {
     // 庭モード(絵巻)は週の節目(土曜・日曜)にのみ開く。閉扉中は静かに何もしない
@@ -141,7 +150,7 @@ export default function Home() {
       <View style={styles.header}>
         <Text style={styles.wordmark}>Yaranai</Text>
         {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
-        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel="メニュー">
+        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t.menu.a11yLabel}>
           <View style={styles.hamburger}>
             <View style={styles.hbLine} />
             <View style={styles.hbLine} />
@@ -178,7 +187,7 @@ export default function Home() {
         </Pressable>
       ) : (
         <View style={styles.empty}>
-          <Text style={styles.headline}>ここから、変わる。</Text>
+          <Text style={styles.headline}>{t.home.emptyHeadline}</Text>
         </View>
       )}
 
@@ -199,7 +208,7 @@ export default function Home() {
       {totals && Math.round(totalSavedMinutes) > 0 && (
         <View style={[styles.stats, unreadArticle && styles.statsUnderStrip]}>
           <Text style={styles.headline}>
-            {totals.longest_days}日で、{formatMinutes(totalSavedMinutes)}が{'\n'}戻ってきました。
+            {t.home.savedHeadline(totals.longest_days, formatMinutes(totalSavedMinutes, lang))}
           </Text>
           {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
           {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
@@ -215,15 +224,19 @@ export default function Home() {
               <Text style={styles.label}>{vow.app_label}</Text>
               <Text style={styles.saved}>
                 {actual != null
-                  ? `昨日の使用 ${formatMinutes(actual)}(ふだん ${formatMinutes(vow.baseline_minutes)})→ ${formatMinutes(vow.baseline_minutes - actual)}戻った`
-                  : '昨日の実測を待っています。'}
+                  ? t.home.rowSaved(
+                      formatMinutes(actual, lang),
+                      formatMinutes(vow.baseline_minutes, lang),
+                      formatMinutes(vow.baseline_minutes - actual, lang),
+                    )
+                  : t.home.rowWaiting}
               </Text>
             </View>
           );
         })}
 
         <Pressable style={styles.observe} onPress={() => router.push('/(app)/observe')}>
-          <Text style={styles.observeText}>時間の行き先を見る</Text>
+          <Text style={styles.observeText}>{t.home.observeLink}</Text>
         </Pressable>
       </View>
       </>
@@ -243,10 +256,11 @@ function ReadingStrip({
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
+  const t = useT();
   return (
     <Pressable style={[styles.strip, style]} onPress={onPress}>
       <View>
-        <Text style={styles.stripLabel}>読みもの</Text>
+        <Text style={styles.stripLabel}>{t.home.stripLabel}</Text>
         <Text style={styles.stripTitle}>{article.title}</Text>
       </View>
       {article.unread && <View style={styles.dot} />}

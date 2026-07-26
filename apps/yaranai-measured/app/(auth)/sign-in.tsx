@@ -5,11 +5,13 @@ import {
 import { Link, Redirect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession, colors, fonts } from '@yaranai/core';
+import { useT } from '../../lib/i18n/context';
 
 type Mode = 'signIn' | 'signUp';
 
 export default function SignIn() {
   const session = useSession();
+  const t = useT();
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,25 +23,25 @@ export default function SignIn() {
 
   const signIn = async () => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) setMessage('入れませんでした。メールとパスワードを確かめてください。');
+    if (error) setMessage(t.auth.signInFailed);
   };
 
   const signUp = async () => {
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
     if (error) {
-      setMessage('はじめられませんでした。少し時間をおいてもう一度。');
+      setMessage(t.auth.signUpFailed);
       return;
     }
     // Supabase側で「Confirm email」がONのときは、session が張られず
     // 確認メール待ちになる。そのときは案内を出す。
     if (!data.session) {
-      setNotice('確認メールを送りました。メールのリンクを開いてからお入りください。');
+      setNotice(t.auth.confirmSent);
     }
   };
 
   const submit = async () => {
     if (!email.trim() || !password) {
-      setMessage('メールとパスワードを入れてください。');
+      setMessage(t.auth.missingFields);
       return;
     }
     setBusy(true);
@@ -66,11 +68,11 @@ export default function SignIn() {
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
-        <Text style={styles.modeLabel}>{isSignIn ? 'おかえりなさい' : 'あたらしくはじめる'}</Text>
+        <Text style={styles.modeLabel}>{isSignIn ? t.auth.welcomeBack : t.auth.startNew}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="メールアドレス"
+          placeholder={t.auth.emailPlaceholder}
           placeholderTextColor={colors.usuzumi}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -79,7 +81,7 @@ export default function SignIn() {
         />
         <TextInput
           style={styles.input}
-          placeholder="パスワード"
+          placeholder={t.auth.passwordPlaceholder}
           placeholderTextColor={colors.usuzumi}
           secureTextEntry
           value={password}
@@ -87,7 +89,7 @@ export default function SignIn() {
         />
 
         <Pressable style={styles.primary} onPress={submit} disabled={busy}>
-          <Text style={styles.primaryText}>{isSignIn ? '入る' : 'はじめる'}</Text>
+          <Text style={styles.primaryText}>{isSignIn ? t.auth.enter : t.auth.begin}</Text>
         </Pressable>
 
         {notice !== '' && <Text style={styles.notice}>{notice}</Text>}
@@ -95,14 +97,14 @@ export default function SignIn() {
 
         <Pressable style={styles.secondary} onPress={toggleMode} disabled={busy}>
           <Text style={styles.secondaryText}>
-            {isSignIn ? 'アカウントをつくる' : 'すでにアカウントをお持ちの方'}
+            {isSignIn ? t.auth.createAccount : t.auth.haveAccount}
           </Text>
         </Pressable>
 
         {isSignIn && (
           <Link href="/(auth)/forgot-password" asChild>
             <Pressable style={styles.link}>
-              <Text style={styles.linkText}>パスワードをお忘れの方</Text>
+              <Text style={styles.linkText}>{t.auth.forgotPassword}</Text>
             </Pressable>
           </Link>
         )}

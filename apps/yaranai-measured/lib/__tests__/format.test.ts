@@ -19,3 +19,11 @@ test('端数と負値の丸め', () => {
   assert.equal(formatMinutes(59.5), '1時間');
   assert.equal(formatMinutes(-5), '0分');
 });
+
+test('英語表記(lang=en)', () => {
+  assert.equal(formatMinutes(0, 'en'), '0 min');
+  assert.equal(formatMinutes(42, 'en'), '42 min');
+  assert.equal(formatMinutes(60, 'en'), '1 hr');
+  assert.equal(formatMinutes(126, 'en'), '2 hr 6 min');
+  assert.equal(formatMinutes(-5, 'en'), '0 min');
+});

@@ -7,10 +7,13 @@ import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../lib/baseline';
 import { formatMinutes } from '../../lib/format';
+import { useLang, useT } from '../../lib/i18n/context';
 
 export default function Declare() {
   const session = useSession();
   const router = useRouter();
+  const { lang } = useLang();
+  const t = useT();
   const params = useLocalSearchParams<{ packageName?: string; label?: string }>();
   const packageName = typeof params.packageName === 'string' ? params.packageName : '';
   const label = typeof params.label === 'string' ? params.label : packageName;
@@ -39,11 +42,11 @@ export default function Declare() {
     setBusy(false);
 
     if (error) {
-      // アクティブ3本超過はDBトリガーが止める
+      // アクティブ3本超過はDBトリガーが止める(DB側のメッセージは日本語固定)
       if (error.message.includes('手元におけるのは最大3つまで')) {
-        setMessage('手元におけるのは、3つまでです。');
+        setMessage(t.declare.limitReached);
       } else {
-        setMessage('宣言できませんでした。もう一度お試しください。');
+        setMessage(t.declare.failed);
       }
       return;
     }
@@ -56,12 +59,10 @@ export default function Declare() {
     return (
       <View style={styles.container}>
         <View style={styles.doneBody}>
-          <Text style={styles.doneLede}>{label}を、手放しました。</Text>
-          <Text style={styles.worldview}>
-            この庭は、あなたが取り戻した時間とともに、{'\n'}ゆっくり姿を変えていきます。
-          </Text>
+          <Text style={styles.doneLede}>{t.declare.doneLede(label)}</Text>
+          <Text style={styles.worldview}>{t.declare.doneWorldview}</Text>
           <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)')}>
-            <Text style={styles.doneActionText}>庭へ</Text>
+            <Text style={styles.doneActionText}>{t.declare.toGarden}</Text>
           </Pressable>
         </View>
       </View>
@@ -71,9 +72,9 @@ export default function Declare() {
   if (!packageName) {
     return (
       <View style={styles.container}>
-        <Text style={styles.description}>アプリは、観測の一覧から選んでください。</Text>
+        <Text style={styles.description}>{t.declare.pickFromObserve}</Text>
         <Pressable style={styles.secondary} onPress={() => router.back()}>
-          <Text style={styles.secondaryText}>戻る</Text>
+          <Text style={styles.secondaryText}>{t.declare.back}</Text>
         </Pressable>
       </View>
     );
@@ -83,13 +84,12 @@ export default function Declare() {
   if (baseline && baseline.status === 'insufficient') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>ふだんの記録を集めています</Text>
+        <Text style={styles.title}>{t.declare.gatheringTitle}</Text>
         <Text style={styles.description}>
-          この端末の記録が{BASELINE_MIN_DAYS}日ぶんに満ちると、宣言できるようになります。{'\n'}
-          いまは{baseline.availableDays}日ぶんです。
+          {t.declare.gatheringBody(BASELINE_MIN_DAYS, baseline.availableDays)}
         </Text>
         <Pressable style={styles.secondary} onPress={() => router.back()}>
-          <Text style={styles.secondaryText}>戻る</Text>
+          <Text style={styles.secondaryText}>{t.declare.back}</Text>
         </Pressable>
       </View>
     );
@@ -97,34 +97,32 @@ export default function Declare() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>やらない、を宣言する。</Text>
+      <Text style={styles.title}>{t.declare.title}</Text>
 
       <View style={styles.form}>
         <Text style={styles.appLabel}>{label}</Text>
 
         {baseline?.status === 'ok' && (
           <Text style={styles.baseline}>
-            あなたはこの{Math.round(baseline.windowDays / 7)}週、{'\n'}
-            1日平均{formatMinutes(baseline.averageMinutesPerDay)}を{'\n'}
-            このアプリに渡していました。
+            {t.declare.baseline(
+              Math.round(baseline.windowDays / 7),
+              formatMinutes(baseline.averageMinutesPerDay, lang),
+            )}
           </Text>
         )}
 
-        <Text style={styles.note}>
-          この平均が、あなたの「ふだん」として固定されます。{'\n'}
-          ふだんより使わなかったぶんだけ、時間が戻ります。
-        </Text>
+        <Text style={styles.note}>{t.declare.note}</Text>
 
         <Pressable
           style={styles.primary}
           onPress={declare}
           disabled={busy || baseline?.status !== 'ok'}
         >
-          <Text style={styles.primaryText}>宣言する</Text>
+          <Text style={styles.primaryText}>{t.declare.declare}</Text>
         </Pressable>
 
         <Pressable style={styles.secondary} onPress={() => router.back()}>
-          <Text style={styles.secondaryText}>戻る</Text>
+          <Text style={styles.secondaryText}>{t.declare.back}</Text>
         </Pressable>
 
         {message !== '' && <Text style={styles.message}>{message}</Text>}

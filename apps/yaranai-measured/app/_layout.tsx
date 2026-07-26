@@ -5,6 +5,7 @@ import { Slot } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { SessionContext, colors } from '@yaranai/core';
+import { LanguageProvider } from '../lib/i18n/context';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -32,7 +33,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={StyleSheet.absoluteFill}>
       <SessionContext.Provider value={session}>
-        <Slot />
+        {/* 表示言語(日本語/英語)。認証画面にも効かせるためセッションと同じ深さに置く */}
+        <LanguageProvider>
+          <Slot />
+        </LanguageProvider>
       </SessionContext.Provider>
     </GestureHandlerRootView>
   );
