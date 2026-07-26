@@ -1,6 +1,8 @@
 // 起動演出「小径」(起動演出指示書・最終版)。
 // 完全な闇 → 夜が明けるように竹林の小径が現れる → 開口部の光の中に「Yaranai」が灯り、
-// 「ここから、変わる。」が続く → ホームへ。合計 2000ms 固定(§4)。
+// 「ここから、変わる。」が続く → ホームへ。演出は 2000ms 固定(§4)、その後
+// 題字を読み取れるだけ最終フレームで静止してからホームへ(holdAfterPlay)。
+// バックグラウンド復帰(variant="still")は演出を流さず最終フレームの静止画だけを挟む。
 //
 // 層構成(下から): 竹林ベイク画像(カメラ静定 scale 1.04→1) → 光3つ(screen 合成)
 // → 帳(黒) → 影の暈 → 題字グロー下層(ぼかし) …ここまで Skia Canvas。
@@ -62,11 +64,16 @@ function Bloom({ spec, opacity, scale, lift }: {
 type Props = {
   /** ホーム(ルート)の準備が済んだか。2000ms 経過後もこれが偽の間は最終フレームで静止(§5) */
   ready: boolean;
+  /**
+   * full: 演出をフルで流す(コールド起動)。
+   * still: 演出を流さず最終フレームの静止画だけを見せる(バックグラウンド復帰)
+   */
+  variant: 'full' | 'still';
   /** フェードアウト完了(アンマウントしてよいタイミング)の通知 */
   onDone: () => void;
 };
 
-export function LaunchOverlay({ ready, onDone }: Props) {
+export function LaunchOverlay({ ready, variant, onDone }: Props) {
   const { width, height } = useWindowDimensions();
   const density = Math.min(2, PixelRatio.get());
   const cover = coverTransform(width, height);
@@ -123,21 +130,30 @@ export function LaunchOverlay({ ready, onDone }: Props) {
   const titleOp = useSharedValue(0);
   const copyOp = useSharedValue(0);
 
-  // OS のアニメーション無効化設定(§6)。判定が返るまでは黒のまま(冒頭250msの黒が吸収する)
-  const [mode, setMode] = useState<'pending' | 'play' | 'reduced'>('pending');
+  // static: 最終フレームの静止画を即時表示する(バックグラウンド復帰の still、
+  // または OS の reduce motion §6)。play の判定が返るまでは黒のまま(冒頭250msの黒が吸収する)
+  const [mode, setMode] = useState<'pending' | 'play' | 'static'>(
+    variant === 'still' ? 'static' : 'pending',
+  );
   useEffect(() => {
+    if (variant === 'still') return; // 最初から static
     let alive = true;
     AccessibilityInfo.isReduceMotionEnabled()
-      .then((v) => { if (alive) setMode(v ? 'reduced' : 'play'); })
+      .then((v) => { if (alive) setMode(v ? 'static' : 'play'); })
       .catch(() => { if (alive) setMode('play'); });
     return () => { alive = false; };
-  }, []);
+  }, [variant]);
 
+  // played = 最終フレームが表示済み。playedAt からの経過が完了後ホールドの起点になる
   const [played, setPlayed] = useState(false);
+  const playedAtRef = useRef(0);
   useEffect(() => {
     if (mode === 'pending') return;
-    if (mode === 'reduced') {
-      // 最終状態を即時表示し、最低 500ms 静止(§6)
+    const markPlayed = () => {
+      playedAtRef.current = Date.now();
+      setPlayed(true);
+    };
+    if (mode === 'static') {
       veil.value = 0;
       cam.value = 1;
       coreOp.value = TL.core.rest;
@@ -150,8 +166,8 @@ export function LaunchOverlay({ ready, onDone }: Props) {
       glowOp.value = TL.glow.rest;
       titleOp.value = 1;
       copyOp.value = TL.copy.rest;
-      const t = setTimeout(() => setPlayed(true), TL.reducedHold);
-      return () => clearTimeout(t);
+      markPlayed();
+      return;
     }
 
     // 帳: 夜明け(easeInOut)
@@ -193,26 +209,33 @@ export function LaunchOverlay({ ready, onDone }: Props) {
     titleOp.value = withDelay(TL.title.delay, withTiming(1, { duration: TL.title.duration, easing: easeOutCubic }));
     copyOp.value = withDelay(TL.copy.delay, withTiming(TL.copy.rest, { duration: TL.copy.duration, easing: easeOutCubic }));
 
-    const t = setTimeout(() => setPlayed(true), TL.total);
+    const t = setTimeout(markPlayed, TL.total);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
-  // 完了かつホーム準備済みでフェードアウト(§5: ロードが長い間は最終フレームで静止して待つ。
-  // スピナー等は出さない)。フェードが終わったらアンマウント通知。
+  // 完了かつホーム準備済みで、題字を読み取れるだけ静止してからフェードアウト
+  // (§5: ロードが長い間は最終フレームで静止して待つ。スピナー等は出さない)。
+  // ロード待ちで既に静止していた時間はホールドから差し引く。
+  // フェードが終わったらアンマウント通知。
   const finish = useCallback(() => onDone(), [onDone]);
   const fading = useRef(false);
   useEffect(() => {
     if (!played || !ready || fading.current) return;
     fading.current = true;
-    rootOpacity.value = withTiming(
-      0,
-      { duration: TL.homeFadeOut, easing: Easing.inOut(Easing.ease) },
-      (finished) => {
-        'worklet';
-        if (finished) runOnJS(finish)();
-      },
-    );
+    const minHold = variant === 'full' ? TL.holdAfterPlay : TL.stillHold;
+    const hold = Math.max(0, minHold - (Date.now() - playedAtRef.current));
+    const t = setTimeout(() => {
+      rootOpacity.value = withTiming(
+        0,
+        { duration: TL.homeFadeOut, easing: Easing.inOut(Easing.ease) },
+        (finished) => {
+          'worklet';
+          if (finished) runOnJS(finish)();
+        },
+      );
+    }, hold);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [played, ready]);
 

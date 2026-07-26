@@ -12,9 +12,13 @@ import { LaunchOverlay } from '../components/launch/LaunchOverlay';
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  // 起動演出「小径」(§6): コールド/ウォーム/バックグラウンド復帰のたびに毎回表示。
-  // id はバックグラウンド復帰時の再マウント(頭からの再生)用。
-  const [launch, setLaunch] = useState({ id: 0, visible: true });
+  // 起動演出「小径」(§6): コールド起動はフルの演出、バックグラウンド復帰は
+  // 最終フレームの静止画だけを挟む(still)。id は復帰時の再マウント用。
+  const [launch, setLaunch] = useState<{ id: number; visible: boolean; variant: 'full' | 'still' }>({
+    id: 0,
+    visible: true,
+    variant: 'full',
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -27,13 +31,13 @@ export default function RootLayout() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // バックグラウンド復帰で演出を最初から再生する(§6)。Android は active↔background の
-  // 二値なので background からの active 復帰だけを見る。
+  // バックグラウンド復帰では演出は流さず、最終フレームの静止画だけを見せる(§6)。
+  // Android は active↔background の二値なので background からの active 復帰だけを見る。
   const appState = useRef(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       if (appState.current === 'background' && next === 'active') {
-        setLaunch((l) => ({ id: l.id + 1, visible: true }));
+        setLaunch((l) => ({ id: l.id + 1, visible: true, variant: 'still' }));
       }
       appState.current = next;
     });
@@ -61,9 +65,10 @@ export default function RootLayout() {
         </SessionContext.Provider>
       )}
       {/* 起動演出はロードと独立に 2000ms で完結し、ロードが長ければ最終フレームで静止(§5)。
+          演出とロードの両方が済んでから、題字を読み取れるだけさらに静止してホームへ。
           ローディングのスピナーはこの覆いの下に隠れるため画面には出ない */}
       {showLaunch && (
-        <LaunchOverlay key={launch.id} ready={!loading} onDone={dismissLaunch} />
+        <LaunchOverlay key={launch.id} ready={!loading} variant={launch.variant} onDone={dismissLaunch} />
       )}
     </GestureHandlerRootView>
   );
