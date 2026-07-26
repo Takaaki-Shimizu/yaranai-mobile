@@ -86,6 +86,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.kinari,
     borderWidth: 1,
     borderColor: colors.suna,
+    // 直角だと硬く出るため、角は控えめに丸める(和紙の切り口くらいの緩さ)
+    borderRadius: 12,
+    // 角丸の外へ項目のタップ範囲がはみ出さないよう内側で切る
+    overflow: 'hidden',
     paddingVertical: 6,
   },
   item: { paddingVertical: 16, paddingHorizontal: 24 },
