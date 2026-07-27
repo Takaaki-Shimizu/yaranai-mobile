@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yaranai — ここから、変わる。</title>
+    <meta
+      name="description"
+      content="やらないアプリを、3つ選ぶ。破った日があっても、積み上げた時間は消えない。"
+    />
+
+    <!--
+  ============================================================
+  Yaranai ウェイトリストLP（復帰演出デザイン準拠 v2）
+  ------------------------------------------------------------
+  ▼ デザイン
+    アプリの復帰演出（竹林+光の道+暈し光）をSVG/CSSのみで再現。
+    v2: 竹に円柱の陰影+上下フェード、光を主役に再構成、周辺減光追加。
+    画像アセットなし。Skia実装と定数単位で揃えたくなったら
+    Claude Codeにリポジトリの色・寸法の移植を依頼すること。
+
+  ▼ コピー
+    ヒーローは決定コピー「ここから、変わる。」のみ。補足行なし。
+
+  ▼ 記録機構
+    ?v=xxx のパラメータは登録時に variant として保存される。
+    パラメータなしの直行流入は "direct"。
+    表示には影響せんけど、将来の価格検証（Van Westendorp）や
+    コピー再テスト時にこの記録をそのまま使い回す想定。
+
+  ▼ Supabase 接続（下の CONFIG を埋めるだけ）
+    テーブル作成SQL:
+      create table waitlist (
+        id uuid primary key default gen_random_uuid(),
+        email text not null,
+        variant text not null,
+        created_at timestamptz default now()
+      );
+      alter table waitlist enable row level security;
+      create policy "anon insert only" on waitlist
+        for insert to anon with check (true);
+    ※ select ポリシーは作らない（anonからは書き込みのみ）。
+    ※ anon key はクライアント公開前提のキー。HTML直書きで問題なし。
+  ============================================================
+-->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --yoru: #12110c; /* 夜（地） */
+        --hikari: #e9e4d6; /* 光（文字・道） */
+        --usuzumi: #8c857b; /* 薄墨（補足） */
+        --shu: #a63a2b; /* 朱（落款） */
+        --font-min: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+        --font-goth:
+          "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", sans-serif;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--yoru);
+      }
+
+      body {
+        font-family: var(--font-goth);
+        font-weight: 300;
+        color: var(--hikari);
+        background: var(--yoru);
+        line-height: 1.9;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ---------- 粒子（フィルムグレイン） ---------- */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 5;
+        opacity: 0.05;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+
+      /* ---------- ヒーロー ---------- */
+      .hero-stage {
+        position: relative;
+        height: 100svh;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* 中央がわずかに明るい夜。手前から奥への空気 */
+        background: radial-gradient(
+          ellipse 90% 70% at 50% 42%,
+          #1a1912,
+          var(--yoru) 75%
+        );
+      }
+
+      /* 竹林：闇に半分溶けとる状態が正解。上下フェード+全体を沈める */
+      .bamboo {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: min(28vw, 240px);
+        pointer-events: none;
+        opacity: 0.7;
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          #000 18%,
+          #000 78%,
+          transparent 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          #000 18%,
+          #000 78%,
+          transparent 100%
+        );
+      }
+      .bamboo-l {
+        left: 0;
+      }
+      .bamboo-r {
+        right: 0;
+        transform: scaleX(-1);
+      }
+
+      /* ---------- 光（ここが主役） ---------- */
+
+      /* 道：上（奥）から手前へ広がる。芯と裾の二層 */
+      .path {
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: min(94vw, 520px);
+        height: 72%;
+        clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+        background: linear-gradient(
+          to bottom,
+          rgba(233, 228, 214, 0.06),
+          rgba(233, 228, 214, 0.02) 45%,
+          rgba(233, 228, 214, 0.04)
+        );
+        filter: blur(14px);
+        /* 文字の高さでは消えて、足元にだけ気配として残す */
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 34%,
+          #000 68%,
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 34%,
+          #000 68%,
+          #000 100%
+        );
+      }
+      .path-core {
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: min(50vw, 240px);
+        height: 56%;
+        clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+        background: linear-gradient(
+          to bottom,
+          rgba(233, 228, 214, 0.08),
+          rgba(233, 228, 214, 0.01) 60%,
+          rgba(233, 228, 214, 0.03)
+        );
+        filter: blur(20px);
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 25%,
+          #000 70%,
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 25%,
+          #000 70%,
+          #000 100%
+        );
+      }
+
+      /* 暈し光：文字二行をまるごと包む。これが主役 */
+      .glow-halo {
+        position: absolute;
+        left: 50%;
+        top: 45%;
+        transform: translate(-50%, -50%);
+        width: min(130vw, 640px);
+        aspect-ratio: 1;
+        background: radial-gradient(
+          circle,
+          rgba(233, 228, 214, 0.14),
+          transparent 70%
+        );
+        filter: blur(36px);
+      }
+      .glow-core {
+        position: absolute;
+        left: 50%;
+        top: 45%;
+        transform: translate(-50%, -50%);
+        width: min(85vw, 380px);
+        aspect-ratio: 1;
+        background: radial-gradient(
+          circle,
+          rgba(238, 233, 219, 0.22),
+          transparent 72%
+        );
+        filter: blur(30px);
+      }
+
+      /* 足元の木漏れ日（左右一つずつ。増やさない） */
+      .komorebi {
+        position: absolute;
+        width: 170px;
+        height: 240px;
+        background: radial-gradient(
+          ellipse,
+          rgba(233, 228, 214, 0.09),
+          transparent 66%
+        );
+        filter: blur(16px);
+      }
+      .komorebi.l {
+        left: 3%;
+        bottom: 5%;
+      }
+      .komorebi.r {
+        right: 3%;
+        bottom: 11%;
+      }
+
+      /* 周辺減光：四隅を沈めて視線を光へ */
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse 80% 68% at 50% 44%,
+          transparent 45%,
+          rgba(8, 8, 5, 0.6) 100%
+        );
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        opacity: 0;
+        animation: akari 2.6s ease 0.4s forwards;
+      }
+
+      @keyframes akari {
+        to {
+          opacity: 1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hero-copy {
+          animation: none;
+          opacity: 1;
+        }
+      }
+
+      .hero-copy h1 {
+        font-family: var(--font-min);
+        font-weight: 400;
+        font-size: clamp(34px, 9vw, 52px);
+        letter-spacing: 0.42em;
+        text-indent: 0.42em;
+        color: #f3efe3;
+        text-shadow:
+          0 0 18px rgba(238, 233, 219, 0.55),
+          0 0 60px rgba(238, 233, 219, 0.25);
+      }
+
+      .hero-copy p {
+        margin-top: 22px;
+        font-family: var(--font-min);
+        font-size: clamp(16px, 4.2vw, 20px);
+        letter-spacing: 0.3em;
+        text-indent: 0.3em;
+        color: rgba(233, 228, 214, 0.9);
+        text-shadow: 0 0 24px rgba(238, 233, 219, 0.35);
+      }
+
+      /* ---------- 本文 ---------- */
+      .page {
+        width: min(680px, 100%);
+        margin: 0 auto;
+        padding: 0 28px 96px;
+      }
+
+      .creed {
+        padding-top: 88px;
+        text-align: center;
+        font-family: var(--font-min);
+        font-size: 16px;
+        letter-spacing: 0.12em;
+        color: rgba(233, 228, 214, 0.92);
+      }
+      .creed p + p {
+        margin-top: 1.6em;
+      }
+
+      /* ---------- 登録フォーム ---------- */
+      .join {
+        margin-top: 96px;
+        padding-top: 64px;
+        border-top: 1px solid rgba(140, 133, 123, 0.25);
+        text-align: center;
+      }
+
+      #waitlist-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      #email {
+        font-family: var(--font-goth);
+        font-size: 16px;
+        width: min(360px, 100%);
+        padding: 14px 18px;
+        background: rgba(233, 228, 214, 0.05);
+        border: 1px solid rgba(140, 133, 123, 0.4);
+        border-radius: 2px;
+        color: var(--hikari);
+        text-align: center;
+        letter-spacing: 0.06em;
+      }
+      #email::placeholder {
+        color: rgba(140, 133, 123, 0.8);
+      }
+      #email:focus {
+        outline: 2px solid rgba(233, 228, 214, 0.7);
+        outline-offset: 2px;
+        border-color: transparent;
+      }
+
+      #submit-btn {
+        font-family: var(--font-min);
+        font-weight: 500;
+        font-size: 15px;
+        letter-spacing: 0.3em;
+        text-indent: 0.3em;
+        padding: 13px 40px;
+        background: var(--hikari);
+        color: var(--yoru);
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        box-shadow: 0 0 28px rgba(233, 228, 214, 0.12);
+      }
+      #submit-btn:hover {
+        background: #f5f1e4;
+      }
+      #submit-btn:focus-visible {
+        outline: 2px solid var(--hikari);
+        outline-offset: 3px;
+      }
+
+      .micro {
+        margin-top: 24px;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        color: var(--usuzumi);
+      }
+
+      /* ---------- 登録完了（朱の落款） ---------- */
+      #done {
+        display: none;
+        text-align: center;
+      }
+
+      /* 灯：輪郭を持たない小さな光。登録の証 */
+      .tomoshibi {
+        width: 140px;
+        height: 140px;
+        margin: 0 auto 12px;
+        background: radial-gradient(
+          circle,
+          rgba(243, 238, 224, 0.55) 0%,
+          rgba(238, 231, 210, 0.16) 38%,
+          transparent 68%
+        );
+        filter: blur(3px);
+        opacity: 0;
+        animation: tomoru 2s ease 0.2s forwards;
+      }
+
+      @keyframes tomoru {
+        to {
+          opacity: 1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .tomoshibi {
+          animation: none;
+          opacity: 1;
+        }
+      }
+
+      #done .done-main {
+        font-family: var(--font-min);
+        font-size: 16px;
+        letter-spacing: 0.14em;
+      }
+      #done .done-sub {
+        margin-top: 1.2em;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        color: var(--usuzumi);
+      }
+
+      footer {
+        margin-top: 120px;
+        text-align: center;
+        font-size: 11px;
+        letter-spacing: 0.24em;
+        color: var(--usuzumi);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============ ヒーロー：竹林と光の道 ============ -->
+    <header class="hero-stage">
+      <!-- 竹林（左）。円柱の陰影グラデーション+節。右は反転 -->
+      <svg
+        class="bamboo bamboo-l"
+        viewBox="0 0 240 1200"
+        preserveAspectRatio="xMinYMid slice"
+        aria-hidden="true"
+      >
+        <defs>
+          <!-- 円柱の陰影：両端が沈み、中央がわずかに起きる -->
+          <linearGradient id="cyl-near" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#0E0F08" />
+            <stop offset="0.42" stop-color="#262718" />
+            <stop offset="0.58" stop-color="#2B2C1B" />
+            <stop offset="1" stop-color="#0C0D07" />
+          </linearGradient>
+          <linearGradient id="cyl-mid" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#0D0E08" />
+            <stop offset="0.5" stop-color="#1E1F12" />
+            <stop offset="1" stop-color="#0C0D07" />
+          </linearGradient>
+          <g id="stalk2">
+            <rect x="0" y="0" width="24" height="1200" rx="6" />
+            <!-- 節：暗い帯+直下に細い起こしの線 -->
+            <g>
+              <rect
+                x="0"
+                y="118"
+                width="24"
+                height="5"
+                fill="rgba(0,0,0,0.45)"
+              />
+              <rect
+                x="0"
+                y="123"
+                width="24"
+                height="1.5"
+                fill="rgba(233,228,214,0.05)"
+              />
+              <rect
+                x="0"
+                y="292"
+                width="24"
+                height="5"
+                fill="rgba(0,0,0,0.45)"
+              />
+              <rect
+                x="0"
+                y="297"
+                width="24"
+                height="1.5"
+                fill="rgba(233,228,214,0.05)"
+              />
+              <rect
+                x="0"
+                y="470"
+                width="24"
+                height="5"
+                fill="rgba(0,0,0,0.45)"
+              />
+              <rect
+                x="0"
+                y="475"
+                width="24"
+                height="1.5"
+                fill="rgba(233,228,214,0.05)"
+              />
+              <rect
+                x="0"
+                y="655"
+                width="24"
+                height="5"
+                fill="rgba(0,0,0,0.45)"
+              />
+              <rect
+                x="0"
+                y="660"
+                width="24"
+                height="1.5"
+                fill="rgba(233,228,214,0.05)"
+              />
+              <rect
+                x="0"
+                y="838"
+                width="24"
+                height="5"
+                fill="rgba(0,0,0,0.45)"
+              />
+              <rect
+                x="0"
+                y="843"
+                width="24"
+                height="1.5"
+                fill="rgba(233,228,214,0.05)"
+              />
+              <rect
+                x="0"
+                y="1015"
+                width="24"
+                height="5"
+                fill="rgba(0,0,0,0.45)"
+              />
+              <rect
+                x="0"
+                y="1020"
+                width="24"
+                height="1.5"
+                fill="rgba(233,228,214,0.05)"
+              />
+            </g>
+          </g>
+        </defs>
+        <!-- 奥：細く・暗く・強くぼかす。輪郭を闇に返す -->
+        <g style="filter: blur(4px); opacity: 0.55">
+          <use
+            href="#stalk2"
+            x="230"
+            y="-70"
+            fill="#15160D"
+            transform="scale(0.55 1)"
+          />
+          <use
+            href="#stalk2"
+            x="300"
+            y="-150"
+            fill="#13140C"
+            transform="scale(0.5 1)"
+          />
+          <use
+            href="#stalk2"
+            x="390"
+            y="-30"
+            fill="#111207"
+            transform="scale(0.45 1)"
+          />
+        </g>
+        <!-- 中景 -->
+        <g style="filter: blur(1.6px); opacity: 0.85">
+          <use
+            href="#stalk2"
+            x="95"
+            y="-100"
+            fill="url(#cyl-mid)"
+            transform="scale(0.85 1)"
+          />
+          <use
+            href="#stalk2"
+            x="128"
+            y="-30"
+            fill="url(#cyl-mid)"
+            transform="scale(0.78 1)"
+          />
+        </g>
+        <!-- 近景：太いが、わずかにぼかして空気に馴染ませる -->
+        <g style="filter: blur(0.6px)">
+          <use
+            href="#stalk2"
+            x="6"
+            y="-50"
+            fill="url(#cyl-near)"
+            transform="scale(1.35 1)"
+          />
+          <use
+            href="#stalk2"
+            x="42"
+            y="-140"
+            fill="url(#cyl-near)"
+            transform="scale(1.12 1)"
+          />
+        </g>
+      </svg>
+      <svg
+        class="bamboo bamboo-r"
+        viewBox="0 0 240 1200"
+        preserveAspectRatio="xMinYMid slice"
+        aria-hidden="true"
+      >
+        <g style="filter: blur(4px); opacity: 0.55">
+          <use
+            href="#stalk2"
+            x="250"
+            y="-110"
+            fill="#15160D"
+            transform="scale(0.55 1)"
+          />
+          <use
+            href="#stalk2"
+            x="350"
+            y="-40"
+            fill="#111207"
+            transform="scale(0.48 1)"
+          />
+        </g>
+        <g style="filter: blur(1.6px); opacity: 0.85">
+          <use
+            href="#stalk2"
+            x="112"
+            y="-170"
+            fill="url(#cyl-mid)"
+            transform="scale(0.8 1)"
+          />
+        </g>
+        <g style="filter: blur(0.6px)">
+          <use
+            href="#stalk2"
+            x="4"
+            y="-20"
+            fill="url(#cyl-near)"
+            transform="scale(1.35 1)"
+          />
+          <use
+            href="#stalk2"
+            x="40"
+            y="-90"
+            fill="url(#cyl-near)"
+            transform="scale(1.15 1)"
+          />
+        </g>
+      </svg>
+
+      <!-- 光の層（描画順=奥から手前） -->
+      <div class="path" aria-hidden="true"></div>
+      <div class="path-core" aria-hidden="true"></div>
+      <div class="komorebi l" aria-hidden="true"></div>
+      <div class="komorebi r" aria-hidden="true"></div>
+      <div class="glow-halo" aria-hidden="true"></div>
+      <div class="glow-core" aria-hidden="true"></div>
+      <div class="vignette" aria-hidden="true"></div>
+
+      <div class="hero-copy">
+        <h1>Yaranai</h1>
+        <p>ここから、変わる。</p>
+      </div>
+    </header>
+
+    <!-- ============ 本文 ============ -->
+    <div class="page">
+      <section class="creed">
+        <p>やらないアプリを、三つ選ぶ。</p>
+        <p>破った日があっても、積み上げた時間は消えない。</p>
+        <p>時間を取り戻そう。ここから、変わる。</p>
+      </section>
+
+      <section class="join">
+        <form id="waitlist-form" novalidate>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="メールアドレス"
+            autocomplete="email"
+            inputmode="email"
+            required
+          />
+          <button type="submit" id="submit-btn">案内を受け取る</button>
+        </form>
+
+        <p class="micro">
+          準備が整ったら、一通だけお知らせします。それ以外は送りません。
+        </p>
+
+        <div id="done" aria-live="polite">
+          <div class="tomoshibi" aria-hidden="true"></div>
+          <p class="done-main">承りました。</p>
+          <p class="done-sub">ご案内までお待ちください。</p>
+        </div>
+      </section>
+
+      <footer>Yaranai</footer>
+    </div>
+
+    <script>
+      /* ---------- CONFIG（ここを埋める） ---------- */
+      const SUPABASE_URL = "https://ugqazqmxanddzrmxoiru.supabase.co"; // 例: 'https://xxxx.supabase.co'
+      const SUPABASE_ANON_KEY =
+        "sb_publishable_BBKvaK06mfg7SWXlei7d-g_pQRnYXJg";
+
+      /* ---------- 流入記録（表示には影響せん。将来の検証用） ---------- */
+      const param = new URLSearchParams(location.search).get("v");
+      const variantLabel = param || "direct";
+
+      /* ---------- 登録処理 ---------- */
+      const form = document.getElementById("waitlist-form");
+      const done = document.getElementById("done");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("email").value.trim();
+        if (!email || !email.includes("@")) {
+          document.getElementById("email").focus();
+          return;
+        }
+
+        const record = { email, variant: variantLabel };
+
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+          try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                Prefer: "return=minimal",
+              },
+              body: JSON.stringify(record),
+            });
+            if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+          } catch (err) {
+            console.error(err);
+            // 静かなプロダクトでも、失敗は静かに握りつぶさない
+            alert(
+              "送信できませんでした。時間をおいて、もう一度お試しください。",
+            );
+            return;
+          }
+        } else {
+          console.log("[waitlist] CONFIG未設定のためローカル記録のみ:", record);
+        }
+
+        form.style.display = "none";
+        document.querySelector(".micro").style.display = "none";
+        done.style.display = "block";
+      });
+    </script>
+  </body>
+</html>
