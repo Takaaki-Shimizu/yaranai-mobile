@@ -1,7 +1,9 @@
 // 庭モード(絵巻)。週の節目(土曜・日曜の暦日)にのみ開く(§5.2)。祝日は対象外。
 // 開発者モードは曜日に関わらず365日開く(実測・高水位には触れず、ホームの
 // スライダー値をルートパラメータで受け取ってその場で組む)。
-// 退出は明示的な「とじる」のみ。自動で閉じない・自動遷移しない。
+// 退出は明示的な「戻る」のみ。自動で閉じない・自動遷移しない。
+// 「とじる」はホーム最下部の閉じ際の儀式(閉じ際演出指示書 §1)専用の語なので、
+// ここでは使わない。この「戻る」はホームへ帰るだけで、障子演出は再生しない。
 
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
@@ -62,11 +64,11 @@ export default function GardenMode() {
     <Animated.View style={[styles.container, appearStyle]}>
       {shown && <GardenScroll growth={shown} />}
       <Pressable
-        style={[styles.close, { top: insets.top + 12 }]}
+        style={[styles.back, { top: insets.top + 12 }]}
         hitSlop={16}
         onPress={() => router.back()}
       >
-        <Text style={styles.closeText}>{t.garden.close}</Text>
+        <Text style={styles.backText}>{t.garden.back}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -74,13 +76,13 @@ export default function GardenMode() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.kinari },
-  close: {
+  back: {
     position: 'absolute',
     right: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  closeText: {
+  backText: {
     fontFamily: fonts.serif,
     fontSize: 13,
     letterSpacing: 4,
