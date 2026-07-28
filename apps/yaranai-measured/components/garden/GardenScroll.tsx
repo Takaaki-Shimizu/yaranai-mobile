@@ -16,6 +16,7 @@ import {
 } from '../../lib/garden/scene';
 import type { Scene } from '../../lib/garden/scene-types';
 import { bakeLayers, bakeOverlay, type BakedLayer } from './renderer';
+import { useBaked } from './use-baked';
 
 // ベイク解像度の上限(論理px→物理px)。メモリと精細さのバランスは実機で調整する
 const MAX_BAKE_SCALE = 0.85;
@@ -65,15 +66,18 @@ export function GardenScroll({ growth }: Props) {
   const offsetY = Math.max(0, (height - paintH) / 2);
 
   const scene = useMemo(() => buildScene(growth), [growth]);
-  const layers = useMemo(() => {
+  // レイヤーと紙の質感を一括で焼く。ひとつでも欠けたら null を返して焼き直す
+  // (バックグラウンド復帰・ベイク失敗への備えは use-baked.ts に集約しとる)。
+  const baked = useBaked(() => {
     const density = Math.min(2, PixelRatio.get());
     const bakeScale = Math.min(dpScale * density, MAX_BAKE_SCALE);
-    return bakeLayers(scene, bakeScale);
-  }, [scene, dpScale]);
-  const overlay = useMemo(() => {
-    const density = Math.min(2, PixelRatio.get());
-    return bakeOverlay(scene, Math.round(width * density), Math.round(height * density));
-  }, [scene, width, height]);
+    const layers = bakeLayers(scene, bakeScale);
+    const overlay = bakeOverlay(scene, Math.round(width * density), Math.round(height * density));
+    if (!overlay || layers.length !== scene.layers.length) return null;
+    return { layers, overlay };
+  }, [scene, dpScale, width, height]);
+  const layers: BakedLayer[] = baked.value?.layers ?? [];
+  const overlay = baked.value?.overlay ?? null;
   const bleed = useMemo(() => bleedColors(scene), [scene]);
 
   // §変更2: 開扉は中央始まり(EDGE_PEEK=0)。ホームとほぼ同じ絵から左右どちらへも歩ける
@@ -116,7 +120,8 @@ export function GardenScroll({ growth }: Props) {
   return (
     <GestureDetector gesture={gesture}>
       <View style={styles.fill} collapsable={false}>
-        <Canvas style={styles.fill}>
+        {/* key: バックグラウンド復帰のたびに Canvas ごと作り直し、描き直しを確実にする */}
+        <Canvas key={baked.generation} style={styles.fill}>
           {/* 縦のブリード: 絵の上は空、下は大地の色で満たす */}
           <Rect x={0} y={0} width={width} height={height} color={bleed.sky} />
           <Rect x={0} y={offsetY + paintH / 2} width={width} height={height} color={bleed.ground} />
