@@ -259,7 +259,7 @@ export function drawOverlay(canvas: SkCanvas, scene: Scene, widthPx: number, hei
 // オフスクリーン面のスナップショットは生成元のGPUコンテキストに紐づくテクスチャで、
 // 画面の Canvas(別スレッドの描画コンテキスト)からは参照できず何も映らない。
 // makeNonTextureImage() でCPU側の画像に複製してから返す。
-function snapshotRaster(surface: SkSurface): SkImage {
+export function snapshotRaster(surface: SkSurface): SkImage {
   surface.flush();
   const texture = surface.makeImageSnapshot();
   const image = texture.makeNonTextureImage();

@@ -29,6 +29,11 @@ export type AppStrings = {
     rowWaiting: string;
     observeLink: string;
     stripLabel: string;
+    /**
+     * 閉じ際の儀式「とじる」。一語一義: この語はホーム最下部のこのボタンにだけ使う。
+     * 画面を離れてホームへ帰るだけの遷移は、どこであれ「戻る」(reading.back など)。
+     */
+    tojiru: string;
   };
   reading: {
     listTitle: string;
@@ -79,7 +84,8 @@ export type AppStrings = {
     openSettings: string;
   };
   garden: {
-    close: string;
+    /** 絵巻ビューからホームへ帰る。障子演出は再生しない(ゆえに「とじる」ではない) */
+    back: string;
   };
   auth: {
     welcomeBack: string;
@@ -133,6 +139,7 @@ const ja: AppStrings = {
     rowWaiting: '昨日の実測を待っています。',
     observeLink: '時間の行き先を見る',
     stripLabel: '読みもの',
+    tojiru: 'とじる',
   },
   reading: {
     listTitle: '読みもの',
@@ -186,7 +193,7 @@ const ja: AppStrings = {
     openSettings: '設定を開く',
   },
   garden: {
-    close: 'とじる',
+    back: '戻る',
   },
   auth: {
     welcomeBack: 'おかえりなさい',
@@ -241,6 +248,8 @@ const en: AppStrings = {
     rowWaiting: "Waiting for yesterday's measurement.",
     observeLink: 'See where your time goes',
     stripLabel: 'Reading',
+    // 「戻る」= Back と一語一義で分ける。閉じ際の儀式だけが Close
+    tojiru: 'Close',
   },
   reading: {
     listTitle: 'Reading',
@@ -294,7 +303,7 @@ const en: AppStrings = {
     openSettings: 'Open Settings',
   },
   garden: {
-    close: 'Close',
+    back: 'Back',
   },
   auth: {
     welcomeBack: 'Welcome back',

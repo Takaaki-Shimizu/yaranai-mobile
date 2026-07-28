@@ -1,8 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, useWindowDimensions,
+  View, Text, Pressable, StyleSheet, RefreshControl, useWindowDimensions,
   type StyleProp, type ViewStyle,
 } from 'react-native';
+import Animated, {
+  Easing, useAnimatedStyle, useSharedValue, withTiming,
+} from 'react-native-reanimated';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
@@ -15,8 +18,13 @@ import { DevGarden } from '../../components/garden/DevGarden';
 import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
 import { HOME_ASPECT } from '../../lib/garden/scene';
 import { isEngawaOpen } from '../../lib/garden/gate';
-import { changedCategories, changeNote, type DiffCategory } from '../../lib/garden/diff';
+import { changedCategories, changeNote, diffDuration, type DiffCategory } from '../../lib/garden/diff';
 import { useIsDeveloper } from '../../lib/developer';
+import { TojiruCurtain } from '../../components/tojiru/TojiruCurtain';
+import { exitToBackground } from '../../lib/tojiru/exit';
+import { TOJIRU_TIMELINE } from '../../lib/tojiru/timeline';
+import { useReduceMotion } from '../../lib/use-reduce-motion';
+import { useForegroundGeneration } from '../../lib/use-foreground';
 import { evaluateCrashedDay, evaluateStanding } from '../../lib/articles/evaluate';
 import { loadArticlesState } from '../../lib/articles/storage';
 import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
@@ -62,6 +70,13 @@ export default function Home() {
   // 読みもの(§5.1): 記事状態を素のまま持ち、未読の帯の1本はレンダー時に言語をかけて選ぶ。
   const [articlesState, setArticlesState] = useState<ArticlesState | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // 閉じ際演出「とじる」(§1)。演出中はホームのUIを退場させ、覆いに任せる。
+  const [closing, setClosing] = useState(false);
+  const contentOpacity = useSharedValue(1);
+  const reduceMotion = useReduceMotion();
+  const foreground = useForegroundGeneration();
+  // 入場差分アニメが流れ終わる時刻(ms)。この間の「とじる」は無視する(§6)
+  const diffUntil = useRef(0);
 
   const loadAll = useCallback(async () => {
     // 累計はやめた誓いも含めた全体。行の表示はアクティブな誓いだけ。
@@ -95,10 +110,13 @@ export default function Home() {
       const cats = changedCategories(prev, growthRes);
       setPrevGrowth(cats.length ? prev : null);
       setGardenCats(cats);
+      // 差分アニメが流れる間は「とじる」を受け付けない(§6)
+      diffUntil.current = cats.length ? Date.now() + diffDuration(cats) : 0;
       saveLastSeen(session.user.id, growthRes);
     } else {
       setPrevGrowth(null);
       setGardenCats([]);
+      diffUntil.current = 0;
     }
 
     // 読みもの(§5.1): 発火判定を回してから状態を読み、未読の帯を1本だけ出す。
@@ -150,109 +168,158 @@ export default function Home() {
     }
   };
 
+  // 閉じ際の儀式(§2・§3)。とじる → UIが退場し、庭に還り、障子が閉じ、
+  // 1200ms でアプリがバックグラウンドへ移る。演出中の分岐は一切作らない。
+  const onTojiruPress = () => {
+    if (closing) return;
+    // 差分アニメの再生中は無視する(§6)。押されなかったことにするだけで、何も出さない
+    if (Date.now() < diffUntil.current) return;
+    // 開発者モードと、端末のアニメーション無効化設定は演出を省いて即 E(§6)
+    if (isDeveloper || reduceMotion) {
+      exitToBackground();
+      return;
+    }
+    setClosing(true);
+    contentOpacity.value = withTiming(0, {
+      duration: TOJIRU_TIMELINE.exit.duration,
+      easing: Easing.out(Easing.cubic),
+    });
+  };
+
+  // BackHandler.exitApp() はアプリを終了させず背面へ回すだけのこともある。
+  // 復帰したときに障子が閉じたままにならんよう、前面に戻った時点で畳む(§7-8)。
+  useEffect(() => {
+    setClosing(false);
+    contentOpacity.value = 1;
+  }, [foreground, contentOpacity]);
+
+  const contentStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.value }));
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.wordmark}>Yaranai</Text>
-        {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
-        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t.menu.a11yLabel}>
-          <View style={styles.hamburger}>
-            <View style={styles.hbLine} />
-            <View style={styles.hbLine} />
-            <View style={styles.hbLine} />
-          </View>
-        </Pressable>
-      </View>
-
-      <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
-
-      {/* 理想(WHAT)は庭の直上に常設する。開発者モードでも同じ枠を使い、
-          未入力でも高さを確保するので庭の描画開始位置は動かない */}
-      <IdealHeader />
-
-      {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
-      {isDeveloper ? (
-        <>
-          <DevGarden />
-          {/* 開発者モードは計測しないため発火条件を満たさない。読みものは常に表示する
-              (登録簿の先頭)。永続状態は参照せず、タップで記事画面を確認できる */}
-          {devStripArticle && (
-            <ReadingStrip
-              article={devStripArticle}
-              onPress={() => router.push(`/(app)/reading/${devStripArticle.id}`)}
-            />
-          )}
-        </>
-      ) : (
-      <>
-      {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
-      {growth && growth.stones > 0 ? (
-        <Pressable onPress={onGardenPress}>
-          <HomeGarden growth={growth} height={gardenHeight} prevGrowth={prevGrowth} />
-        </Pressable>
-      ) : (
-        <View style={styles.empty}>
-          <Text style={styles.headline}>{t.home.emptyHeadline}</Text>
-        </View>
-      )}
-
-      {/* 読みもの: 未読の帯(§5.1)。庭と累計の一文の間に置く。
-          「戻ってきました。」とアプリ行の間に挟むと文意が切れるため、庭の直下に出す。
-          罫線2本のみ・カード化しない。未読の印は点1個。タップで記事へ。
-          庭からは 28、下は累計ブロックの余白 40 で挟み、帯が窮屈に見えないようにする。
-          既読になった帯は次の focus でここから消える(演出なし) */}
-      {unreadArticle && (
-        <ReadingStrip
-          style={styles.stripHome}
-          article={unreadArticle}
-          onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
-        />
-      )}
-
-      {/* 蓄積 */}
-      {totals && Math.round(totalSavedMinutes) > 0 && (
-        <View style={[styles.stats, unreadArticle && styles.statsUnderStrip]}>
-          <Text style={styles.headline}>
-            {t.home.savedHeadline(totals.longest_days, formatMinutes(totalSavedMinutes, lang))}
-          </Text>
-          {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
-          {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
-        </View>
-      )}
-
-      {/* 誓い */}
-      <View style={styles.list}>
-        {vows.map((vow) => {
-          const actual = yesterdayMinutes.get(vow.vow_id);
-          // 正式名が引けんときは宣言時に保存した名前をそのまま出す。
-          const label = officialLabels[vow.package_name]?.trim() || vow.app_label;
-          return (
-            <View key={vow.vow_id} style={styles.row}>
-              <Text style={styles.label}>{label}</Text>
-              <Text style={styles.saved}>
-                {actual != null
-                  ? t.home.rowSaved(
-                      formatMinutes(actual, lang),
-                      formatMinutes(vow.baseline_minutes, lang),
-                      formatMinutes(vow.baseline_minutes - actual, lang),
-                    )
-                  : t.home.rowWaiting}
-              </Text>
+    <View style={styles.root}>
+      {/* 区間 A(§3): ホームのUIはここごとフェードアウトする。
+          ヘッダー・数字・記録カード・とじるボタン自身が、まとめて退場する */}
+      <Animated.ScrollView
+        style={[styles.container, contentStyle]}
+        contentContainerStyle={styles.content}
+        pointerEvents={closing ? 'none' : 'auto'}
+        scrollEnabled={!closing}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={styles.header}>
+          <Text style={styles.wordmark}>Yaranai</Text>
+          {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t.menu.a11yLabel}>
+            <View style={styles.hamburger}>
+              <View style={styles.hbLine} />
+              <View style={styles.hbLine} />
+              <View style={styles.hbLine} />
             </View>
-          );
-        })}
+          </Pressable>
+        </View>
 
-        <Pressable style={styles.observe} onPress={() => router.push('/(app)/observe')}>
-          <Text style={styles.observeText}>{t.home.observeLink}</Text>
+        <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
+
+        {/* 理想(WHAT)は庭の直上に常設する。開発者モードでも同じ枠を使い、
+            未入力でも高さを確保するので庭の描画開始位置は動かない */}
+        <IdealHeader />
+
+        {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
+        {isDeveloper ? (
+          <>
+            <DevGarden />
+            {/* 開発者モードは計測しないため発火条件を満たさない。読みものは常に表示する
+                (登録簿の先頭)。永続状態は参照せず、タップで記事画面を確認できる */}
+            {devStripArticle && (
+              <ReadingStrip
+                article={devStripArticle}
+                onPress={() => router.push(`/(app)/reading/${devStripArticle.id}`)}
+              />
+            )}
+          </>
+        ) : (
+        <>
+        {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
+        {growth && growth.stones > 0 ? (
+          <Pressable onPress={onGardenPress}>
+            <HomeGarden growth={growth} height={gardenHeight} prevGrowth={prevGrowth} />
+          </Pressable>
+        ) : (
+          <View style={styles.empty}>
+            <Text style={styles.headline}>{t.home.emptyHeadline}</Text>
+          </View>
+        )}
+
+        {/* 読みもの: 未読の帯(§5.1)。庭と累計の一文の間に置く。
+            「戻ってきました。」とアプリ行の間に挟むと文意が切れるため、庭の直下に出す。
+            罫線2本のみ・カード化しない。未読の印は点1個。タップで記事へ。
+            庭からは 28、下は累計ブロックの余白 40 で挟み、帯が窮屈に見えないようにする。
+            既読になった帯は次の focus でここから消える(演出なし) */}
+        {unreadArticle && (
+          <ReadingStrip
+            style={styles.stripHome}
+            article={unreadArticle}
+            onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
+          />
+        )}
+
+        {/* 蓄積 */}
+        {totals && Math.round(totalSavedMinutes) > 0 && (
+          <View style={[styles.stats, unreadArticle && styles.statsUnderStrip]}>
+            <Text style={styles.headline}>
+              {t.home.savedHeadline(totals.longest_days, formatMinutes(totalSavedMinutes, lang))}
+            </Text>
+            {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
+            {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
+          </View>
+        )}
+
+        {/* 誓い */}
+        <View style={styles.list}>
+          {vows.map((vow) => {
+            const actual = yesterdayMinutes.get(vow.vow_id);
+            // 正式名が引けんときは宣言時に保存した名前をそのまま出す。
+            const label = officialLabels[vow.package_name]?.trim() || vow.app_label;
+            return (
+              <View key={vow.vow_id} style={styles.row}>
+                <Text style={styles.label}>{label}</Text>
+                <Text style={styles.saved}>
+                  {actual != null
+                    ? t.home.rowSaved(
+                        formatMinutes(actual, lang),
+                        formatMinutes(vow.baseline_minutes, lang),
+                        formatMinutes(vow.baseline_minutes - actual, lang),
+                      )
+                    : t.home.rowWaiting}
+                </Text>
+              </View>
+            );
+          })}
+
+          <Pressable style={styles.observe} onPress={() => router.push('/(app)/observe')}>
+            <Text style={styles.observeText}>{t.home.observeLink}</Text>
+          </Pressable>
+        </View>
+        </>
+        )}
+
+        {/* 閉じ際の儀式(§2)。縦スクロールの最下端に置く通常要素で、固定フッター・
+            フローティングにはしない。ホーム以外の画面には置かない。
+            誘導はしない: 促す文言も、印も、バッジも添えない(§5) */}
+        <Pressable
+          style={styles.tojiru}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t.home.tojiru}
+          onPress={onTojiruPress}
+        >
+          <Text style={styles.tojiruText}>{t.home.tojiru}</Text>
         </Pressable>
-      </View>
-      </>
-      )}
-    </ScrollView>
+      </Animated.ScrollView>
+
+      {/* A〜E の覆い。文字・数値・アイコンは一切持たない(§5) */}
+      {closing && <TojiruCurtain growth={growth} />}
+    </View>
   );
 }
 
@@ -280,8 +347,20 @@ function ReadingStrip({
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.kinari },
   container: { flex: 1, backgroundColor: colors.kinari },
   content: { paddingBottom: 80 },
+
+  // 「とじる」(§2): 中央寄せのテキストのみ。枠・背景・影は付けない。
+  // カード末尾から 56 空け、タップ領域は最小 44dp 四方を満たす(高さ 44 + hitSlop)。
+  tojiru: {
+    marginTop: 56,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 色・字間は読みもの画面の「戻る」に揃える(薄墨・letterSpacing 3)
+  tojiruText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

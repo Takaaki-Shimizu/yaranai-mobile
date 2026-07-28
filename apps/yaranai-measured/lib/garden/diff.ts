@@ -74,3 +74,14 @@ export const STAGE_TIMING: Record<DiffCategory, { delay: number; duration: numbe
   light: { delay: 500, duration: 2000 }, // 前回位置から滲み広がる
   stone: { delay: 750, duration: 1400 },
 };
+
+/**
+ * 差分演出が終わるまでの時間(ms)。変化なしは 0。
+ * 閉じ際演出「とじる」は、この間に押されても無視する(指示書 §6)。
+ */
+export function diffDuration(categories: DiffCategory[]): number {
+  return categories.reduce(
+    (max, cat) => Math.max(max, STAGE_TIMING[cat].delay + STAGE_TIMING[cat].duration),
+    0,
+  );
+}
