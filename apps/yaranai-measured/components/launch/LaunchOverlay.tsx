@@ -25,6 +25,7 @@ import { fonts } from '@yaranai/core';
 import { coverTransform, KOMICHI_LAYOUT, VANISHING_POINT } from '../../lib/launch/komichi';
 import { LAUNCH_TIMELINE as TL } from '../../lib/launch/timeline';
 import { bakeKomichi, bakeTitleGlow } from './bake';
+import { useBaked } from '../garden/use-baked';
 
 const easeOutCubic = Easing.out(Easing.cubic);
 const camEase = Easing.bezier(0.25, 0.5, 0.3, 1);
@@ -80,11 +81,13 @@ export function LaunchOverlay({ ready, variant, onDone }: Props) {
   const toX = (x: number) => cover.ox + x * cover.s;
   const toY = (y: number) => cover.oy + y * cover.s;
 
-  // 竹林とグロー層は最初のレンダーで同期ベイク(1回きり。以後は画像を置くだけ)
-  const sceneImage = useMemo(
+  // 竹林とグロー層は最初のレンダーで同期ベイク(1回きり。以後は画像を置くだけ)。
+  // 復帰直後は描画面が整っとらずベイクが空を返すことがあるけん、焼けるまで数回やり直す
+  // (やり直しに失敗し続けても、帳の黒と題字だけで演出は成立する)。
+  const sceneImage = useBaked(
     () => bakeKomichi(Math.max(1, Math.round(width * density)), Math.max(1, Math.round(height * density))),
     [width, height, density],
-  );
+  ).value;
   const titleSize = KOMICHI_LAYOUT.title.fontSize * cover.s;
   const titleSpacing = KOMICHI_LAYOUT.title.letterSpacing * cover.s;
   const glow = useMemo(
