@@ -4,6 +4,7 @@ import { STRINGS } from '../../i18n/strings';
 import { CARD_LAYOUTS, CARD_SIZES, declarationBaselines } from '../card-spec';
 import { formatDeclaredOn, parseDeclaredOn } from '../format';
 import { EXCUSE_PLACEHOLDERS, pickPlaceholder } from '../placeholders';
+import { declarationScale } from '../preview-svg';
 import { buildQrMatrix } from '../qr';
 import { EXCUSE_CARD_URL } from '../url';
 import {
@@ -89,6 +90,24 @@ test('全角14字×2行の最長ケースが、字を縮めずに安全幅へ収
     assert.ok(longest <= d.safeWidth, `${size}: 最長行 ${longest}px が安全幅 ${d.safeWidth}px を超える`);
     // 安全幅そのものも版面の内側に収まっていること
     assert.ok(d.safeWidth <= CARD_LAYOUTS[size].width - 80);
+  }
+});
+
+test('上限(全角20字)の宣言は、字送りごと縮めて安全幅へ収まる', () => {
+  const widthOf = (chars: number, size: number, ls: number) => chars * size + (chars - 1) * ls;
+  const lines = excuseLines('あ'.repeat(EXCUSE_MAX_WIDTH), 'ja'); // 1行目が全角21字
+  for (const size of CARD_SIZES) {
+    const layout = CARD_LAYOUTS[size];
+    const d = layout.declaration;
+    const scale = declarationScale(layout, lines);
+    assert.ok(scale < 1, `${size}: 基準幅を超える行に縮尺が掛かっていない`);
+    assert.ok(scale >= 0.5, `${size}: 縮みすぎて読めない(${scale})`);
+    const longest = widthOf(EXCUSE_MAX_WIDTH + 1, d.size * scale, d.letterSpacing * scale);
+    assert.ok(longest <= d.safeWidth, `${size}: 縮めても ${longest}px が安全幅 ${d.safeWidth}px を超える`);
+  }
+  // 基準幅(全角14字)に収まる宣言は縮めない
+  for (const size of CARD_SIZES) {
+    assert.equal(declarationScale(CARD_LAYOUTS[size], excuseLines('ショート動画があるアプリ', 'ja')), 1);
   }
 });
 
