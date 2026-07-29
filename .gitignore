@@ -37,6 +37,10 @@ yarn-error.*
 *.tsbuildinfo
 .test-dist/
 
+# 開発用プレビューの書き出し先(scripts/render-*.js)
+.garden-previews/
+.excuse-previews/
+
 app-example
 
 # generated native folders

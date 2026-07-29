@@ -61,6 +61,12 @@ export default function Declare() {
         <View style={styles.doneBody}>
           <Text style={styles.doneLede}>{t.declare.doneLede(label)}</Text>
           <Text style={styles.worldview}>{t.declare.doneWorldview}</Text>
+          {/* 言い訳カードの告知(言い訳カード §4.4)。世界観の語りの後に一行だけ。
+              タップで言い訳カードのタブへ入る。タップ可能であることを示す装飾
+              (下線・矢印・ボタン枠)は付けない。告知はこの1箇所のみ */}
+          <Pressable onPress={() => router.push('/(app)/excuse')}>
+            <Text style={styles.worldview}>{t.declare.doneExcuseHint}</Text>
+          </Pressable>
           <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)')}>
             <Text style={styles.doneActionText}>{t.declare.toGarden}</Text>
           </Pressable>

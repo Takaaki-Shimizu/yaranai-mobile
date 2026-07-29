@@ -14,13 +14,49 @@ import type { Lang } from './types';
 export type AppStrings = {
   menu: {
     a11yLabel: string;
-    ideal: string;
-    reading: string;
     logout: string;
     logoutTitle: string;
     logoutBody: string;
     logoutCancel: string;
     logoutConfirm: string;
+  };
+  /** 固定フッターの3タブ。文字ラベルは出さないので、これは読み上げ専用の名前 */
+  footer: {
+    garden: string;
+    reading: string;
+    excuse: string;
+  };
+  excuse: {
+    title: string;
+    emptyLede: string;
+    create: string;
+    replace: string;
+    inputLede: string;
+    inputA11y: string;
+    inputNote: string;
+    next: string;
+    confirmQuestion: string;
+    declare: string;
+    back: string;
+    errorEmpty: string;
+    errorTooLong: (max: number) => string;
+    errorTooManyLines: string;
+    errorLineTooLong: (max: number) => string;
+    saveFailed: string;
+    buildFailed: string;
+    share: string;
+    shareSquare: string;
+    shareStory: string;
+    shareCancel: string;
+    shareFailed: string;
+    shareUnavailable: string;
+    /** カードの面に刷る文言。宣言文と宣言日以外はここが正 */
+    card: {
+      /** 預かりの一文(§2-4)。行組みはサイズごとに変わる */
+      custody: { square: string[]; story: string[] };
+      wordmark: string;
+      qrLabel: string;
+    };
   };
   home: {
     emptyHeadline: string;
@@ -61,6 +97,8 @@ export type AppStrings = {
     failed: string;
     doneLede: (label: string) => string;
     doneWorldview: string;
+    /** 言い訳カードの告知(§4.4)。宣伝はこの1箇所だけ */
+    doneExcuseHint: string;
     toGarden: string;
     pickFromObserve: string;
     gatheringTitle: string;
@@ -123,13 +161,49 @@ export type AppStrings = {
 const ja: AppStrings = {
   menu: {
     a11yLabel: 'メニュー',
-    ideal: '理想を入力',
-    reading: '読みもの',
     logout: 'ログアウト',
     logoutTitle: 'ログアウトしますか?',
     logoutBody: '次に開くときは、もう一度ログインが必要です。',
     logoutCancel: 'やめる',
     logoutConfirm: 'ログアウト',
+  },
+  footer: {
+    garden: '庭',
+    reading: '読みもの',
+    excuse: '言い訳カード',
+  },
+  excuse: {
+    title: '言い訳カード',
+    emptyLede: 'やらない、をひとつ、掲げておけます。',
+    create: '宣言をつくる',
+    replace: '書き直す',
+    inputLede: 'やらない、をひとつ。',
+    inputA11y: 'やらないこと',
+    inputNote: '全角24字まで。読点で2行に分かれます。',
+    next: 'すすむ',
+    confirmQuestion: 'これを、やらないと宣言しますか。',
+    declare: '宣言する',
+    back: '戻る',
+    errorEmpty: 'やらないことを、書いてください。',
+    errorTooLong: (max) => `全角${max}字以内にしてください。`,
+    errorTooManyLines: '読点は、ひとつまでにしてください。',
+    errorLineTooLong: (max) => `一行は全角${max}字までです。読点で区切ってください。`,
+    saveFailed: '宣言できませんでした。もう一度お試しください。',
+    buildFailed: 'カードを組めませんでした。',
+    share: '共有する',
+    shareSquare: '正方形',
+    shareStory: '9 : 16',
+    shareCancel: 'やめる',
+    shareFailed: '書き出せませんでした。',
+    shareUnavailable: 'この端末では共有できません。',
+    card: {
+      custody: {
+        square: ['この宣言は、Yaranaiがお預かりしています。'],
+        story: ['この宣言は、Yaranaiが', 'お預かりしています。'],
+      },
+      wordmark: 'Y a r a n a i',
+      qrLabel: 'Yaranaiとは',
+    },
   },
   home: {
     emptyHeadline: 'ここから、変わる。',
@@ -168,6 +242,7 @@ const ja: AppStrings = {
     failed: '宣言できませんでした。もう一度お試しください。',
     doneLede: (label) => `${label}を、手放しました。`,
     doneWorldview: 'この庭は、あなたが取り戻した時間とともに、\nゆっくり姿を変えていきます。',
+    doneExcuseHint: 'やらない、を掲げておくための一枚も、用意してあります。',
     toGarden: '庭へ',
     pickFromObserve: 'アプリは、観測の一覧から選んでください。',
     gatheringTitle: 'ふだんの記録を集めています',
@@ -231,13 +306,49 @@ const ja: AppStrings = {
 const en: AppStrings = {
   menu: {
     a11yLabel: 'Menu',
-    ideal: 'Your ideal',
-    reading: 'Reading',
     logout: 'Log out',
     logoutTitle: 'Log out?',
     logoutBody: "You'll need to sign in again next time.",
     logoutCancel: 'Not now',
     logoutConfirm: 'Log out',
+  },
+  footer: {
+    garden: 'Garden',
+    reading: 'Reading',
+    excuse: 'Excuse card',
+  },
+  excuse: {
+    title: 'Excuse card',
+    emptyLede: 'You can hold up one “I won’t,”\nand leave it standing.',
+    create: 'Write your declaration',
+    replace: 'Write it again',
+    inputLede: 'One thing you won’t do.',
+    inputA11y: 'What you won’t do',
+    inputNote: 'Up to 24 full-width characters. A comma splits it into two lines.',
+    next: 'Continue',
+    confirmQuestion: 'Declare that you won’t?',
+    declare: 'Declare',
+    back: 'Back',
+    errorEmpty: 'Write down what you won’t do.',
+    errorTooLong: (max) => `Keep it within ${max} full-width characters.`,
+    errorTooManyLines: 'Use no more than one comma.',
+    errorLineTooLong: (max) => `A line holds ${max} full-width characters. Break it with a comma.`,
+    saveFailed: "Couldn't make your declaration. Please try again.",
+    buildFailed: "Couldn't compose the card.",
+    share: 'Share',
+    shareSquare: 'Square',
+    shareStory: '9 : 16',
+    shareCancel: 'Not now',
+    shareFailed: "Couldn't export it.",
+    shareUnavailable: "This device can't share.",
+    card: {
+      custody: {
+        square: ['Yaranai is holding this declaration.'],
+        story: ['Yaranai is holding', 'this declaration.'],
+      },
+      wordmark: 'Y a r a n a i',
+      qrLabel: 'What is Yaranai',
+    },
   },
   home: {
     emptyHeadline: 'This is where it changes.',
@@ -278,6 +389,7 @@ const en: AppStrings = {
     failed: "Couldn't make your declaration. Please try again.",
     doneLede: (label) => `You've let go of ${label}.`,
     doneWorldview: 'This garden will slowly change shape\nalongside the time you take back.',
+    doneExcuseHint: 'There is also a card, for holding up an “I won’t.”',
     toGarden: 'To the garden',
     pickFromObserve: 'Choose an app from your observations.',
     gatheringTitle: 'Learning your usual',

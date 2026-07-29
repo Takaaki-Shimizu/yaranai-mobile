@@ -8,6 +8,9 @@
 - `yaranai-garden-growth.html` — Day 1 / Day 42。成長段階の表現の移植元
 - `yaranai-launch-eyelevel-3patterns.html` — 起動演出「小径」。**案1(mockP)が採用案**。
   構図・タイムラインの移植元(シード84210固定)
+- `yaranai-excuse-card-mock-v3.html` — 言い訳カード「夜の竹林と灯り」(デザインの正)。
+  座標・色は `apps/yaranai-measured/lib/excuse/card-spec.ts` に移植されている。
+  版下からの照合は `scripts/render-excuse-cards.js`(SVGを書き出して並べて見る)
 
 SVGの座標・グラデーション定義・フィルタ設定は
 `apps/yaranai-measured/lib/garden/scene.ts` にそのまま基準値として移植されている。
