@@ -25,6 +25,14 @@ test('金箔はすべて最小サイズ8dp以上(§8)', () => {
   }
 });
 
+test('フッターの金箔はアイコン帯(56dp)内に収まり、どの端末でも見える', () => {
+  // 箔は縦ストレッチに載せないので y は帯上端からの dp。下インセットの
+  // 大きい端末でも隠れないよう、インセット除きの帯高 56(FOOTER_HEIGHT)以内。
+  for (const foil of FOOTER_FOILS) {
+    assert.ok(foil.y >= 0 && foil.y + foil.size <= 56, `箔 y=${foil.y} が帯の外`);
+  }
+});
+
 test('ヘッダー紙片はキャンバスの縦範囲(150dp)に収まる', () => {
   const maxY = Math.max(...HEADER_PIECES.flatMap((p) => p.points.map(([, y]) => y)));
   assert.equal(maxY, HEADER_MOTIF_HEIGHT);
