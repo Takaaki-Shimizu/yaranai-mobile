@@ -69,13 +69,16 @@ test('excuseLines: 英語も同じ規則で割れる', () => {
   );
 });
 
-test('excuseLines: 上限まで書いても、どの行もカードの1行に収まる', () => {
+test('excuseLines: 上限まで書いても2行まで。型の行は必ず1行の幅に収まる', () => {
   for (const lang of ['ja', 'en'] as const) {
     const longest = lang === 'ja' ? 'あ'.repeat(EXCUSE_MAX_WIDTH) : 'a'.repeat(EXCUSE_MAX_WIDTH * 2);
     assert.equal(excuseWidth(longest), EXCUSE_MAX_WIDTH);
     const lines = excuseLines(longest, lang);
-    assert.ok(lines.length <= 2);
-    for (const line of lines) assert.ok(excuseWidth(line) <= EXCUSE_CARD_LINE_WIDTH);
+    assert.ok(lines.length === 2);
+    // 1行目(「◯◯は」)は最長で上限+1字。基準幅を超えるぶんは描画側が安全幅へ縮める
+    assert.ok(excuseWidth(lines[0]) <= EXCUSE_MAX_WIDTH + 1);
+    // 型の行(「やらない。」)は基準の1行幅に収まる
+    assert.ok(excuseWidth(lines[1]) <= EXCUSE_CARD_LINE_WIDTH);
   }
 });
 
@@ -90,7 +93,8 @@ test('validateExcuse: モックの顔(確定例文)が通る', () => {
   assert.equal(result.ok && result.value, 'ショート動画があるアプリ');
 });
 
-test('validateExcuse: 全角13字ちょうどは通り、14字は拒否する', () => {
+test('validateExcuse: 上限は理想と同じ全角20字。ちょうどは通り、超えたら拒否する', () => {
+  assert.equal(EXCUSE_MAX_WIDTH, 20);
   assert.equal(validateExcuse('あ'.repeat(EXCUSE_MAX_WIDTH)).ok, true);
   const tooLong = validateExcuse('あ'.repeat(EXCUSE_MAX_WIDTH + 1));
   assert.equal(tooLong.ok, false);

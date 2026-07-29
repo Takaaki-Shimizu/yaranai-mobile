@@ -4,7 +4,7 @@
 //
 // 出すのは3つ:
 //   mock   … モック v3 の顔(確定例文)。版下がモックとずれとらんかの照合用
-//   longest… 入力上限(全角13字)いっぱいの最長ケース(§9-2 のはみ出し確認)
+//   longest… 入力上限(全角20字)いっぱいの最長ケース(§9-2 のはみ出し確認)
 //   single … 1行に収まる短い宣言(ベースラインが2行の中間に来るか)
 
 const fs = require('node:fs');
@@ -26,7 +26,7 @@ const CUSTODY = {
 
 const cases = {
   mock: 'ショート動画があるアプリ',
-  longest: 'あ'.repeat(EXCUSE_MAX_WIDTH), // 入力上限いっぱい(1行目が全角14字になる)
+  longest: 'あ'.repeat(EXCUSE_MAX_WIDTH), // 入力上限いっぱい(1行目が全角21字。安全幅へ縮む)
   single: '二次会',
 };
 

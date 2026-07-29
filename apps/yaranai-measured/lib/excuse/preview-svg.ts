@@ -12,6 +12,7 @@ import {
   type CardLayout, type CardSize, type GradientStop,
 } from './card-spec';
 import { buildQrMatrix } from './qr';
+import { excuseWidth } from './validate';
 
 export type PreviewContent = {
   lines: string[];
@@ -31,6 +32,20 @@ const stops = (list: GradientStop[]) =>
     .join('');
 
 const FONT = "'Shippori Mincho',serif";
+
+/**
+ * 宣言文の縮尺(§9-2 はみ出し禁止の保険)。bake.ts と同じく、安全幅を超える行が
+ * あれば全行に同じ縮尺を掛ける。Skia は実測で縮めるが、SVGに実測は無いので
+ * 「全角1字の送り ≒ font-size」の概算で見る(明朝の全角送りはこれとほぼ等しい)。
+ */
+export function declarationScale(L: CardLayout, lines: string[]): number {
+  const d = L.declaration;
+  const widest = lines.reduce((max, text) => {
+    const chars = [...text].length;
+    return Math.max(max, excuseWidth(text) * d.size + Math.max(0, chars - 1) * d.letterSpacing);
+  }, 0);
+  return widest > d.safeWidth ? d.safeWidth / widest : 1;
+}
 
 function textTag(
   text: string, cx: number, y: number, size: number, ls: number,
@@ -87,12 +102,16 @@ export function cardToSvg(size: CardSize, content: PreviewContent): string {
       .join('')}
   </g>`;
 
-  // 宣言文は二層描き。下にぼかした光量の層、上に輪郭の層(§5-3)
+  // 宣言文は二層描き。下にぼかした光量の層、上に輪郭の層(§5-3)。
+  // 安全幅を超える行があれば、字送りごと全行を同じ縮尺で縮める(§9-2)
+  const scale = declarationScale(L, lines);
+  const dSize = d.size * scale;
+  const dLs = d.letterSpacing * scale;
   const declaration = `<g>
     <g filter="url(#textGlow)" opacity="${d.glowOpacity}">
-      ${lines.map((line, i) => textTag(line, d.cx, baselines[i], d.size, d.letterSpacing, d.glowColor)).join('')}
+      ${lines.map((line, i) => textTag(line, d.cx, baselines[i], dSize, dLs, d.glowColor)).join('')}
     </g>
-    ${lines.map((line, i) => textTag(line, d.cx, baselines[i], d.size, d.letterSpacing, d.color)).join('')}
+    ${lines.map((line, i) => textTag(line, d.cx, baselines[i], dSize, dLs, d.color)).join('')}
   </g>`;
 
   const custody = content.custody

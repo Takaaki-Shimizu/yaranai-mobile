@@ -93,8 +93,11 @@ export default function ExcuseNew() {
     return (
       <View style={styles.container}>
         <View style={styles.confirmBody}>
+          {/* 上限いっぱいの行(全角21字)は画面幅を超える。折り返さず、字ごと縮めて1行に収める */}
           {lines.map((line, i) => (
-            <Text key={i} style={styles.confirmLine}>{line}</Text>
+            <Text key={i} style={styles.confirmLine} numberOfLines={1} adjustsFontSizeToFit>
+              {line}
+            </Text>
           ))}
           <Text style={styles.question}>{t.excuse.confirmQuestion}</Text>
           <Pressable style={styles.primary} onPress={declare} disabled={busy}>
@@ -136,7 +139,9 @@ export default function ExcuseNew() {
         {preview.length > 0 && (
           <View style={styles.preview}>
             {preview.map((line, i) => (
-              <Text key={i} style={styles.previewLine}>{line}</Text>
+              <Text key={i} style={styles.previewLine} numberOfLines={1} adjustsFontSizeToFit>
+                {line}
+              </Text>
             ))}
           </View>
         )}

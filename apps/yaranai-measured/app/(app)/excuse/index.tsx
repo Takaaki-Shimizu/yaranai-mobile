@@ -17,8 +17,9 @@ import { useSession, colors, fonts } from '@yaranai/core';
 
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 import { ExcuseCardView } from '../../../components/excuse/ExcuseCardView';
+import { XGlyph } from '../../../components/excuse/XGlyph';
 import type { CardContent } from '../../../components/excuse/bake';
-import { shareCard } from '../../../components/excuse/share';
+import { postCardToX, shareCard } from '../../../components/excuse/share';
 import { CARD_SIZES, type CardSize } from '../../../lib/excuse/card-spec';
 import { formatDeclaredOn } from '../../../lib/excuse/format';
 import { consumeRevealPending } from '../../../lib/excuse/reveal-flag';
@@ -110,6 +111,19 @@ export default function ExcuseTab() {
     const result = await shareCard(userId, size, content);
     setBusy(false);
     setChoosingSize(false);
+    if (result === 'unavailable') setMessage(t.excuse.shareUnavailable);
+    else if (result === 'failed') setMessage(t.excuse.shareFailed);
+  };
+
+  // Xへのポスト(§4.3)。投稿向きの正方形をXの投稿画面へ直接渡す。
+  // Xが無い端末では共有シートへ降りる(share.ts 側で吸収)
+  const onPostToX = async () => {
+    const content = contentFor('square');
+    if (!userId || !content || busy) return;
+    setBusy(true);
+    setMessage('');
+    const result = await postCardToX(userId, content);
+    setBusy(false);
     if (result === 'unavailable') setMessage(t.excuse.shareUnavailable);
     else if (result === 'failed') setMessage(t.excuse.shareFailed);
   };
@@ -207,6 +221,16 @@ export default function ExcuseTab() {
             </View>
           ) : (
             <>
+              {/* Xへは正方形を直接。共有シートは従来どおりサイズを選んでから */}
+              <Pressable
+                style={styles.action}
+                onPress={onPostToX}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={t.excuse.postToX}
+              >
+                <XGlyph size={18} color={colors.sumi} />
+              </Pressable>
               <Pressable style={styles.action} onPress={() => setChoosingSize(true)}>
                 <Text style={styles.actionText}>{t.excuse.share}</Text>
               </Pressable>

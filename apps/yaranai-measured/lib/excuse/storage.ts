@@ -1,15 +1,17 @@
 // 言い訳カードの宣言の永続化層。
 //
 // 正本はSupabase(復元フローのA分類 §2-6)。カード宣言はアンインストールで消えてはならない
-// ため、庭の高水位や理想と違って端末を正本にしない。AsyncStorage はあくまで
-// オフライン時に掲げておくためのキャッシュで、書き込みは必ずサーバーを通る。
+// ため、庭の高水位や理想と違って端末を正本にしない。
 //
-// 差し替えは declare_excuse() RPC 経由。旧行の superseded 化と新行の挿入を
-// クライアントで2回に分けると、間で失敗したとき現行が0枚になり得るため。
+// ただし、宣言できないことのほうが重い ── 宣言は発話であって、サーバーの都合で
+// 発話が止まってはならない。書き込みは3段のはしごで必ずどこかに立つ:
 //
-// ただしRPCが無い環境(002_excuse_declarations.sql が未投入・投入が途中で落ちた・
-// PostgRESTのスキーマキャッシュがまだ関数を知らない)では、宣言そのものが立たなくなる。
-// 宣言できないことのほうが重いので、そのときだけテーブルへ直に書く道へ降りる。
+//   1. declare_excuse() RPC … 旧行の superseded 化と新行の挿入を1トランザクションで。
+//   2. テーブルへ直に書く   … RPCが無い・使えない環境(002_excuse_declarations.sql が
+//                             未投入・投入が途中で落ちた・スキーマキャッシュ未更新)の代替。
+//   3. 端末に書く           … サーバーにどうしても届かないとき(スキーマが丸ごと無い・
+//                             圏外・認証切れ)。pending の印を付けて掲げ、次に開いたとき
+//                             サーバーへ押し直す。正本には遅れて追いつく。
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabase';
@@ -18,8 +20,10 @@ import type { CardSize } from './card-spec';
 export type ExcuseDeclaration = {
   id: string;
   whatText: string;
-  /** YYYY-MM-DD(Asia/Tokyo の暦日。サーバーが打つ) */
+  /** YYYY-MM-DD(Asia/Tokyo の暦日。サーバーが打つ。端末預かりの間だけ端末が打つ) */
   declaredOn: string;
+  /** サーバー未達の印。次の読み込みで押し直し、届いたら消える */
+  pending?: boolean;
 };
 
 const cacheKey = (userId: string) => `yaranai.excuse.current.v1:${userId}`;
@@ -53,15 +57,30 @@ async function readCache(userId: string): Promise<ExcuseDeclaration | null> {
 /**
  * 現行の宣言(superseded_at is null の1件)。
  * サーバーに届かなかったときはキャッシュを返す ── 掲げた宣言は、圏外でも掲げたままにする。
+ * 端末預かり(pending)の宣言が残っていれば、まずサーバーへ押し直す。
  */
 export async function loadCurrentDeclaration(userId: string): Promise<ExcuseDeclaration | null> {
+  const cached = await readCache(userId);
+
+  // 端末にしか無い宣言はサーバーの読み値より新しい。先に押し直し、
+  // 届くまではサーバーの行で上書きしない(掲げた宣言を引っ込めない)
+  if (cached?.pending) {
+    const pushed = await declareToServer(userId, cached.whatText);
+    if (pushed.row) {
+      const declaration = toDeclaration(pushed.row);
+      await writeCache(userId, declaration);
+      return declaration;
+    }
+    return cached;
+  }
+
   const { data, error } = await supabase
     .from('excuse_declarations')
     .select('id, what_text, declared_on')
     .is('superseded_at', null)
     .maybeSingle();
 
-  if (error) return readCache(userId);
+  if (error) return cached;
 
   const declaration = data ? toDeclaration(data as Row) : null;
   await writeCache(userId, declaration);
@@ -77,14 +96,6 @@ type PostgrestError = { code?: string; message?: string; details?: string; hint?
 
 const describe = (error: PostgrestError | null): string =>
   [error?.code, error?.message].filter(Boolean).join(' ') || 'unknown error';
-
-/** 関数そのものが見つからない(未投入・スキーマキャッシュ未更新)ときのしるし */
-function isMissingFunction(error: PostgrestError | null): boolean {
-  if (!error) return false;
-  // PGRST202 = スキーマキャッシュに関数が無い / 42883 = undefined_function
-  if (error.code === 'PGRST202' || error.code === '42883') return true;
-  return /(function|routine).*(not found|does not exist)/i.test(error.message ?? '');
-}
 
 /**
  * RPCが使えないときの代替。トランザクションにならないので、
@@ -128,26 +139,57 @@ async function declareWithoutRpc(
 }
 
 /**
+ * サーバーへの書き込み(はしごの1〜2段目)。まず declare_excuse() RPC、
+ * だめならテーブルへ直に書く。RPC の失敗理由は問わない ── 関数が無いときに限らず、
+ * 権限や定義の食い違いで落ちても、直書きが通るなら宣言は立ったほうがよい
+ * (RPC は1トランザクションなので、途中で落ちても書き残しは無い)。
+ */
+async function declareToServer(
+  userId: string,
+  whatText: string,
+): Promise<{ row: Row | null; reason: string }> {
+  const { data, error } = await supabase.rpc('declare_excuse', { p_what_text: whatText });
+  // RPC は returns excuse_declarations なので単一行が返る
+  const row = (Array.isArray(data) ? data[0] : data) as Row | undefined | null;
+  if (row) return { row, reason: '' };
+
+  const reason = error ? describe(error) : 'empty response';
+  const fallback = await declareWithoutRpc(userId, whatText);
+  if (fallback.row) return { row: fallback.row, reason: '' };
+  return { row: null, reason: `${reason} / ${fallback.reason}` };
+}
+
+/** 端末預かりの宣言日。Asia/Tokyo は夏時間が無いので UTC+9 固定で足りる */
+function todayInTokyo(): string {
+  const t = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
+}
+
+/**
  * 宣言の作成・差し替え。旧宣言は削除せず superseded 化される(§2-1)。
- * 通すのは declare_excuse() RPC。無い環境でだけテーブルへ直に書く。
+ * サーバーに届かなくても宣言は立つ ── 発話はもう済んでいる。端末に pending で預け、
+ * 次に開いたとき(loadCurrentDeclaration)サーバーへ押し直す。
  */
 export async function declareExcuse(
   userId: string,
   whatText: string,
 ): Promise<DeclareResult> {
-  const { data, error } = await supabase.rpc('declare_excuse', { p_what_text: whatText });
-  // RPC は returns excuse_declarations なので単一行が返る
-  let row = (Array.isArray(data) ? data[0] : data) as Row | undefined | null;
-  let reason = error ? describe(error) : row ? '' : 'empty response';
-
-  if (!row && isMissingFunction(error)) {
-    const fallback = await declareWithoutRpc(userId, whatText);
-    row = fallback.row;
-    if (!row) reason = `${reason} / ${fallback.reason}`;
+  const server = await declareToServer(userId, whatText);
+  if (server.row) {
+    const declaration = toDeclaration(server.row);
+    await writeCache(userId, declaration);
+    return { ok: true, declaration };
   }
 
-  if (!row) return { ok: false, reason };
-  const declaration = toDeclaration(row);
+  // はしごの3段目: 端末に預ける。原因(スキーマ未投入・圏外など)はログへ回す
+  console.warn('[excuse] declare falling back to device:', server.reason);
+  const declaration: ExcuseDeclaration = {
+    id: `local-${Date.now().toString(36)}`,
+    whatText,
+    declaredOn: todayInTokyo(),
+    pending: true,
+  };
   await writeCache(userId, declaration);
   return { ok: true, declaration };
 }

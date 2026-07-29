@@ -188,8 +188,8 @@ node scripts/render-garden-previews.js /tmp/garden-previews
 
 ```
 lib/excuse/
-  validate.ts    宣言文の規則(人は「やらないこと」を全角13字まで。「はやらない。」と
-                 1〜2行の行組みはアプリが添える)。純関数・テスト対象
+  validate.ts    宣言文の規則(人は「やらないこと」を全角20字まで(理想と同じ)。
+                 「はやらない。」と1〜2行の行組みはアプリが添える)。純関数・テスト対象
   card-spec.ts   版下(モックv3の座標・色)。描画系に依存しない純データ
   qr.ts          QRのモジュール行列(qrcode-generator, 誤り訂正Q)
   url.ts         QRの遷移先 https://yaranai.app/?utm_source=excuse_card
@@ -200,7 +200,8 @@ lib/excuse/
 components/excuse/
   bake.ts        版下→Skia。3層(地/灯り/文字)に焼き、書き出しは1枚に畳む
   ExcuseCardView.tsx  9:16の表示と完成演出
-  share.ts       PNG書き出し → Android標準の共有シート
+  share.ts       PNG書き出し → Android標準の共有シート / Xの投稿画面へ直接(postCardToX)
+  XGlyph.tsx     Xロゴ(ポスト導線のアイコン)
 components/AppFooter.tsx  固定フッター3タブ(庭/読みもの/言い訳カード)
 ```
 
