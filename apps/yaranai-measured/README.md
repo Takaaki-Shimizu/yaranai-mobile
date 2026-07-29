@@ -200,7 +200,8 @@ lib/excuse/
 components/excuse/
   bake.ts        版下→Skia。3層(地/灯り/文字)に焼き、書き出しは1枚に畳む
   ExcuseCardView.tsx  9:16の表示と完成演出
-  share.ts       PNG書き出し → Android標準の共有シート
+  share.ts       PNG書き出し → Android標準の共有シート / Xの投稿画面へ直接(postCardToX)
+  XGlyph.tsx     Xロゴ(ポスト導線のアイコン)
 components/AppFooter.tsx  固定フッター3タブ(庭/読みもの/言い訳カード)
 ```
 

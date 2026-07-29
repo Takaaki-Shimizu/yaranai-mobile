@@ -45,6 +45,8 @@ export type AppStrings = {
     saveFailed: string;
     buildFailed: string;
     share: string;
+    /** Xへのポスト導線(アイコンボタン)の読み上げ用ラベル */
+    postToX: string;
     shareSquare: string;
     shareStory: string;
     shareCancel: string;
@@ -190,6 +192,7 @@ const ja: AppStrings = {
     saveFailed: '宣言できませんでした。もう一度お試しください。',
     buildFailed: 'カードを組めませんでした。',
     share: '共有する',
+    postToX: 'Xにポストする',
     shareSquare: '正方形',
     shareStory: '9 : 16',
     shareCancel: 'やめる',
@@ -334,6 +337,7 @@ const en: AppStrings = {
     saveFailed: "Couldn't make your declaration. Please try again.",
     buildFailed: "Couldn't compose the card.",
     share: 'Share',
+    postToX: 'Post to X',
     shareSquare: 'Square',
     shareStory: '9 : 16',
     shareCancel: 'Not now',
