@@ -5,6 +5,13 @@
 -- 実測版のSupabaseプロジェクト(001_schema.sql を入れたほうの)に投入すること。
 --
 -- 使い方: Supabase Dashboard → SQL Editor に全文貼り付けて Run
+--
+-- 何度でも流し直してよい(全文が冪等)。SQL Editor は貼った全文をひとつの
+-- トランザクションで走らせるので、途中の1文でも落ちると「1文も適用されない」。
+-- 既存のポリシーに当たって全部が巻き戻る事故を防ぐため、create policy の前に
+-- drop policy if exists を置いてある。
+--
+-- 宣言が「宣言できませんでした」で止まるときは、まずこの全文を流し直すこと。
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -32,6 +39,7 @@ create table if not exists excuse_declarations (
 
 alter table excuse_declarations enable row level security;
 
+drop policy if exists "Users can manage own excuse_declarations" on excuse_declarations;
 create policy "Users can manage own excuse_declarations"
   on excuse_declarations for all
   using (auth.uid() = user_id)
@@ -74,6 +82,8 @@ begin
 end;
 $$ language plpgsql;
 
+grant execute on function declare_excuse(text) to authenticated;
+
 -- ------------------------------------------------------------
 -- 3. app_events (アプリ内の出来事のログ)
 --
@@ -93,6 +103,7 @@ create table if not exists app_events (
 
 alter table app_events enable row level security;
 
+drop policy if exists "Users can manage own app_events" on app_events;
 create policy "Users can manage own app_events"
   on app_events for all
   using (auth.uid() = user_id)
@@ -100,3 +111,11 @@ create policy "Users can manage own app_events"
 
 create index if not exists app_events_user_created_idx
   on app_events(user_id, created_at desc);
+
+-- ------------------------------------------------------------
+-- 4. PostgREST のスキーマキャッシュを更新
+--
+--    これを撃たないと、作ったばかりの declare_excuse() が API 側からは
+--    まだ見えず、宣言が PGRST202(関数が見つからない)で落ちることがある。
+-- ------------------------------------------------------------
+notify pgrst, 'reload schema';

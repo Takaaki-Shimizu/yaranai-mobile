@@ -6,7 +6,9 @@ import { formatDeclaredOn, parseDeclaredOn } from '../format';
 import { EXCUSE_PLACEHOLDERS, pickPlaceholder } from '../placeholders';
 import { buildQrMatrix } from '../qr';
 import { EXCUSE_CARD_URL } from '../url';
-import { EXCUSE_MAX_LINE_WIDTH, EXCUSE_MAX_WIDTH, excuseWidth, validateExcuse } from '../validate';
+import {
+  EXCUSE_CARD_LINE_WIDTH, EXCUSE_MAX_WIDTH, excuseLines, excuseWidth, validateExcuse,
+} from '../validate';
 
 // ---- 書き出しの2サイズ(§2-8) -------------------------------------------
 test('カードは 1080×1080 と 1080×1920 の2サイズ', () => {
@@ -83,7 +85,7 @@ test('全角14字×2行の最長ケースが、字を縮めずに安全幅へ収
   const widthOf = (chars: number, size: number, ls: number) => chars * size + (chars - 1) * ls;
   for (const size of CARD_SIZES) {
     const d = CARD_LAYOUTS[size].declaration;
-    const longest = widthOf(EXCUSE_MAX_LINE_WIDTH, d.size, d.letterSpacing);
+    const longest = widthOf(EXCUSE_CARD_LINE_WIDTH, d.size, d.letterSpacing);
     assert.ok(longest <= d.safeWidth, `${size}: 最長行 ${longest}px が安全幅 ${d.safeWidth}px を超える`);
     // 安全幅そのものも版面の内側に収まっていること
     assert.ok(d.safeWidth <= CARD_LAYOUTS[size].width - 80);
@@ -136,17 +138,24 @@ test('宣言日が読めないときは空文字(日付の行ごと出さない)
 });
 
 // ---- 例文(§7) ------------------------------------------------------------
-test('例文はすべて入力規則を満たす(そのまま打ち込める)', () => {
+test('例文はすべて入力規則を満たし、カードの行にも収まる(そのまま打ち込める)', () => {
   for (const lang of ['ja', 'en'] as const) {
     for (const example of EXCUSE_PLACEHOLDERS[lang]) {
       const result = validateExcuse(example);
       assert.equal(result.ok, true, `${example} が入力規則を外れている`);
       assert.ok(excuseWidth(example) <= EXCUSE_MAX_WIDTH);
-      if (result.ok) {
-        for (const line of result.lines) assert.ok(excuseWidth(line) <= EXCUSE_MAX_LINE_WIDTH);
+      const lines = excuseLines(example, lang);
+      assert.ok(lines.length >= 1 && lines.length <= 2);
+      for (const line of lines) {
+        assert.ok(excuseWidth(line) <= EXCUSE_CARD_LINE_WIDTH, `${line} が1行に収まらない`);
       }
     }
   }
+});
+
+test('例文には宣言の型(「はやらない。」)を含めない ── 型はアプリが添える', () => {
+  for (const example of EXCUSE_PLACEHOLDERS.ja) assert.ok(!example.includes('やらない'));
+  for (const example of EXCUSE_PLACEHOLDERS.en) assert.ok(!/won[’']t/.test(example));
 });
 
 test('例文に「愚痴の聞き役」「なんとなくの残業」は入れない(§7)', () => {
@@ -155,8 +164,12 @@ test('例文に「愚痴の聞き役」「なんとなくの残業」は入れ�
   assert.ok(!all.includes('残業'));
 });
 
-test('確定例文(モックの顔)が先頭にある', () => {
-  assert.equal(EXCUSE_PLACEHOLDERS.ja[0], 'ショート動画があるアプリは、やらない。');
+test('確定例文(モックの顔)が先頭にあり、型を添えるとモックの一文になる', () => {
+  assert.equal(EXCUSE_PLACEHOLDERS.ja[0], 'ショート動画があるアプリ');
+  assert.deepEqual(
+    excuseLines(EXCUSE_PLACEHOLDERS.ja[0], 'ja'),
+    ['ショート動画があるアプリは', 'やらない。'],
+  );
 });
 
 test('pickPlaceholder: 乱数の端でも範囲から外れない', () => {

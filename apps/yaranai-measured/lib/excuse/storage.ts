@@ -6,6 +6,10 @@
 //
 // 差し替えは declare_excuse() RPC 経由。旧行の superseded 化と新行の挿入を
 // クライアントで2回に分けると、間で失敗したとき現行が0枚になり得るため。
+//
+// ただしRPCが無い環境(002_excuse_declarations.sql が未投入・投入が途中で落ちた・
+// PostgRESTのスキーマキャッシュがまだ関数を知らない)では、宣言そのものが立たなくなる。
+// 宣言できないことのほうが重いので、そのときだけテーブルへ直に書く道へ降りる。
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabase';
@@ -64,22 +68,88 @@ export async function loadCurrentDeclaration(userId: string): Promise<ExcuseDecl
   return declaration;
 }
 
+/** 書けなかったときは理由も返す。画面には出さないが、原因の切り分けに要る */
+export type DeclareResult =
+  | { ok: true; declaration: ExcuseDeclaration }
+  | { ok: false; reason: string };
+
+type PostgrestError = { code?: string; message?: string; details?: string; hint?: string };
+
+const describe = (error: PostgrestError | null): string =>
+  [error?.code, error?.message].filter(Boolean).join(' ') || 'unknown error';
+
+/** 関数そのものが見つからない(未投入・スキーマキャッシュ未更新)ときのしるし */
+function isMissingFunction(error: PostgrestError | null): boolean {
+  if (!error) return false;
+  // PGRST202 = スキーマキャッシュに関数が無い / 42883 = undefined_function
+  if (error.code === 'PGRST202' || error.code === '42883') return true;
+  return /(function|routine).*(not found|does not exist)/i.test(error.message ?? '');
+}
+
+/**
+ * RPCが使えないときの代替。トランザクションにならないので、
+ * 差し替えの途中で落ちたら現行が0枚になり得る ── 拾えたら元に戻す。
+ */
+async function declareWithoutRpc(
+  userId: string,
+  whatText: string,
+): Promise<{ row: Row | null; reason: string }> {
+  const { data: current } = await supabase
+    .from('excuse_declarations')
+    .select('id')
+    .is('superseded_at', null);
+  const supersededIds = ((current ?? []) as { id: string }[]).map((r) => r.id);
+
+  if (supersededIds.length > 0) {
+    const { error } = await supabase
+      .from('excuse_declarations')
+      .update({ superseded_at: new Date().toISOString() })
+      .in('id', supersededIds);
+    if (error) return { row: null, reason: describe(error) };
+  }
+
+  const { data, error } = await supabase
+    .from('excuse_declarations')
+    .insert({ user_id: userId, what_text: whatText })
+    .select('id, what_text, declared_on')
+    .single();
+
+  if (error || !data) {
+    // 新しい宣言が立たんかったので、掲げていた宣言を掲げ直す(0枚のまま残さない)
+    if (supersededIds.length > 0) {
+      await supabase
+        .from('excuse_declarations')
+        .update({ superseded_at: null })
+        .in('id', supersededIds);
+    }
+    return { row: null, reason: describe(error) };
+  }
+  return { row: data as Row, reason: '' };
+}
+
 /**
  * 宣言の作成・差し替え。旧宣言は削除せず superseded 化される(§2-1)。
- * 書けたら新しい宣言を、書けなかったら null を返す。
+ * 通すのは declare_excuse() RPC。無い環境でだけテーブルへ直に書く。
  */
 export async function declareExcuse(
   userId: string,
   whatText: string,
-): Promise<ExcuseDeclaration | null> {
+): Promise<DeclareResult> {
   const { data, error } = await supabase.rpc('declare_excuse', { p_what_text: whatText });
-  if (error || !data) return null;
   // RPC は returns excuse_declarations なので単一行が返る
-  const row = (Array.isArray(data) ? data[0] : data) as Row | undefined;
-  if (!row) return null;
+  let row = (Array.isArray(data) ? data[0] : data) as Row | undefined | null;
+  let reason = error ? describe(error) : row ? '' : 'empty response';
+
+  if (!row && isMissingFunction(error)) {
+    const fallback = await declareWithoutRpc(userId, whatText);
+    row = fallback.row;
+    if (!row) reason = `${reason} / ${fallback.reason}`;
+  }
+
+  if (!row) return { ok: false, reason };
   const declaration = toDeclaration(row);
   await writeCache(userId, declaration);
-  return declaration;
+  return { ok: true, declaration };
 }
 
 /**

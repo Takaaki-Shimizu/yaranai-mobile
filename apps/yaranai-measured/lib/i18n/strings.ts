@@ -33,15 +33,14 @@ export type AppStrings = {
     replace: string;
     inputLede: string;
     inputA11y: string;
-    inputNote: string;
+    /** 上限と、アプリが型を添えることの断り。行組みは人に問わない */
+    inputNote: (max: number) => string;
     next: string;
     confirmQuestion: string;
     declare: string;
     back: string;
     errorEmpty: string;
     errorTooLong: (max: number) => string;
-    errorTooManyLines: string;
-    errorLineTooLong: (max: number) => string;
     saveFailed: string;
     buildFailed: string;
     share: string;
@@ -174,20 +173,18 @@ const ja: AppStrings = {
   },
   excuse: {
     title: '言い訳カード',
-    emptyLede: 'やらない、をひとつ、掲げておけます。',
+    emptyLede: 'やらないことをひとつ、掲げておけます。',
     create: '宣言をつくる',
     replace: '書き直す',
-    inputLede: 'やらない、をひとつ。',
+    inputLede: 'やらないことをひとつ。',
     inputA11y: 'やらないこと',
-    inputNote: '全角24字まで。読点で2行に分かれます。',
+    inputNote: (max) => `全角${max}字まで。「はやらない。」は、こちらで添えます。`,
     next: 'すすむ',
     confirmQuestion: 'これを、やらないと宣言しますか。',
     declare: '宣言する',
     back: '戻る',
-    errorEmpty: 'やらないことを、書いてください。',
+    errorEmpty: 'やらないことを書いてください。',
     errorTooLong: (max) => `全角${max}字以内にしてください。`,
-    errorTooManyLines: '読点は、ひとつまでにしてください。',
-    errorLineTooLong: (max) => `一行は全角${max}字までです。読点で区切ってください。`,
     saveFailed: '宣言できませんでした。もう一度お試しください。',
     buildFailed: 'カードを組めませんでした。',
     share: '共有する',
@@ -232,7 +229,7 @@ const ja: AppStrings = {
     editA11y: '理想を編集',
   },
   declare: {
-    title: 'やらない、を宣言する。',
+    title: 'やらないことを、宣言する。',
     baseline: (weeks, time) =>
       `あなたはこの${weeks}週、\n1日平均${time}を\nこのアプリに渡していました。`,
     note: 'この平均が、あなたの「ふだん」として固定されます。\nふだんより使わなかったぶんだけ、時間が戻ります。',
@@ -242,7 +239,7 @@ const ja: AppStrings = {
     failed: '宣言できませんでした。もう一度お試しください。',
     doneLede: (label) => `${label}を、手放しました。`,
     doneWorldview: 'この庭は、あなたが取り戻した時間とともに、\nゆっくり姿を変えていきます。',
-    doneExcuseHint: 'やらない、を掲げておくための一枚も、用意してあります。',
+    doneExcuseHint: 'やらないことを掲げておく一枚も、用意してあります。',
     toGarden: '庭へ',
     pickFromObserve: 'アプリは、観測の一覧から選んでください。',
     gatheringTitle: 'ふだんの記録を集めています',
@@ -255,7 +252,7 @@ const ja: AppStrings = {
     note: '直近7日に使ったアプリを、12週の1日平均で。\n宣言すると、この平均がそのまま、あなたの「ふだん」になります。',
     avgPerDay: (time) => `1日 平均${time}`,
     vowed: '誓いのなか',
-    declareLink: 'これをやらない、と宣言する',
+    declareLink: 'これをやらないと宣言する',
     gathering: (need, have) =>
       `まだ記録を集めています。\nこの端末の記録が${need}日ぶんに満ちると、\n時間の行き先が見えるようになります。\nいまは${have}日ぶんです。`,
     empty: 'まだ観測が集まっていません。\nこの端末を使ううちに、静かに集まります。',
@@ -324,15 +321,13 @@ const en: AppStrings = {
     replace: 'Write it again',
     inputLede: 'One thing you won’t do.',
     inputA11y: 'What you won’t do',
-    inputNote: 'Up to 24 full-width characters. A comma splits it into two lines.',
+    inputNote: (max) => `Up to ${max} full-width characters. “I won’t.” is added for you.`,
     next: 'Continue',
     confirmQuestion: 'Declare that you won’t?',
     declare: 'Declare',
     back: 'Back',
     errorEmpty: 'Write down what you won’t do.',
     errorTooLong: (max) => `Keep it within ${max} full-width characters.`,
-    errorTooManyLines: 'Use no more than one comma.',
-    errorLineTooLong: (max) => `A line holds ${max} full-width characters. Break it with a comma.`,
     saveFailed: "Couldn't make your declaration. Please try again.",
     buildFailed: "Couldn't compose the card.",
     share: 'Share',

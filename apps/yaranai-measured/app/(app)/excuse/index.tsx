@@ -24,7 +24,7 @@ import { formatDeclaredOn } from '../../../lib/excuse/format';
 import { consumeRevealPending } from '../../../lib/excuse/reveal-flag';
 import { loadCurrentDeclaration, type ExcuseDeclaration } from '../../../lib/excuse/storage';
 import { EXCUSE_CARD_URL } from '../../../lib/excuse/url';
-import { splitExcuseLines } from '../../../lib/excuse/validate';
+import { excuseLines } from '../../../lib/excuse/validate';
 import { useLang, useT } from '../../../lib/i18n/context';
 import { useReduceMotion } from '../../../lib/use-reduce-motion';
 
@@ -69,9 +69,10 @@ export default function ExcuseTab() {
     }, [userId]),
   );
 
+  // 保存してあるのは「やらないこと」だけ。「はやらない。」と行組みはここで添える
   const lines = useMemo(
-    () => (declaration ? splitExcuseLines(declaration.whatText) : []),
-    [declaration],
+    () => (declaration ? excuseLines(declaration.whatText, lang) : []),
+    [declaration, lang],
   );
 
   // カードに刷る文言。預かりの一文だけがサイズで行組みを変える

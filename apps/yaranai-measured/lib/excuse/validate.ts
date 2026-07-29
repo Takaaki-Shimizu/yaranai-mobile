@@ -1,18 +1,32 @@
-// 言い訳カードの宣言文(WHAT)の文字数規則。表示にも保存にも依存しない純関数だけを置く。
+// 言い訳カードの宣言文(WHAT)の規則。表示にも保存にも依存しない純関数だけを置く。
 //
-// 規則(指示書 §2-2 / §9-2):
-//   - 上限は全角24字。読点(、)で2行に自動分割し、2行を超える入力は入力UIの時点で弾く。
-//   - 1行の上限は全角14字。モックの最長行「ショート動画があるアプリは、」がちょうど14字で、
-//     カードの組みはこの幅を最長ケースとして設計してある(§9-2)。
+// 人が書くのは「やらないこと」だけ(例:ショート動画があるアプリ)。
+// 「はやらない。」はアプリが添える ── 宣言の型は世界観の側の持ちものであって、
+// 毎回それを書かせるのは人の仕事ではない(§2-2)。
+//
+// 行組みもアプリが決める。読点を打って改行させる操作は要らない:
+//   - 「◯◯はやらない。」が1行(全角14字)に収まるなら、1行のまま据える。
+//   - 収まらないなら「◯◯は」/「やらない。」の2行に割る。割れ目は必ずここ。
+// カードの組みは全角14字を最長ケースとして設計してあるので(§9-2)、
+// 書ける長さの上限は「14字 −「は」1字」で全角13字になる。
 //
 // 数え方は「全角換算」。全角(かな・漢字・全角記号・絵文字)を1、半角(ASCII等)を0.5と数える。
-// 日本語の入力では指示書の24字・14字とそのまま一致し、英語の入力でも版面に載る量が
+// 日本語の入力では指示書の字数とそのまま一致し、英語の入力でも版面に載る量が
 // おなじになる ── カードの組みが守っているのは字数ではなく行の幅であるため。
 // 数える単位はコードポイント(理想 lib/ideal/validate.ts と同じく、絵文字を2字と数えない)。
 
-export const EXCUSE_MAX_WIDTH = 24;
-export const EXCUSE_MAX_LINES = 2;
-export const EXCUSE_MAX_LINE_WIDTH = 14;
+import type { Lang } from '../i18n/types';
+
+/** 人が書く「やらないこと」の上限(全角換算)。添える「は」1字ぶんを1行の上限から引いた値 */
+export const EXCUSE_MAX_WIDTH = 13;
+/** カード1行の上限(全角換算)。版下がこの幅を最長ケースとして組んである(§9-2) */
+export const EXCUSE_CARD_LINE_WIDTH = 14;
+
+/** アプリが添える宣言の型。人はこの前の部分だけを書く */
+const TAIL: Record<Lang, { particle: string; join: string; tail: string }> = {
+  ja: { particle: 'は', join: '', tail: 'やらない。' },
+  en: { particle: ',', join: ' ', tail: 'I won’t.' },
+};
 
 // 全角(East Asian Wide / Fullwidth)として数える範囲。絵文字も1字として数える。
 const FULL_WIDTH_RANGES: ReadonlyArray<readonly [number, number]> = [
@@ -45,50 +59,65 @@ export function excuseWidth(text: string): number {
   return width;
 }
 
+// すでに宣言の型まで書いてしまった入力から、型のぶんを落とすための形。
+// 習慣で「〜はやらない。」と打つ人がいる ── そのまま通すと「〜はやらないはやらない。」になる。
+// 旧い保存値(型ごと保存していた頃の宣言)を読み直すときも、ここを通れば同じ絵になる。
+// 「は、やらない。」「はやらない」「、やらない。」「やらない」のどれで書かれても落とせる形
+const WRITTEN_TAILS: RegExp[] = [
+  /\s*は?\s*[、,]?\s*(?:やらない|やりません)[。.!!]?$/,
+  /\s*[、,]?\s*I\s*(?:won[’'`]t|will\s+not)[。.!!]?$/i,
+];
+
 /**
  * 入力の正規化。改行は落とし(単行入力なので混入は貼り付けだけ)、前後の空白を落とす。
  * 内部の空白はそのまま(英語の入力で語間が要る)。
+ * 末尾の宣言の型と句読点は落とす ── 残すのは「やらないこと」だけ。
  */
 export function normalizeExcuse(raw: string): string {
-  return raw.replace(/[\r\n]+/g, '').trim();
+  const flat = raw.replace(/[\r\n]+/g, '').trim();
+  let value = flat;
+  for (const pattern of WRITTEN_TAILS) {
+    const stripped = flat.replace(pattern, '').trim();
+    // 「やらない」とだけ書いた人の入力まで空にはしない
+    if (stripped !== '' && stripped !== flat) {
+      value = stripped;
+      break;
+    }
+  }
+  return value.replace(/[、,。.]+$/, '').trim();
+}
+
+/** 宣言の一文。「やらないこと」にアプリが型を添えたもの */
+export function excuseSentence(subject: string, lang: Lang): string {
+  const value = normalizeExcuse(subject);
+  if (value === '') return '';
+  const { particle, join, tail } = TAIL[lang];
+  return `${value}${particle}${join}${tail}`;
 }
 
 /**
- * 読点で行に割る。読点は行末に残し(モックの「…アプリは、/ やらない。」)、
- * 割った結果の空行は捨てる ──「…やらない。」のように読点で終わる入力でも1行のまま。
- * 英語のカンマも読点として見る(区切りの役が同じため)。
+ * カードに刷る行。1行に収まればそのまま、収まらなければ型の手前で割る。
+ * 割れ目はここだけなので、読点を打って改行を作る操作は要らない。
  */
-export function splitExcuseLines(text: string): string[] {
-  const lines: string[] = [];
-  let current = '';
-  for (const ch of normalizeExcuse(text)) {
-    current += ch;
-    if (ch === '、' || ch === ',') {
-      lines.push(current);
-      current = '';
-    }
-  }
-  if (current !== '') lines.push(current);
-  return lines.map((line) => line.trim()).filter((line) => line !== '');
+export function excuseLines(subject: string, lang: Lang): string[] {
+  const sentence = excuseSentence(subject, lang);
+  if (sentence === '') return [];
+  if (excuseWidth(sentence) <= EXCUSE_CARD_LINE_WIDTH) return [sentence];
+  const { particle, tail } = TAIL[lang];
+  return [`${normalizeExcuse(subject)}${particle}`, tail];
 }
 
 export type ExcuseValidation =
-  | { ok: true; value: string; lines: string[] }
-  | { ok: false; reason: 'empty' | 'tooLong' | 'tooManyLines' | 'lineTooLong' };
+  | { ok: true; value: string }
+  | { ok: false; reason: 'empty' | 'tooLong' };
 
 /**
  * 保存前の検証。空文字は不可 ── 宣言は発話なので、白紙の宣言は存在しない。
- * 弾く順は「長すぎ → 行数 → 行の長さ」。いちばん直しやすい理由から出す。
+ * 見るのは長さだけ。行数も行の幅も、こちらで組むので人に問わない。
  */
 export function validateExcuse(raw: string): ExcuseValidation {
   const value = normalizeExcuse(raw);
   if (value === '') return { ok: false, reason: 'empty' };
   if (excuseWidth(value) > EXCUSE_MAX_WIDTH) return { ok: false, reason: 'tooLong' };
-
-  const lines = splitExcuseLines(value);
-  if (lines.length > EXCUSE_MAX_LINES) return { ok: false, reason: 'tooManyLines' };
-  if (lines.some((line) => excuseWidth(line) > EXCUSE_MAX_LINE_WIDTH)) {
-    return { ok: false, reason: 'lineTooLong' };
-  }
-  return { ok: true, value, lines };
+  return { ok: true, value };
 }

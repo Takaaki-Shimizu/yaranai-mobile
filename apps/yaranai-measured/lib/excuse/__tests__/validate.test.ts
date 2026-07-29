@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  EXCUSE_MAX_LINE_WIDTH, EXCUSE_MAX_WIDTH,
-  excuseWidth, normalizeExcuse, splitExcuseLines, validateExcuse,
+  EXCUSE_CARD_LINE_WIDTH, EXCUSE_MAX_WIDTH,
+  excuseLines, excuseSentence, excuseWidth, normalizeExcuse, validateExcuse,
 } from '../validate';
 
 test('excuseWidth: 全角は1、半角は0.5で数える', () => {
@@ -16,71 +16,101 @@ test('excuseWidth: 絵文字はサロゲートペアでも1字(全角)として�
   assert.equal('🌱'.length, 2); // String#length は UTF-16 単位。これを使わない根拠
 });
 
-test('splitExcuseLines: 読点で2行に割り、読点は行末に残す', () => {
-  assert.deepEqual(
-    splitExcuseLines('ショート動画があるアプリは、やらない。'),
-    ['ショート動画があるアプリは、', 'やらない。'],
+// ---- 型はアプリが添える --------------------------------------------------
+test('excuseSentence: 「はやらない。」はアプリが添える', () => {
+  assert.equal(
+    excuseSentence('ショート動画があるアプリ', 'ja'),
+    'ショート動画があるアプリはやらない。',
+  );
+  assert.equal(excuseSentence('Short-video apps', 'en'), 'Short-video apps, I won’t.');
+});
+
+test('excuseSentence: 空の入力には型を添えない', () => {
+  assert.equal(excuseSentence('   ', 'ja'), '');
+});
+
+test('normalizeExcuse: 習慣で書いた「はやらない。」は落とす(二重に添えない)', () => {
+  assert.equal(normalizeExcuse('ショート動画があるアプリは、やらない。'), 'ショート動画があるアプリ');
+  assert.equal(normalizeExcuse('二次会はやらない'), '二次会');
+  assert.equal(normalizeExcuse('深夜の通話はやりません。'), '深夜の通話');
+  assert.equal(normalizeExcuse('Late-night calls, I won’t.'), 'Late-night calls');
+  assert.equal(
+    excuseSentence('ショート動画があるアプリは、やらない。', 'ja'),
+    'ショート動画があるアプリはやらない。',
   );
 });
 
-test('splitExcuseLines: 読点がなければ1行のまま', () => {
-  assert.deepEqual(splitExcuseLines('二次会はやらない。'), ['二次会はやらない。']);
+test('normalizeExcuse: 「やらない」だけの入力は空にしない', () => {
+  assert.equal(normalizeExcuse('やらない'), 'やらない');
 });
 
-test('splitExcuseLines: 末尾の読点で空行を作らない', () => {
-  assert.deepEqual(splitExcuseLines('即レスは、'), ['即レスは、']);
+test('normalizeExcuse: 改行を落とし、前後の空白と末尾の句読点を落とす', () => {
+  assert.equal(normalizeExcuse('  二次\n会 '), '二次会');
+  assert.equal(normalizeExcuse('二次会、'), '二次会');
 });
 
-test('splitExcuseLines: 半角カンマも読点として扱う', () => {
-  assert.deepEqual(splitExcuseLines('Late-night calls, I won’t.'), ['Late-night calls,', 'I won’t.']);
+// ---- 行組みもアプリが決める ----------------------------------------------
+test('excuseLines: 1行に収まるなら1行のまま(読点で割らない)', () => {
+  assert.deepEqual(excuseLines('二次会', 'ja'), ['二次会はやらない。']);
 });
 
-test('normalizeExcuse: 改行を落とし、前後の空白を落とす', () => {
-  assert.equal(normalizeExcuse('  二次会は、\nやらない。 '), '二次会は、やらない。');
+test('excuseLines: 収まらないときだけ「◯◯は」/「やらない。」に割る', () => {
+  assert.deepEqual(
+    excuseLines('ショート動画があるアプリ', 'ja'),
+    ['ショート動画があるアプリは', 'やらない。'],
+  );
 });
 
-test('validateExcuse: モックの顔(確定例文)が通り、2行に割れる', () => {
-  const result = validateExcuse('ショート動画があるアプリは、やらない。');
+test('excuseLines: 英語も同じ規則で割れる', () => {
+  assert.deepEqual(excuseLines('Late-night calls', 'en'), ['Late-night calls, I won’t.']);
+  assert.deepEqual(
+    excuseLines('Video in the background', 'en'),
+    ['Video in the background,', 'I won’t.'],
+  );
+});
+
+test('excuseLines: 上限まで書いても、どの行もカードの1行に収まる', () => {
+  for (const lang of ['ja', 'en'] as const) {
+    const longest = lang === 'ja' ? 'あ'.repeat(EXCUSE_MAX_WIDTH) : 'a'.repeat(EXCUSE_MAX_WIDTH * 2);
+    assert.equal(excuseWidth(longest), EXCUSE_MAX_WIDTH);
+    const lines = excuseLines(longest, lang);
+    assert.ok(lines.length <= 2);
+    for (const line of lines) assert.ok(excuseWidth(line) <= EXCUSE_CARD_LINE_WIDTH);
+  }
+});
+
+test('excuseLines: 空の入力は行を作らない', () => {
+  assert.deepEqual(excuseLines('', 'ja'), []);
+});
+
+// ---- 検証 ------------------------------------------------------------------
+test('validateExcuse: モックの顔(確定例文)が通る', () => {
+  const result = validateExcuse('ショート動画があるアプリ');
   assert.equal(result.ok, true);
-  assert.deepEqual(result.ok && result.lines, ['ショート動画があるアプリは、', 'やらない。']);
+  assert.equal(result.ok && result.value, 'ショート動画があるアプリ');
 });
 
-test('validateExcuse: 全角24字ちょうどは通る(14字+10字の最長ケース)', () => {
-  // 14字目が読点。1行目=14字、2行目=10字 で合計24字
-  const text = `${'あ'.repeat(13)}、${'い'.repeat(10)}`;
-  assert.equal(excuseWidth(text), EXCUSE_MAX_WIDTH);
-  const result = validateExcuse(text);
+test('validateExcuse: 全角13字ちょうどは通り、14字は拒否する', () => {
+  assert.equal(validateExcuse('あ'.repeat(EXCUSE_MAX_WIDTH)).ok, true);
+  const tooLong = validateExcuse('あ'.repeat(EXCUSE_MAX_WIDTH + 1));
+  assert.equal(tooLong.ok, false);
+  assert.equal(tooLong.ok === false && tooLong.reason, 'tooLong');
+});
+
+test('validateExcuse: 型を書き添えても、落としたぶんで長さを見る', () => {
+  // 「は、やらない。」ぶんは数えない ── 保存するのは「やらないこと」だけ
+  const result = validateExcuse(`${'あ'.repeat(EXCUSE_MAX_WIDTH)}は、やらない。`);
   assert.equal(result.ok, true);
-  assert.deepEqual(result.ok && result.lines.map(excuseWidth), [14, 10]);
+  assert.equal(result.ok && excuseWidth(result.value), EXCUSE_MAX_WIDTH);
 });
 
-test('validateExcuse: 全角25字は拒否する', () => {
-  const result = validateExcuse('あ'.repeat(EXCUSE_MAX_WIDTH + 1));
-  assert.equal(result.ok, false);
-  assert.equal(result.ok === false && result.reason, 'tooLong');
-});
-
-test('validateExcuse: 読点2つ(3行)は拒否する', () => {
-  const result = validateExcuse('あ、い、う');
-  assert.equal(result.ok, false);
-  assert.equal(result.ok === false && result.reason, 'tooManyLines');
-});
-
-test('validateExcuse: 1行が15字を超えると拒否する(24字以内でも)', () => {
-  const text = 'あ'.repeat(EXCUSE_MAX_LINE_WIDTH + 1);
-  assert.ok(excuseWidth(text) <= EXCUSE_MAX_WIDTH);
-  const result = validateExcuse(text);
-  assert.equal(result.ok, false);
-  assert.equal(result.ok === false && result.reason, 'lineTooLong');
+test('validateExcuse: 読点をいくつ打っても拒否しない(行組みは人に問わない)', () => {
+  assert.equal(validateExcuse('あ、い、う').ok, true);
 });
 
 test('validateExcuse: 空文字・空白だけは拒否する(白紙の宣言は存在しない)', () => {
+  const blank = validateExcuse('   ');
   assert.equal(validateExcuse('').ok, false);
-  assert.equal(validateExcuse('   ').ok, false);
-});
-
-test('validateExcuse: 英語の宣言も全角換算で通る', () => {
-  const result = validateExcuse('Late-night calls, I won’t.');
-  assert.equal(result.ok, true);
-  assert.deepEqual(result.ok && result.lines, ['Late-night calls,', 'I won’t.']);
+  assert.equal(blank.ok, false);
+  assert.equal(blank.ok === false && blank.reason, 'empty');
 });
