@@ -11,13 +11,24 @@
 
     <!--
   ============================================================
-  Yaranai ウェイトリストLP（復帰演出デザイン準拠 v2）
+  Yaranai ウェイトリストLP（復帰演出デザイン準拠 v2.1）
   ------------------------------------------------------------
   ▼ デザイン
     アプリの復帰演出（竹林+光の道+暈し光）をSVG/CSSのみで再現。
     v2: 竹に円柱の陰影+上下フェード、光を主役に再構成、周辺減光追加。
+    v2.1: スクロールキュー追加（下記）。
     画像アセットなし。Skia実装と定数単位で揃えたくなったら
     Claude Codeにリポジトリの色・寸法の移植を依頼すること。
+
+  ▼ スクロールキュー（v2.1）
+    ヒーローが100svhで完結して見え、下にスクロールできることが
+    伝わらん問題への対応。細い縦線+光が下へ流れる意匠で、
+    竹林に一筋の光が落ちるイメージ。題字の点灯（0.4s〜）に半歩
+    遅れて灯り始め（0.8s〜1.8s）、一度スクロールしたら
+    フェードアウトして二度と出ない
+    （急かす装置にしない。案内は入口で一度だけ）。
+    ※当初は題字が灯り終わる2.4s後に出す設計やったが、実機確認で
+      「数秒間なにも無い」＝未反映に見える問題が出たため前倒し。
 
   ▼ コピー
     ヒーローは決定コピー「ここから、変わる。」のみ。補足行なし。
@@ -308,6 +319,68 @@
         text-indent: 0.3em;
         color: rgba(233, 228, 214, 0.9);
         text-shadow: 0 0 24px rgba(238, 233, 219, 0.35);
+      }
+
+      /* ---------- スクロールキュー ----------
+         細い縦線を光が一筋、下へ流れる。
+         外側(.scroll-cue)が消灯担当（JSでopacityを落とす）、
+         内側(.scroll-cue__inner)が点灯担当（題字に半歩遅れて
+         akariで現れる）。役割を分けとるのは、fill-mode:forwardsの
+         entrance animationとinline styleの上書きが衝突するため。 */
+      .scroll-cue {
+        position: absolute;
+        bottom: 28px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        pointer-events: none;
+        transition: opacity 0.8s ease;
+      }
+      .scroll-cue__inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        opacity: 0;
+        animation: akari 1s ease 0.8s forwards;
+      }
+      .scroll-cue__label {
+        font-family: var(--font-min);
+        font-size: 10px;
+        letter-spacing: 0.3em;
+        text-indent: 0.3em;
+        color: rgba(233, 228, 214, 0.6);
+      }
+      .scroll-cue__line {
+        position: relative;
+        width: 1px;
+        height: 44px;
+        background: rgba(233, 228, 214, 0.2);
+        overflow: hidden;
+      }
+      .scroll-cue__line::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: -40%;
+        width: 1px;
+        height: 40%;
+        background: rgba(233, 228, 214, 0.7);
+        animation: cue-flow 3s ease-in-out infinite;
+      }
+      @keyframes cue-flow {
+        to {
+          top: 100%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .scroll-cue__inner {
+          animation: none;
+          opacity: 1;
+        }
+        .scroll-cue__line::after {
+          animation: none;
+        }
       }
 
       /* ---------- 本文 ---------- */
@@ -685,6 +758,14 @@
         <h1>Yaranai</h1>
         <p>ここから、変わる。</p>
       </div>
+
+      <!-- スクロールキュー：一筋の光が下へ落ちる -->
+      <div class="scroll-cue" aria-hidden="true">
+        <div class="scroll-cue__inner">
+          <span class="scroll-cue__label">scroll</span>
+          <span class="scroll-cue__line"></span>
+        </div>
+      </div>
     </header>
 
     <!-- ============ 本文 ============ -->
@@ -732,6 +813,16 @@
       /* ---------- 流入記録（表示には影響せん。将来の検証用） ---------- */
       const param = new URLSearchParams(location.search).get("v");
       const variantLabel = param || "direct";
+
+      /* ---------- スクロールキュー：一度スクロールしたら黙る ---------- */
+      const scrollCue = document.querySelector(".scroll-cue");
+      window.addEventListener(
+        "scroll",
+        () => {
+          scrollCue.style.opacity = "0";
+        },
+        { once: true, passive: true },
+      );
 
       /* ---------- 登録処理 ---------- */
       const form = document.getElementById("waitlist-form");
