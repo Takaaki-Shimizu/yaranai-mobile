@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
 import { colors } from '@yaranai/core';
 import { useT } from '../lib/i18n/context';
+import { FooterWashi } from './washi/Washi';
 
 export type FooterTab = 'garden' | 'reading' | 'excuse';
 
@@ -74,10 +75,11 @@ type Href = Parameters<ReturnType<typeof useRouter>['navigate']>[0];
 
 type Item = { tab: FooterTab; href: Href; label: string; icon: (p: { color: string }) => ReactElement };
 
-export function AppFooter({ active }: { active: FooterTab }) {
+export function AppFooter({ active, washi }: { active: FooterTab; washi?: boolean }) {
   const router = useRouter();
   const t = useT();
   const insets = useSafeAreaInsets();
+  const barHeight = FOOTER_HEIGHT + insets.bottom;
 
   const items: Item[] = [
     { tab: 'garden', href: '/(app)', label: t.footer.garden, icon: StonesIcon },
@@ -86,7 +88,10 @@ export function AppFooter({ active }: { active: FooterTab }) {
   ];
 
   return (
-    <View style={[styles.bar, { height: FOOTER_HEIGHT + insets.bottom, paddingBottom: insets.bottom }]}>
+    <View style={[styles.bar, { height: barHeight, paddingBottom: insets.bottom }]}>
+      {/* 和紙意匠(ホームのみ §5)。帯に内包して境界でクリップし、アイコンより背面に敷く。
+          帯の実高(下インセット込み)へ縦をストレッチして端末差に追従する */}
+      {washi && <FooterWashi height={barHeight} />}
       {items.map(({ tab, href, label, icon: Icon }) => (
         <Pressable
           key={tab}
