@@ -119,8 +119,9 @@ export function HeaderWashi() {
  */
 export function FooterWashi({ height }: { height: number }) {
   const { width } = useWindowDimensions();
+  const scaleX = width / MOTIF_BASE_WIDTH;
   const transform: Transforms3d = [
-    { scaleX: width / MOTIF_BASE_WIDTH },
+    { scaleX },
     { scaleY: height / FOOTER_BASE_HEIGHT },
   ];
   return (
@@ -132,11 +133,12 @@ export function FooterWashi({ height }: { height: number }) {
           baseHeight={FOOTER_BASE_HEIGHT}
           transform={transform}
         />
-        <Group transform={transform}>
-          {FOOTER_FOILS.map((f, i) => (
-            <FoilRect key={i} foil={f} />
-          ))}
-        </Group>
+        {/* 箔は縦ストレッチに載せない: 正方形のまま、帯上端からの dp 位置に置く。
+            ストレッチすると下インセットの大きい端末で箔がアイコン帯の外へ沈む。
+            横位置だけ画面幅に追従させる */}
+        {FOOTER_FOILS.map((f, i) => (
+          <FoilRect key={i} foil={{ ...f, x: f.x * scaleX }} />
+        ))}
       </Canvas>
     </View>
   );

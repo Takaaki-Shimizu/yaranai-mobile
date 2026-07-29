@@ -43,10 +43,14 @@ export const MOTIF_BASE_WIDTH = 390;
 /** ヘッダー意匠が届く縦の範囲(紙片の最大y)。キャンバスの高さに使う */
 export const HEADER_MOTIF_HEIGHT = 150;
 
+// 紙片の opacity はモック原典(ヘッダー 0.34/0.30、フッター 0.34/0.30/0.32/0.28/0.18)から
+// 実機調整で約1.5倍に引き上げた。原典値では mottle マスクと合わさって
+// 「目を凝らせば分かる」程度にしか出ず、ぱっと見で和紙の重なりを感じられなかったため。
+
 /** ヘッダー意匠: 紙片2枚(§4)。ヘッダー左上原点 */
 export const HEADER_PIECES: readonly PaperPiece[] = [
-  { points: [[-40, -30], [120, -50], [170, 60], [90, 150], [-50, 110]], fill: WASHI.washi1, opacity: 0.34 },
-  { points: [[60, -60], [210, -40], [230, 80], [130, 120], [40, 40]], fill: WASHI.washi2, opacity: 0.30 },
+  { points: [[-40, -30], [120, -50], [170, 60], [90, 150], [-50, 110]], fill: WASHI.washi1, opacity: 0.50 },
+  { points: [[60, -60], [210, -40], [230, 80], [130, 120], [40, 40]], fill: WASHI.washi2, opacity: 0.45 },
 ];
 
 /** ヘッダー意匠: 金箔2粒(§4) */
@@ -63,14 +67,20 @@ export const FOOTER_BASE_HEIGHT = 72;
 
 /** フッター意匠: 紙片5枚(§5)。フッター帯(390×72)のローカル座標 */
 export const FOOTER_PIECES: readonly PaperPiece[] = [
-  { points: [[-20, -6], [120, 4], [150, 50], [60, 80], [-30, 66]], fill: WASHI.washi1, opacity: 0.34 },
-  { points: [[90, 10], [230, -8], [250, 44], [170, 78], [100, 60]], fill: WASHI.washi2, opacity: 0.30 },
-  { points: [[210, 2], [350, -10], [372, 40], [300, 80], [224, 62]], fill: WASHI.washi3, opacity: 0.32 },
-  { points: [[320, 14], [420, 0], [424, 66], [340, 82]], fill: WASHI.washi1, opacity: 0.28 },
-  { points: [[40, 34], [150, 26], [166, 74], [56, 84]], fill: WASHI.washi4, opacity: 0.18 },
+  { points: [[-20, -6], [120, 4], [150, 50], [60, 80], [-30, 66]], fill: WASHI.washi1, opacity: 0.50 },
+  { points: [[90, 10], [230, -8], [250, 44], [170, 78], [100, 60]], fill: WASHI.washi2, opacity: 0.45 },
+  { points: [[210, 2], [350, -10], [372, 40], [300, 80], [224, 62]], fill: WASHI.washi3, opacity: 0.48 },
+  { points: [[320, 14], [420, 0], [424, 66], [340, 82]], fill: WASHI.washi1, opacity: 0.42 },
+  { points: [[40, 34], [150, 26], [166, 74], [56, 84]], fill: WASHI.washi4, opacity: 0.28 },
 ];
 
-/** フッター意匠: 金箔2粒(§5) */
+/**
+ * フッター意匠: 金箔2粒(§5)。
+ * 箔の y は「帯上端からの dp」で、紙片と違い縦ストレッチをかけずに置く。
+ * ストレッチに載せると、下インセット(システムナビ)が大きい端末で箔が
+ * アイコン帯の外へ沈んで見えなくなるため(実機で発生)。y+size は
+ * インセットを除いた帯の高さ(FOOTER_HEIGHT = 56)以内に収めること。
+ */
 export const FOOTER_FOILS: readonly Foil[] = [
   { x: 338, y: 14, size: 9, rotate: -14, fill: WASHI.foil2, opacity: 0.6 },
   { x: 72, y: 42, size: 8, rotate: 20, fill: WASHI.foil1, opacity: 0.6 },
@@ -87,14 +97,16 @@ export const MOTTLE = {
 } as const;
 
 /**
- * alpha = clamp(luminance × 0.7 − 0.25)。
- * SVG feColorMatrix の第4行 `0.7 0.7 0.7 0 -0.25` と等価(§6)
+ * alpha = clamp(luminance × 0.8 − 0.12)。
+ * モック原典は SVG feColorMatrix 第4行 `0.7 0.7 0.7 0 -0.25`(§6)だが、
+ * その値では実機でマスクが削りすぎて紙片がほぼ見えなくなったため、
+ * ムラの階調は保ったまま全体の透過率を引き上げている(実機調整)。
  */
 export const MOTTLE_ALPHA_MATRIX: readonly number[] = [
   0, 0, 0, 0, 0,
   0, 0, 0, 0, 0,
   0, 0, 0, 0, 0,
-  0.7, 0.7, 0.7, 0, -0.25,
+  0.8, 0.8, 0.8, 0, -0.12,
 ];
 
 /** grain 紙肌(§7): 画面全体に multiply で薄く重ねる */
