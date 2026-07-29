@@ -6,11 +6,12 @@
 // 作成済みのときは 9:16 のカードを大きく出す。カードをタップすると余計なものを畳んで
 // 全画面になる ── 対面提示はこの状態で行う(§4.3)。
 // 「戻る」は既存の語彙・体裁に準拠する。「とじる」はホーム最下部の閉じ際の儀式だけの語で、
-// ここでは使わない(一語一義)。
+// ここでは使わない(一語一義)。全画面からの出口は「戻る」の一語に統一し、端末の戻るも
+// 同じところへ着く ── 掲げたものを畳むだけで、タブからは出ない。
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, ActivityIndicator, useWindowDimensions,
+  View, Text, Pressable, StyleSheet, ActivityIndicator, useWindowDimensions, BackHandler,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -97,6 +98,18 @@ export default function ExcuseTab() {
   const storyContent = contentFor('story');
 
   const onRevealEnd = useCallback(() => setRevealing(false), []);
+
+  // 全画面は画面(ルート)ではなく状態なので、端末の戻るは黙っていればタブごと庭へ帰す。
+  // 掲げている間だけ戻るを預かって、まず全画面を畳む ── 画面の中で開いたものは、
+  // 画面の中で閉じてから外へ出る。true を返して遷移は起こさない(Android のみ効く)
+  useEffect(() => {
+    if (!presenting) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPresenting(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [presenting]);
 
   // reduce motion のときは演出なしで最終状態を即時表示する(§4.2-4)。
   // 端末の設定は非同期に読めるので、判明した時点で畳む(ExcuseCardView 側で
