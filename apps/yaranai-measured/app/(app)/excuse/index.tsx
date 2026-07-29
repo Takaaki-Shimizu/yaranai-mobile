@@ -17,10 +17,10 @@ import { useSession, colors, fonts } from '@yaranai/core';
 
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 import { ExcuseCardView } from '../../../components/excuse/ExcuseCardView';
-import { XGlyph } from '../../../components/excuse/XGlyph';
+import { ShareGlyph } from '../../../components/excuse/ShareGlyph';
 import type { CardContent } from '../../../components/excuse/bake';
-import { postCardToX, shareCard } from '../../../components/excuse/share';
-import { CARD_SIZES, type CardSize } from '../../../lib/excuse/card-spec';
+import { shareCard } from '../../../components/excuse/share';
+import { type CardSize } from '../../../lib/excuse/card-spec';
 import { formatDeclaredOn } from '../../../lib/excuse/format';
 import { consumeRevealPending } from '../../../lib/excuse/reveal-flag';
 import { loadCurrentDeclaration, type ExcuseDeclaration } from '../../../lib/excuse/storage';
@@ -43,7 +43,6 @@ export default function ExcuseTab() {
   // 作成直後の一度だけ完成演出を流す(§4.2-3)
   const [revealing, setRevealing] = useState(false);
   const [presenting, setPresenting] = useState(false);
-  const [choosingSize, setChoosingSize] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -52,7 +51,6 @@ export default function ExcuseTab() {
       // 儀式を終えて戻ってきたときだけ印が立っている。印は取ると消える
       if (consumeRevealPending()) {
         setPresenting(false);
-        setChoosingSize(false);
         setMessage('');
         setRevealing(true);
       }
@@ -103,26 +101,14 @@ export default function ExcuseTab() {
     if (reduceMotion && revealing) onRevealEnd();
   }, [reduceMotion, revealing, onRevealEnd]);
 
-  const onShare = async (size: CardSize) => {
-    const content = contentFor(size);
-    if (!userId || !content || busy) return;
-    setBusy(true);
-    setMessage('');
-    const result = await shareCard(userId, size, content);
-    setBusy(false);
-    setChoosingSize(false);
-    if (result === 'unavailable') setMessage(t.excuse.shareUnavailable);
-    else if (result === 'failed') setMessage(t.excuse.shareFailed);
-  };
-
-  // Xへのポスト(§4.3)。投稿向きの正方形をXの投稿画面へ直接渡す。
-  // Xが無い端末では共有シートへ降りる(share.ts 側で吸収)
-  const onPostToX = async () => {
+  // 共有(§4.3)。押したらそのまま共有シートを開く ── 途中に選択は挟まない。
+  // 渡すのは投稿向きの正方形1枚
+  const onShare = async () => {
     const content = contentFor('square');
     if (!userId || !content || busy) return;
     setBusy(true);
     setMessage('');
-    const result = await postCardToX(userId, content);
+    const result = await shareCard(userId, 'square', content);
     setBusy(false);
     if (result === 'unavailable') setMessage(t.excuse.shareUnavailable);
     else if (result === 'failed') setMessage(t.excuse.shareFailed);
@@ -205,41 +191,21 @@ export default function ExcuseTab() {
       </View>
 
       <View style={[styles.actions, hidden]} pointerEvents={revealing ? 'none' : 'auto'}>
-          {choosingSize ? (
-            // サイズ選択(§4.3)。2つと「やめる」だけ。おすすめも既定も置かない
-            <View style={styles.sizeRow}>
-              {CARD_SIZES.map((size) => (
-                <Pressable key={size} style={styles.sizeItem} disabled={busy} onPress={() => onShare(size)}>
-                  <Text style={styles.actionText}>
-                    {size === 'square' ? t.excuse.shareSquare : t.excuse.shareStory}
-                  </Text>
-                </Pressable>
-              ))}
-              <Pressable style={styles.sizeItem} onPress={() => setChoosingSize(false)}>
-                <Text style={styles.secondaryText}>{t.excuse.shareCancel}</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              {/* Xへは正方形を直接。共有シートは従来どおりサイズを選んでから */}
-              <Pressable
-                style={styles.action}
-                onPress={onPostToX}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel={t.excuse.postToX}
-              >
-                <XGlyph size={18} color={colors.sumi} />
-              </Pressable>
-              <Pressable style={styles.action} onPress={() => setChoosingSize(true)}>
-                <Text style={styles.actionText}>{t.excuse.share}</Text>
-              </Pressable>
-              {/* 差し替えは自由(回数制限なし)。作成と同じ儀式を必ず通る(§2-1) */}
-              <Pressable style={styles.secondary} onPress={() => router.push('/(app)/excuse/new')}>
-                <Text style={styles.secondaryText}>{t.excuse.replace}</Text>
-              </Pressable>
-            </>
-          )}
+          {/* 押したらそのまま共有シートへ。印と文言でひとつのボタン */}
+          <Pressable
+            style={[styles.action, styles.actionRow]}
+            onPress={onShare}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={t.excuse.share}
+          >
+            <ShareGlyph size={16} color={colors.sumi} />
+            <Text style={styles.actionText}>{t.excuse.share}</Text>
+          </Pressable>
+          {/* 差し替えは自由(回数制限なし)。作成と同じ儀式を必ず通る(§2-1) */}
+          <Pressable style={styles.secondary} onPress={() => router.push('/(app)/excuse/new')}>
+            <Text style={styles.secondaryText}>{t.excuse.replace}</Text>
+          </Pressable>
           {message !== '' && <Text style={styles.note}>{message}</Text>}
       </View>
 
@@ -282,11 +248,10 @@ const styles = StyleSheet.create({
   // 演出の間の伏せ方。場所は空けたまま見えなくする(寸法を動かさない)
   hidden: { opacity: 0 },
   action: { paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center' },
+  actionRow: { flexDirection: 'row', gap: 10 },
   actionText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 5 },
   secondary: { paddingVertical: 10, alignItems: 'center' },
   secondaryText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
-  sizeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sizeItem: { paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center' },
   back: { paddingVertical: 16, alignItems: 'center' },
   backText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
   note: { fontSize: 12, lineHeight: 22, color: colors.usuzumi, textAlign: 'center', marginTop: 8 },
