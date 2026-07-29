@@ -17,6 +17,7 @@
     "lib/launch/**/*.ts",
     "lib/tojiru/timeline.ts",
     "lib/tojiru/shoji.ts",
+    "lib/washi/motif.ts",
     "lib/__tests__/**/*.ts",
     "lib/articles/trigger.ts",
     "lib/articles/state.ts",

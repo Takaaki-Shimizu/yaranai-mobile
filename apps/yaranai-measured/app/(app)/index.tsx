@@ -32,6 +32,7 @@ import type { ArticlesState } from '../../lib/articles/types';
 import { AppMenu } from '../../components/AppMenu';
 import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
 import { IdealHeader } from '../../components/IdealHeader';
+import { GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
 import { useLang, useT } from '../../lib/i18n/context';
 import type { GrowthParams } from '../../lib/garden/growth';
 
@@ -207,23 +208,29 @@ export default function Home() {
         scrollEnabled={!closing}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.wordmark}>Yaranai</Text>
-          {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
-          <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t.menu.a11yLabel}>
-            <View style={styles.hamburger}>
-              <View style={styles.hbLine} />
-              <View style={styles.hbLine} />
-              <View style={styles.hbLine} />
-            </View>
-          </Pressable>
+        {/* ヘッダー帯(看板)。和紙意匠は帯のコンポーネントに内包し、上端にアンカーする
+            (和紙意匠 §2: 画面絶対座標での配置は禁止)。overflow: hidden で帯の外=
+            庭以下の中央帯に紙片の裾がはみ出さないことを構造的に保証する */}
+        <View style={styles.headerBlock}>
+          <HeaderWashi />
+          <View style={styles.header}>
+            <Text style={styles.wordmark}>Yaranai</Text>
+            {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
+            <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t.menu.a11yLabel}>
+              <View style={styles.hamburger}>
+                <View style={styles.hbLine} />
+                <View style={styles.hbLine} />
+                <View style={styles.hbLine} />
+              </View>
+            </Pressable>
+          </View>
+
+          {/* 理想(WHAT)は庭の直上に常設する。開発者モードでも同じ枠を使い、
+              未入力でも高さを確保するので庭の描画開始位置は動かない */}
+          <IdealHeader />
         </View>
 
         <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
-
-        {/* 理想(WHAT)は庭の直上に常設する。開発者モードでも同じ枠を使い、
-            未入力でも高さを確保するので庭の描画開始位置は動かない */}
-        <IdealHeader />
 
         {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
         {isDeveloper ? (
@@ -320,10 +327,14 @@ export default function Home() {
 
       {/* 固定フッター(言い訳カード §3)。ホームでは「庭」が選択中。
           閉じ際の演出が始まったら、ホームのUIと一緒に沈める(覆いを遮らない) */}
-      {!closing && <AppFooter active="garden" />}
+      {!closing && <AppFooter active="garden" washi />}
 
       {/* A〜E の覆い。文字・数値・アイコンは一切持たない(§5) */}
       {closing && <TojiruCurtain growth={growth} />}
+
+      {/* 紙肌 grain(和紙意匠 §7)。全画面を multiply で薄く覆う最前面レイヤー。
+          意匠のうちこれだけは全画面オーバーレイが許される(§2 の例外) */}
+      <GrainOverlay />
     </View>
   );
 }
@@ -367,6 +378,9 @@ const styles = StyleSheet.create({
   },
   // 色・字間は読みもの画面の「戻る」に揃える(薄墨・letterSpacing 3)
   tojiruText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
+  // ヘッダー帯: 和紙意匠の親。意匠は絶対配置の背面レイヤーなので、
+  // クリップしても文字・タップ領域には影響しない
+  headerBlock: { overflow: 'hidden' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
