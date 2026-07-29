@@ -1,7 +1,10 @@
 // ハンバーガーメニュー(実装仕様書 §5.3)。ヘッダー右上の「退出」を差し替える入口。
-// 項目は上から: 理想を入力 / 読みもの / 言語(罫線で区切る) / ログアウト(罫線で区切り最下部)。
-// 設定は v1 では中身が薄いため項目ごと省略(§5.3)。言語だけはここに置く
-// (設定画面を新設するほどの項目数がないため)。
+//
+// 言い訳カード §3 で「普段開かない箱」に純化した。日々使う導線は固定フッターと
+// 庭の掛け軸が持つので、ここからは外してある:
+//   - 「理想を入力」→ 庭の掛け軸(IdealHeader)のタップ
+//   - 「読みもの」  → フッターの2つめのタブ
+// 残るのは言語(=設定にあたる唯一の項目)とログアウト。
 //
 // 言語の行は「日本語 / English」の2語を並べ、現在の言語を墨色・もう一方を薄墨で示す。
 // タップで即時切替(確認なし)。メニューは閉じない ── 項目名がその場で切り替わるのが
@@ -14,7 +17,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, Text, View, StyleSheet, Alert, Animated, Easing } from 'react-native';
-import { useRouter } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../lib/supabase';
 import { useLang, useT } from '../lib/i18n/context';
@@ -25,7 +27,6 @@ type Props = {
 };
 
 export function AppMenu({ visible, onClose }: Props) {
-  const router = useRouter();
   const { lang, setLang } = useLang();
   const t = useT();
 
@@ -72,16 +73,6 @@ export function AppMenu({ visible, onClose }: Props) {
     ]);
   };
 
-  const goIdeal = () => {
-    onClose();
-    router.push('/(app)/ideal');
-  };
-
-  const goReading = () => {
-    onClose();
-    router.push('/(app)/reading');
-  };
-
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       {/* 背景タップで閉じる。地の暗みも面と一緒に立ち上げる */}
@@ -102,19 +93,9 @@ export function AppMenu({ visible, onClose }: Props) {
               {/* 上辺の内側ハイライト。紙に厚みがあるように見せる1px(見せ方 案A) */}
               <View pointerEvents="none" style={styles.topHighlight} />
 
-              {/* 理想を入力(§5.3)。ホームヘッダーの表示枠タップと同じ編集画面へ入る */}
-              <Pressable style={styles.item} onPress={goIdeal}>
-                <Text style={styles.itemText}>{t.menu.ideal}</Text>
-              </Pressable>
-
-              {/* 項目の間はすべて同じ1本の罫線で区切る(ここだけ無いと束ねて見える) */}
-              <Pressable style={[styles.item, styles.separated]} onPress={goReading}>
-                <Text style={styles.itemText}>{t.menu.reading}</Text>
-              </Pressable>
-
               {/* 言語。両言語の名前をそれぞれの言語で並べる(いま読めない言語の人にも
                   自分の言語が見つかるように)。選択中は墨、他方は薄墨 */}
-              <View style={[styles.langRow, styles.separated]}>
+              <View style={styles.langRow}>
                 <Pressable onPress={() => setLang('ja')} hitSlop={8}>
                   <Text style={[styles.langText, lang === 'ja' && styles.langActive]}>日本語</Text>
                 </Pressable>

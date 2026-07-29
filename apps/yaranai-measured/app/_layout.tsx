@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Slot } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -51,6 +52,9 @@ export default function RootLayout() {
   const showLaunch = launch.visible && !isDeveloperEmail(session?.user?.email);
 
   return (
+    // 固定フッター(言い訳カード §3)がジェスチャーバーの下に潜らないよう、
+    // 端末の安全域をここから配れるようにしておく
+    <SafeAreaProvider>
     <GestureHandlerRootView style={StyleSheet.absoluteFill}>
       {loading ? (
         <View style={{ flex: 1, backgroundColor: colors.kinari, alignItems: 'center', justifyContent: 'center' }}>
@@ -71,5 +75,6 @@ export default function RootLayout() {
         <LaunchOverlay key={launch.id} ready={!loading} variant={launch.variant} onDone={dismissLaunch} />
       )}
     </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

@@ -74,8 +74,9 @@ npx expo start --dev-client
 
 1. supabase.com で新規プロジェクトを作成
 2. SQL Editor で `supabase/001_schema.sql` を全文実行
-3. Authentication → Providers で Email を有効にする
-4. `apps/yaranai-measured/.env` に接続情報を置く:
+3. SQL Editor で `supabase/002_excuse_declarations.sql` を全文実行(言い訳カード)
+4. Authentication → Providers で Email を有効にする
+5. `apps/yaranai-measured/.env` に接続情報を置く:
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
@@ -164,6 +165,51 @@ scripts/render-garden-previews.js  Day1/42/84のSVGプレビュー出力
 npx tsc -p tsconfig.test.json
 node scripts/render-garden-previews.js /tmp/garden-previews
 # 出力されたSVGをブラウザで開いて docs/mocks/reference/ と見比べる
+```
+
+## 言い訳カード — 2026-07
+
+庭が守るのは内発的な渇望(自分がつい開く)。言い訳カードが守るのは外圧(周囲からの誘い)。
+主動線はリアクティブな断りではなく、**掲げておく常設の宣言**である ── カードを静かに掲げ、
+見た人が「この人はやらないと宣言している」と知り、そもそも誘われる場面が減る。
+悪者になるのはYaranaiであって本人ではない。
+
+非交渉の制約(製品として動かさない線):
+
+- **1人1枚。** 現行の宣言は `superseded_at is null` の1件だけ。差し替えは自由(回数制限なし)だが、
+  旧行は削除せず superseded 化して残す(単調非減少)。差し替えは作成と同じ儀式を必ず通る。
+- **実データを載せない。** Day数・取り戻し時間・庭の状態は出さない。カード上の唯一の事実情報は宣言日。
+- **カード宣言は庭に一切影響しない。** 苔・敷石・光・週数のどのパラメータにも接続しない。
+- **朱を使わない。** カードのアクセントは灯り(暖色の光)が担う。
+- **正本はSupabase。** アンインストールで消えてはならない(端末側はキャッシュ)。
+- カウントダウン・FOMO・共有の煽り・バッジ・催促通知を足さない。
+
+構成:
+
+```
+lib/excuse/
+  validate.ts    宣言文の規則(全角24字 / 読点で2行 / 1行14字)。純関数・テスト対象
+  card-spec.ts   版下(モックv3の座標・色)。描画系に依存しない純データ
+  qr.ts          QRのモジュール行列(qrcode-generator, 誤り訂正Q)
+  url.ts         QRの遷移先 https://yaranai.app/?utm_source=excuse_card
+  format.ts      宣言日の表記「2026年7月29日 宣言」
+  storage.ts     正本(Supabase)とキャッシュ(AsyncStorage)
+  timeline.ts    完成演出(2000ms・2段)
+  preview-svg.ts 版下→SVG の照合器(開発用)
+components/excuse/
+  bake.ts        版下→Skia。3層(地/灯り/文字)に焼き、書き出しは1枚に畳む
+  ExcuseCardView.tsx  9:16の表示と完成演出
+  share.ts       PNG書き出し → Android標準の共有シート
+components/AppFooter.tsx  固定フッター3タブ(庭/読みもの/言い訳カード)
+```
+
+版下のプレビュー(実機に入れる前の照合):
+
+```bash
+npx tsc -p tsconfig.test.json
+node scripts/render-excuse-cards.js /tmp/excuse-cards
+# 出力されたSVGをブラウザで開いて docs/mocks の言い訳カード モックv3 と見比べる
+# mock/longest/single の3ケース × 2サイズ
 ```
 
 ## 開発者モード(庭デバッグ)

@@ -17,6 +17,7 @@ import {
   type ArticleListSections,
 } from '../../../lib/articles/select';
 import { useLang, useT } from '../../../lib/i18n/context';
+import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 
 const EMPTY_SECTIONS: ArticleListSections = { standing: [], conditional: [] };
 
@@ -62,35 +63,41 @@ export default function ReadingList() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{t.reading.listTitle}</Text>
+    <View style={styles.root}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>{t.reading.listTitle}</Text>
 
-      <View style={styles.list}>
-        {sections.standing.map(renderRow)}
+        <View style={styles.list}>
+          {sections.standing.map(renderRow)}
 
-        {/* standing と conditional の間の罫線1本(v1.1 §5.2)。
-            その罫線は standing 最終行の下罫線が兼ねる ── ここに線を足すと2本になって
-            余計に見えるため、足すのは息をつける余白だけ。
-            片方しか無いときは区切るものが無いので余白も出さない */}
-        {sections.standing.length > 0 && sections.conditional.length > 0 && (
-          <View style={styles.sectionGap} />
-        )}
+          {/* standing と conditional の間の罫線1本(v1.1 §5.2)。
+              その罫線は standing 最終行の下罫線が兼ねる ── ここに線を足すと2本になって
+              余計に見えるため、足すのは息をつける余白だけ。
+              片方しか無いときは区切るものが無いので余白も出さない */}
+          {sections.standing.length > 0 && sections.conditional.length > 0 && (
+            <View style={styles.sectionGap} />
+          )}
 
-        {sections.conditional.map(renderRow)}
+          {sections.conditional.map(renderRow)}
 
-        {loaded && isEmpty && <Text style={styles.empty}>{t.reading.empty}</Text>}
-      </View>
+          {loaded && isEmpty && <Text style={styles.empty}>{t.reading.empty}</Text>}
+        </View>
 
-      <Pressable style={styles.back} onPress={() => router.back()}>
-        <Text style={styles.backText}>{t.reading.back}</Text>
-      </Pressable>
-    </ScrollView>
+        <Pressable style={styles.back} onPress={() => router.back()}>
+          <Text style={styles.backText}>{t.reading.back}</Text>
+        </Pressable>
+      </ScrollView>
+
+      {/* 固定フッター(言い訳カード §3)。読みものは3タブの真ん中 */}
+      <AppFooter active="reading" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.kinari },
   container: { flex: 1, backgroundColor: colors.kinari },
-  content: { paddingHorizontal: 28, paddingTop: 64, paddingBottom: 80 },
+  content: { paddingHorizontal: 28, paddingTop: 64, paddingBottom: 80 + FOOTER_HEIGHT },
   title: {
     fontFamily: fonts.serif,
     fontSize: 20,

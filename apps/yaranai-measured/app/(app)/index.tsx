@@ -30,6 +30,7 @@ import { loadArticlesState } from '../../lib/articles/storage';
 import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
 import type { ArticlesState } from '../../lib/articles/types';
 import { AppMenu } from '../../components/AppMenu';
+import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
 import { IdealHeader } from '../../components/IdealHeader';
 import { useLang, useT } from '../../lib/i18n/context';
 import type { GrowthParams } from '../../lib/garden/growth';
@@ -317,6 +318,10 @@ export default function Home() {
         </Pressable>
       </Animated.ScrollView>
 
+      {/* 固定フッター(言い訳カード §3)。ホームでは「庭」が選択中。
+          閉じ際の演出が始まったら、ホームのUIと一緒に沈める(覆いを遮らない) */}
+      {!closing && <AppFooter active="garden" />}
+
       {/* A〜E の覆い。文字・数値・アイコンは一切持たない(§5) */}
       {closing && <TojiruCurtain growth={growth} />}
     </View>
@@ -349,7 +354,8 @@ function ReadingStrip({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.kinari },
   container: { flex: 1, backgroundColor: colors.kinari },
-  content: { paddingBottom: 80 },
+  // 「とじる」がフッターの下に潜らないよう、フッターのぶんだけ余白を足す
+  content: { paddingBottom: 80 + FOOTER_HEIGHT },
 
   // 「とじる」(§2): 中央寄せのテキストのみ。枠・背景・影は付けない。
   // カード末尾から 56 空け、タップ領域は最小 44dp 四方を満たす(高さ 44 + hitSlop)。
