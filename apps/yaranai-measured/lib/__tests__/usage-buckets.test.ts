@@ -183,7 +183,7 @@ test('日次集計: 再起動で割れた前日の後半バケットも、ロー
   assert.deepEqual(byDay.get('2026-07-05'), [{ packageName: YT, totalForegroundMs: min(90) }]);
 });
 
-test('基準線: 窓の外から始まる月次バケットを混入させず、重複なしで継ぎ足す', () => {
+test('基準線: 粗い粒度は捨てずに、重なりぶんを引いた残差で12週の窓を埋める', () => {
   const now = ms(2026, 7, 6);
   const beginMs = now - 84 * DAY_MS; // = 2026-04-13
 
@@ -196,23 +196,51 @@ test('基準線: 窓の外から始まる月次バケットを混入させず、
     bucket(YT, ms(2026, 6, 8), ms(2026, 6, 15), 420),
     bucket(YT, ms(2026, 6, 15), ms(2026, 6, 22), 350),
     bucket(YT, ms(2026, 6, 22), ms(2026, 6, 29), 280),
-    bucket(YT, ms(2026, 6, 29), ms(2026, 7, 6), 500), // 日次で数え済みの週 → 捨てる
+    bucket(YT, ms(2026, 6, 29), ms(2026, 7, 6), 500), // 日次で埋まっとる週 → 新しく数えるものはない
   ];
   const monthly: UsageBucket[] = [
-    bucket(YT, ms(2026, 4, 1), ms(2026, 5, 1), 3000), // 窓の外(4/1 < 4/13)から始まる → 捨てる
-    bucket(YT, ms(2026, 5, 1), ms(2026, 6, 1), 1550), // 5月まるごと → 使う
-    bucket(YT, ms(2026, 6, 1), ms(2026, 7, 1), 1500), // 週次と重なる → 捨てる
-    bucket(YT, ms(2026, 7, 1), now, 300), // 日次と重なる → 捨てる
+    bucket(YT, ms(2026, 4, 1), ms(2026, 5, 1), 3000), // 窓の縁をまたぐ → 4/13〜5/1 で切って按分
+    bucket(YT, ms(2026, 5, 1), ms(2026, 6, 1), 1550), // 5月まるごと → そのまま
+    bucket(YT, ms(2026, 6, 1), ms(2026, 7, 1), 1500), // 週次・日次と重なる → 残差だけ
+    bucket(YT, ms(2026, 7, 1), now, 300), // 日次で埋まっとる → 新しく数えるものはない
   ];
 
   const stitched = stitchBaselineWindow({ daily, weekly, monthly }, beginMs, now);
 
-  // 集計できた期間 = 日次7日 + 週次21日 + 5月31日 = 59日
-  assert.equal(coveredDaysOf(stitched), 59);
-  // 合計 = 7×60 + (420+350+280) + 1550 = 3020分(4月・6月・7月の月次は入らない)
-  assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 3020);
-  // 1日平均 = 3020 / 59 ≒ 51.2分(旧実装なら4月の3000分が丸ごと混入しとった)
-  assert.equal(averageMinutesPerDay(stitched, YT), 51.2);
+  // 窓は月次で端から端まで覆えるけん、集計できた期間は84日ちょうど
+  // (旧実装は重なった月次を丸ごと捨てて59日しか覆えず、日によって段で動いとった)
+  assert.equal(coveredDaysOf(stitched), 84);
+  // 合計 = 日次420 + 週次1050 + 4月按分1800(3000×18/30) + 5月1550
+  //        + 6月の残差330(1500 −(週次1050 + 6/29・6/30の日次120))= 5150分
+  assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 5150);
+  assert.equal(averageMinutesPerDay(stitched, YT), 61.3);
+});
+
+test('基準線: 窓の縁をまたぐ月次バケットを捨てず、窓で切って按分する', () => {
+  // 旧実装は firstTimeStamp が窓外なら丸ごと捨てとった。beginMs は毎日1日ずつ進むけん、
+  // 月初を越えた日に30日ぶんの覆いが一度に消え、availableDays がガクンと落ちとった。
+  const now = ms(2026, 7, 6);
+  const beginMs = now - 84 * DAY_MS; // = 2026-04-13
+  const monthly = [bucket(YT, ms(2026, 4, 1), ms(2026, 5, 1), 3000)];
+  const stitched = stitchBaselineWindow({ daily: [], weekly: [], monthly }, beginMs, now);
+  assert.equal(coveredDaysOf(stitched), 18); // 4/13〜5/1
+  assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 1800); // 3000 × 18/30
+});
+
+test('基準線: 細かい粒度と重なる月次バケットは、重なりぶんを引いた残差だけ数える', () => {
+  const now = ms(2026, 7, 1);
+  const beginMs = now - 84 * DAY_MS;
+  const weekly = [
+    bucket(YT, ms(2026, 6, 8), ms(2026, 6, 15), 420),
+    bucket(YT, ms(2026, 6, 15), ms(2026, 6, 22), 350),
+    bucket(YT, ms(2026, 6, 22), ms(2026, 6, 29), 280),
+  ];
+  const monthly = [bucket(YT, ms(2026, 6, 1), ms(2026, 7, 1), 1500)];
+  const stitched = stitchBaselineWindow({ daily: [], weekly, monthly }, beginMs, now);
+  // 覆えた期間 = 6月まるごと30日(旧実装は月次を丸ごと捨てて21日しか覆えんかった)
+  assert.equal(coveredDaysOf(stitched), 30);
+  // 合計 = 週次1050 + 残差450 = 1500分。二重計上もせず、月次の実測も落とさない
+  assert.equal((stitched.totalMsByPackage.get(YT) ?? 0) / 60000, 1500);
 });
 
 test('基準線: 同じ日でパッケージごとに期間がずれた日次バケットを丸ごと捨てない', () => {
@@ -264,6 +292,76 @@ test('12週平均: 記録が無いアプリと空の窓は0分になる(観測�
   assert.equal(averageMinutesPerDay(stitched, 'com.example.unknown'), 0);
   const empty = stitchBaselineWindow({ daily: [], weekly: [], monthly: [] }, beginMs, now);
   assert.equal(averageMinutesPerDay(empty, YT), 0);
+});
+
+// Android の保持期間(日次7日・週次4週・月次6ヶ月)どおりにバケットを作る。
+// 日次は暦日、週次は日曜起点、月次は月初起点。最新の1本だけが now まで開いとる。
+function deviceBuckets(now: number) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
+
+  const daily: UsageBucket[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const start = todayMs - i * DAY_MS;
+    daily.push(bucket(YT, start, i === 0 ? now : start + DAY_MS, 60));
+  }
+
+  const weekStart = todayMs - new Date(todayMs).getDay() * DAY_MS;
+  const weekly: UsageBucket[] = [];
+  for (let i = 3; i >= 0; i--) {
+    const start = weekStart - i * 7 * DAY_MS;
+    weekly.push(bucket(YT, start, i === 0 ? now : start + 7 * DAY_MS, 420));
+  }
+
+  const monthStarts: number[] = [];
+  for (let i = 5; i >= 0; i--) {
+    monthStarts.push(new Date(today.getFullYear(), today.getMonth() - i, 1).getTime());
+  }
+  const monthly = monthStarts.map((start, i) =>
+    bucket(YT, start, i + 1 < monthStarts.length ? monthStarts[i + 1] : now, 1800),
+  );
+
+  return { daily, weekly, monthly };
+}
+
+test('基準線: 日が変わっても集計日数が段で落ちない(12週平均が急に消える不具合の再現)', () => {
+  // 報告された症状: 昨日まで出とった「時間の行き先」が、翌朝には28日ゲートに落ちた。
+  // 原因は availableDays が暦の進みに対して単調やなく、週次1本(7日)・月次1本(30日)の
+  // 単位で採否が反転しとったこと。閾値28の near では日によって出たり消えたりする。
+  // 月境界・週境界・月末月初をまたぐ2ヶ月ぶんを1日ずつ舐めて、84日で動かんことを確かめる。
+  for (let i = 0; i < 70; i++) {
+    const now = ms(2026, 5, 20) + i * DAY_MS + 9 * 3600000 + 49 * 60000;
+    const stitched = stitchBaselineWindow(deviceBuckets(now), now - 84 * DAY_MS, now);
+    assert.equal(
+      coveredDaysOf(stitched),
+      84,
+      `${new Date(now).toISOString().slice(0, 10)} の集計日数が84日でない`,
+    );
+  }
+});
+
+test('基準線: 履歴が浅い端末では、集計日数が1日ずつ増えて減らない', () => {
+  // 端末を使い始めた直後。ゲートを跨ぐ前後で行ったり来たりせず、単調に増える。
+  const historyStart = ms(2026, 6, 1);
+  let prev = 0;
+  for (let i = 1; i <= 45; i++) {
+    const now = historyStart + i * DAY_MS + 9 * 3600000;
+    const all = deviceBuckets(now);
+    const clip = (list: UsageBucket[]) =>
+      list
+        .filter((b) => b.lastTimeStamp > historyStart)
+        .map((b) => ({ ...b, firstTimeStamp: Math.max(b.firstTimeStamp, historyStart) }));
+    const stitched = stitchBaselineWindow(
+      { daily: clip(all.daily), weekly: clip(all.weekly), monthly: clip(all.monthly) },
+      now - 84 * DAY_MS,
+      now,
+    );
+    const days = coveredDaysOf(stitched);
+    assert.equal(days, i, `${i}日目の集計日数が ${days} 日`);
+    assert.ok(days >= prev, `${i}日目に集計日数が ${prev} → ${days} と減った`);
+    prev = days;
+  }
 });
 
 test('基準線: 日次しか残っとらん端末は集計日数がそのまま少なく出る(宣言不可判定用)', () => {

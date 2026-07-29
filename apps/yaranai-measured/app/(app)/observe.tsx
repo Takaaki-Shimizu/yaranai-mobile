@@ -61,6 +61,12 @@ export default function Observe() {
     ]);
     const baseline = measureBaselineWindow();
     setAvailableDays(baseline.availableDays);
+    // 調査用: 集計できた日数はゲートの内外どちらでも出す。以前は表示できたときだけ
+    // 出しとったけん、「まだ記録を集めています」に落ちた原因が実機ログで追えんかった。
+    console.log(
+      `[observe] availableDays=${baseline.availableDays} need=${BASELINE_MIN_DAYS} ` +
+        `coveredMs=${baseline.window.coveredMs} recent7d=${recent.length}`,
+    );
     if (baseline.availableDays >= BASELINE_MIN_DAYS) {
       const candidates = recent
         .filter((r) => !isNoisePackage(r.packageName))
@@ -82,10 +88,7 @@ export default function Observe() {
       // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
       // (adb logcat -s ReactNativeJS UsageStats)。端末の外には出ない。
       const shownSet = new Set(shown.map((r) => r.packageName));
-      console.log(
-        `[observe] recent7d=${recent.length} candidates=${candidates.length} ` +
-          `shown=${shown.length} availableDays=${baseline.availableDays}`,
-      );
+      console.log(`[observe] candidates=${candidates.length} shown=${shown.length}`);
       for (const c of candidates) {
         const state = shownSet.has(c.packageName)
           ? 'show'
