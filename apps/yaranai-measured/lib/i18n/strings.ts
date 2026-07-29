@@ -14,6 +14,7 @@ import type { Lang } from './types';
 export type AppStrings = {
   menu: {
     a11yLabel: string;
+    ideal: string;
     logout: string;
     logoutTitle: string;
     logoutBody: string;
@@ -161,6 +162,7 @@ export type AppStrings = {
 const ja: AppStrings = {
   menu: {
     a11yLabel: 'メニュー',
+    ideal: '理想を入力',
     logout: 'ログアウト',
     logoutTitle: 'ログアウトしますか?',
     logoutBody: '次に開くときは、もう一度ログインが必要です。',
@@ -306,6 +308,7 @@ const ja: AppStrings = {
 const en: AppStrings = {
   menu: {
     a11yLabel: 'Menu',
+    ideal: 'Your ideal',
     logout: 'Log out',
     logoutTitle: 'Log out?',
     logoutBody: "You'll need to sign in again next time.",
