@@ -1,7 +1,8 @@
 // 宣言をつくる儀式(指示書 §4.2)。作成も差し替えも、必ずこの2画面を通る。
 //
-//   1. 入力    … WHATの自由入力。プレースホルダーは例文をランダム表示(§7)。
-//                全角24字上限・2行判定はここで検証する(§4.2-1)。
+//   1. 入力    … 「やらないこと」だけの自由入力。プレースホルダーは例文をランダム表示(§7)。
+//                「はやらない。」はアプリが添え、行組みもアプリが決める(§4.2-1)。
+//                入力中はその添えたあとの一文を下に映して、何を宣言するのかを見せる。
 //   2. 確認    … 明朝・中央寄せの一拍。「これを、やらないと宣言しますか。」
 //   3. 完成演出… カード画面へ ?reveal=1 で渡す(演出はカード画面が持つ)。
 //
@@ -19,8 +20,7 @@ import { pickPlaceholder } from '../../../lib/excuse/placeholders';
 import { markRevealPending } from '../../../lib/excuse/reveal-flag';
 import { declareExcuse } from '../../../lib/excuse/storage';
 import {
-  EXCUSE_MAX_LINE_WIDTH, EXCUSE_MAX_WIDTH,
-  excuseWidth, splitExcuseLines, validateExcuse,
+  EXCUSE_MAX_WIDTH, excuseLines, excuseWidth, normalizeExcuse, validateExcuse,
 } from '../../../lib/excuse/validate';
 import { useLang, useT } from '../../../lib/i18n/context';
 
@@ -42,8 +42,12 @@ export default function ExcuseNew() {
   const placeholder = pickPlaceholder(lang, seed);
 
   const onChangeText = (next: string) => {
-    // 上限は全角換算。短くする方向は常に受け付ける
-    if (excuseWidth(next) <= EXCUSE_MAX_WIDTH || excuseWidth(next) < excuseWidth(text)) {
+    // 上限は全角換算。型(「はやらない。」)まで書き添えた入力は、型を落としたぶんで測る
+    // ── 例文をそのまま貼っても弾かれない。短くする方向は常に受け付ける
+    if (
+      excuseWidth(normalizeExcuse(next)) <= EXCUSE_MAX_WIDTH
+      || excuseWidth(next) < excuseWidth(text)
+    ) {
       setText(next);
       setError('');
     }
@@ -54,10 +58,9 @@ export default function ExcuseNew() {
     if (!result.ok) {
       // エラーは静かなインライン表示にとどめる(アラート・ダイアログは使わない)
       setError(
-        result.reason === 'empty' ? t.excuse.errorEmpty
-          : result.reason === 'tooLong' ? t.excuse.errorTooLong(EXCUSE_MAX_WIDTH)
-          : result.reason === 'tooManyLines' ? t.excuse.errorTooManyLines
-          : t.excuse.errorLineTooLong(EXCUSE_MAX_LINE_WIDTH),
+        result.reason === 'empty'
+          ? t.excuse.errorEmpty
+          : t.excuse.errorTooLong(EXCUSE_MAX_WIDTH),
       );
       return;
     }
@@ -71,7 +74,9 @@ export default function ExcuseNew() {
     setBusy(true);
     const saved = await declareExcuse(userId, result.value);
     setBusy(false);
-    if (!saved) {
+    if (!saved.ok) {
+      // 画面に出すのは静かな一文だけ。原因(スキーマ未投入など)はログへ回す
+      console.warn('[excuse] declare failed:', saved.reason);
       setConfirming(false);
       setError(t.excuse.saveFailed);
       return;
@@ -84,7 +89,7 @@ export default function ExcuseNew() {
 
   // ---- 確認(一拍 §4.2-2) -----------------------------------------------
   if (confirming) {
-    const lines = splitExcuseLines(text);
+    const lines = excuseLines(text, lang);
     return (
       <View style={styles.container}>
         <View style={styles.confirmBody}>
@@ -104,6 +109,9 @@ export default function ExcuseNew() {
   }
 
   // ---- 入力 --------------------------------------------------------------
+  // 添えたあとの一文。書いている最中から、宣言の形をそのまま見せておく
+  const preview = excuseLines(text, lang);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t.excuse.title}</Text>
@@ -125,7 +133,15 @@ export default function ExcuseNew() {
           accessibilityLabel={t.excuse.inputA11y}
         />
 
-        <Text style={styles.note}>{t.excuse.inputNote}</Text>
+        {preview.length > 0 && (
+          <View style={styles.preview}>
+            {preview.map((line, i) => (
+              <Text key={i} style={styles.previewLine}>{line}</Text>
+            ))}
+          </View>
+        )}
+
+        <Text style={styles.note}>{t.excuse.inputNote(EXCUSE_MAX_WIDTH)}</Text>
 
         <Pressable style={styles.primary} onPress={toConfirm}>
           <Text style={styles.primaryText}>{t.excuse.next}</Text>
@@ -176,6 +192,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   note: { fontSize: 12, lineHeight: 22, color: colors.usuzumi, textAlign: 'center' },
+
+  // 添えたあとの一文の下見。入力そのものより弱く置き、主役を奪わない
+  preview: { alignItems: 'center' },
+  previewLine: {
+    fontFamily: fonts.serif,
+    fontSize: 15,
+    lineHeight: 28,
+    letterSpacing: 2,
+    color: colors.usuzumi,
+    textAlign: 'center',
+  },
 
   // 宣言の一拍(§4.2-2)。世界観の語りと同じ体裁: 明朝・中央寄せ・余白多め。
   // 朱は使わない(§2-5)ため、ここのボタンも面で塗らず、文字だけで置く

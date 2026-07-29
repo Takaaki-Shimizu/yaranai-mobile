@@ -33,7 +33,7 @@ import { buildQrMatrix } from '../../lib/excuse/qr';
 
 /** カードに載る文言。言語の解決は呼び出し側(画面)で済ませて渡す */
 export type CardContent = {
-  /** 宣言文。読点で割られた1〜2行 */
+  /** 宣言文。excuseLines() が組んだ1〜2行 */
   lines: string[];
   /** 宣言日。空文字なら行ごと出さない */
   date: string;

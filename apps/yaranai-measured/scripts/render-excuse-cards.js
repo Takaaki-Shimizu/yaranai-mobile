@@ -4,15 +4,15 @@
 //
 // 出すのは3つ:
 //   mock   … モック v3 の顔(確定例文)。版下がモックとずれとらんかの照合用
-//   longest… 全角14字×2行の最長ケース(§9-2 のはみ出し確認)
-//   single … 読点なしの1行(ベースラインが2行の中間に来るか)
+//   longest… 入力上限(全角13字)いっぱいの最長ケース(§9-2 のはみ出し確認)
+//   single … 1行に収まる短い宣言(ベースラインが2行の中間に来るか)
 
 const fs = require('node:fs');
 const path = require('node:path');
 
 const dist = path.join(__dirname, '..', '.test-dist');
 const { cardToSvg } = require(path.join(dist, 'excuse', 'preview-svg.js'));
-const { splitExcuseLines } = require(path.join(dist, 'excuse', 'validate.js'));
+const { excuseLines, EXCUSE_MAX_WIDTH } = require(path.join(dist, 'excuse', 'validate.js'));
 const { formatDeclaredOn } = require(path.join(dist, 'excuse', 'format.js'));
 const { EXCUSE_CARD_URL } = require(path.join(dist, 'excuse', 'url.js'));
 
@@ -25,15 +25,15 @@ const CUSTODY = {
 };
 
 const cases = {
-  mock: 'ショート動画があるアプリは、やらない。',
-  longest: `${'あ'.repeat(13)}、${'い'.repeat(13)}`, // 14字×2行(上限を超える最長ケース)
-  single: '二次会はやらない。',
+  mock: 'ショート動画があるアプリ',
+  longest: 'あ'.repeat(EXCUSE_MAX_WIDTH), // 入力上限いっぱい(1行目が全角14字になる)
+  single: '二次会',
 };
 
 for (const [name, text] of Object.entries(cases)) {
   for (const size of ['square', 'story']) {
     const svg = cardToSvg(size, {
-      lines: splitExcuseLines(text),
+      lines: excuseLines(text, 'ja'),
       date: formatDeclaredOn('2026-07-29', 'ja'),
       custody: CUSTODY[size],
       wordmark: 'Y a r a n a i',

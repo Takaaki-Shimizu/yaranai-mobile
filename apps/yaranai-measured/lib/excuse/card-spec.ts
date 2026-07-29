@@ -258,7 +258,7 @@ export const CARD_SIZES: CardSize[] = ['square', 'story'];
 
 /**
  * 宣言文のベースライン。行数で置き方が変わる(1行は2行の中間に据える)。
- * 3行以上は validate が弾くので、ここでは先頭2行だけを見る。
+ * 行組みは excuseLines() が1〜2行に決めるので、ここでは先頭2行だけを見る。
  */
 export function declarationBaselines(layout: CardLayout, lineCount: number): number[] {
   return lineCount <= 1
