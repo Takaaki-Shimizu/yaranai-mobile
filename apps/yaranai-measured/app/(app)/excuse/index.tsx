@@ -13,6 +13,7 @@ import {
   View, Text, Pressable, StyleSheet, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession, colors, fonts } from '@yaranai/core';
 
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
@@ -36,6 +37,9 @@ export default function ExcuseTab() {
   const { lang } = useLang();
   const reduceMotion = useReduceMotion();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  // フッターは自分の高さに端末の下端(ナビゲーションバー等)を足して伸びる。
+  // 内容の下に空けるのも同じだけ要る ── FOOTER_HEIGHT だけでは操作列が罫線の裏に潜る
+  const insets = useSafeAreaInsets();
   const userId = session?.user?.id;
 
   // undefined = 読み込み中 / null = 未作成
@@ -168,7 +172,9 @@ export default function ExcuseTab() {
   // 場所は空けたまま伏せる ── 演出の途中で版面の寸法が変わると、カードを焼き直して
   // しまい、光の立ち上がりが途切れるため。
   const hidden = revealing && styles.hidden;
-  const cardHeight = windowHeight - 210 - FOOTER_HEIGHT;
+  // 170 = 見出し(64+文字+12)と操作列1行ぶんの取り分。ここを実測より小さく見積もると
+  // カードが操作列に被るので、少し多めに取っておく
+  const cardHeight = windowHeight - 170 - FOOTER_HEIGHT - insets.bottom;
 
   return (
     <View style={styles.root}>
@@ -190,7 +196,17 @@ export default function ExcuseTab() {
         )}
       </View>
 
-      <View style={[styles.actions, hidden]} pointerEvents={revealing ? 'none' : 'auto'}>
+      <View
+        style={[styles.actions, { paddingBottom: FOOTER_HEIGHT + insets.bottom + 12 }, hidden]}
+        pointerEvents={revealing ? 'none' : 'auto'}
+      >
+        {/* 掲げたカードに添える2つ。左に書き直しの道、右に共有 ── 主役は共有のほうなので、
+            再宣言は薄墨のまま、同じ列に置いても声の大きさは変えない */}
+        <View style={styles.actionsRow}>
+          {/* 差し替えは自由(回数制限なし)。作成と同じ儀式を必ず通る(§2-1) */}
+          <Pressable style={styles.secondary} onPress={() => router.push('/(app)/excuse/new')}>
+            <Text style={styles.secondaryText}>{t.excuse.replace}</Text>
+          </Pressable>
           {/* 押したらそのまま共有シートへ。印と文言でひとつのボタン */}
           <Pressable
             style={[styles.action, styles.actionRow]}
@@ -202,11 +218,8 @@ export default function ExcuseTab() {
             <ShareGlyph size={16} color={colors.sumi} />
             <Text style={styles.actionText}>{t.excuse.share}</Text>
           </Pressable>
-          {/* 差し替えは自由(回数制限なし)。作成と同じ儀式を必ず通る(§2-1) */}
-          <Pressable style={styles.secondary} onPress={() => router.push('/(app)/excuse/new')}>
-            <Text style={styles.secondaryText}>{t.excuse.replace}</Text>
-          </Pressable>
-          {message !== '' && <Text style={styles.note}>{message}</Text>}
+        </View>
+        {message !== '' && <Text style={styles.note}>{message}</Text>}
       </View>
 
       {/* フッターも演出の間は伏せる。掲げ終わってから、また導線に戻る */}
@@ -244,13 +257,17 @@ const styles = StyleSheet.create({
   },
   cardBody: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   presentBody: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  actions: { paddingBottom: FOOTER_HEIGHT + 12, alignItems: 'center', gap: 4 },
+  // paddingBottom は端末の下端ぶんを足して画面側で与える(罫線の裏に潜らせない)
+  actions: { alignItems: 'center', gap: 4 },
+  // 2つのボタンを一列に。間は詰めすぎず、どちらも取り違えない程度に離す
+  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   // 演出の間の伏せ方。場所は空けたまま見えなくする(寸法を動かさない)
   hidden: { opacity: 0 },
   action: { paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center' },
   actionRow: { flexDirection: 'row', gap: 10 },
   actionText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 5 },
-  secondary: { paddingVertical: 10, alignItems: 'center' },
+  // 共有と並ぶので、文字の幅だけでは触りにくい。左右にも押せる余地を持たせる
+  secondary: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
   secondaryText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
   back: { paddingVertical: 16, alignItems: 'center' },
   backText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
