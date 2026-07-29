@@ -200,8 +200,8 @@ export default function ExcuseTab() {
         style={[styles.actions, { paddingBottom: FOOTER_HEIGHT + insets.bottom + 12 }, hidden]}
         pointerEvents={revealing ? 'none' : 'auto'}
       >
-        {/* 掲げたカードに添える2つ。左に書き直しの道、右に共有 ── 主役は共有のほうなので、
-            再宣言は薄墨のまま、同じ列に置いても声の大きさは変えない */}
+        {/* 掲げたカードに添える2つ。左に書き直しの道、右に共有 ── 同じ列に並ぶ2つなので
+            字の大きさと色合いは揃え、主役が共有であることは印の有無だけで示す */}
         <View style={styles.actionsRow}>
           {/* 差し替えは自由(回数制限なし)。作成と同じ儀式を必ず通る(§2-1) */}
           <Pressable style={styles.secondary} onPress={() => router.push('/(app)/excuse/new')}>
@@ -268,7 +268,8 @@ const styles = StyleSheet.create({
   actionText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 5 },
   // 共有と並ぶので、文字の幅だけでは触りにくい。左右にも押せる余地を持たせる
   secondary: { paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center' },
-  secondaryText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
+  // 声の大きさは共有と同じに揃える(字の大きさと色合い)。主役の別は印の有無だけで示す
+  secondaryText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 3 },
   back: { paddingVertical: 16, alignItems: 'center' },
   backText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
   note: { fontSize: 12, lineHeight: 22, color: colors.usuzumi, textAlign: 'center', marginTop: 8 },
