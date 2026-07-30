@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yaranai — アプリアイコン モック v3（厳か・銘入り）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500&family=Cinzel:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kinari:#F2EDE1;
+    --sumi:#2E2B26;
+    --sumi-soft:#57534A;
+    --shu:#B0472F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--kinari);
+    color:var(--sumi);
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    line-height:1.9;
+    padding:56px 20px 96px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+  .brand{
+    font-family:'Shippori Mincho',serif;
+    letter-spacing:.42em;
+    font-size:14px;
+    color:var(--sumi-soft);
+    margin-bottom:28px;
+  }
+  h1{
+    font-family:'Shippori Mincho',serif;
+    font-weight:500;
+    font-size:clamp(23px,4.4vw,32px);
+    letter-spacing:.12em;
+    line-height:1.7;
+  }
+  .lede{
+    margin-top:14px;
+    font-size:14px;
+    color:var(--sumi-soft);
+    max-width:42em;
+  }
+  h2{
+    font-family:'Shippori Mincho',serif;
+    font-weight:600;
+    font-size:19px;
+    letter-spacing:.14em;
+    border-bottom:1px solid rgba(46,43,38,.18);
+    padding-bottom:12px;
+    margin:64px 0 8px;
+  }
+  .concept{
+    font-size:13.5px;
+    color:var(--sumi-soft);
+    margin-bottom:24px;
+    max-width:44em;
+  }
+  .concept b{color:var(--sumi);font-weight:500;}
+  .row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    gap:28px;
+    padding:8px 0 4px;
+  }
+  .cell{text-align:center;}
+  .cell .cap{
+    font-size:11px;
+    letter-spacing:.12em;
+    color:var(--sumi-soft);
+    margin-top:10px;
+  }
+  .icon{overflow:hidden;display:block;box-shadow:0 1px 4px rgba(46,43,38,.14);}
+  .icon svg{display:block;width:100%;height:100%;}
+  .sq{border-radius:0;}
+  .squircle{border-radius:22%;}
+  .circle{border-radius:50%;}
+  .s160{width:160px;height:160px;}
+  .s72{width:72px;height:72px;}
+  .s48{width:48px;height:48px;}
+  .note{
+    margin-top:56px;
+    font-size:13px;
+    color:var(--sumi-soft);
+    border:1px solid rgba(46,43,38,.12);
+    padding:18px 20px;
+  }
+  .note b{color:var(--sumi);font-weight:500;}
+  .note code{
+    font-family:ui-monospace,Menlo,monospace;
+    font-size:12px;
+    background:rgba(46,43,38,.06);
+    padding:1px 6px;
+    border-radius:3px;
+    color:var(--sumi);
+  }
+  footer{
+    margin-top:88px;
+    font-size:12px;
+    color:var(--sumi-soft);
+    letter-spacing:.1em;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">Y a r a n a i</div>
+  <h1>アイコンモック v3 — 石と苔と、銘</h1>
+  <p class="lede">案Eの「石に苔がむす」を核に、道の要素を落として厳かへ。四案とも Yaranai の欧文を入れとる。彩度を落とし、苔は深い緑（mossDeep / mossSkirt 系）、余白を広く、書体は Cinzel（碑文体）と Shippori Mincho の二系統で比較する。</p>
+</header>
+
+<!-- ============================================================ -->
+<h2>案H — 石と銘板</h2>
+<p class="concept"><b>暗い苔の面に一石、その下に銘</b>。美術館のキャプションみたいに「YARANAI」を小さく letterspaced で据える。石が主、名は従。一番静かで、一番Eに近い案。</p>
+
+<div class="row">
+  <div class="cell">
+    <span class="icon sq s160"><svg viewBox="0 0 1024 1024" aria-hidden="true">
+      <defs>
+        <radialGradient id="hBg" cx="50%" cy="36%" r="85%">
+          <stop offset="0%" stop-color="#3E4A2C"/>
+          <stop offset="55%" stop-color="#313E23"/>
+          <stop offset="100%" stop-color="#202915"/>
+        </radialGradient>
+        <linearGradient id="hStone" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#8A8271"/>
+          <stop offset="55%" stop-color="#5A5448"/>
+          <stop offset="100%" stop-color="#3B372E"/>
+        </linearGradient>
+        <linearGradient id="hMoss" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#54673A"/>
+          <stop offset="100%" stop-color="#313E23"/>
+        </linearGradient>
+        <filter id="hBlur"><feGaussianBlur stdDeviation="16"/></filter>
+      </defs>
+      <rect width="1024" height="1024" fill="url(#hBg)"/>
+      <!-- 微かな光（右上） -->
+      <ellipse cx="700" cy="200" rx="330" ry="260" fill="#F6ECC8" opacity=".05" filter="url(#hBlur)"/>
+      <!-- 石の落ち影 -->
+      <ellipse cx="524" cy="596" rx="250" ry="40" fill="#0E1208" opacity=".5" filter="url(#hBlur)"/>
+      <!-- 石 -->
+      <path d="M 300,540
+               C 288,420 366,296 512,282
+               C 664,270 744,382 738,494
+               C 734,576 656,616 512,620
+               C 398,622 310,606 300,540 Z" fill="url(#hStone)"/>
+      <path d="M 560,306 C 646,318 704,384 714,446 C 674,398 616,344 560,306 Z" fill="#9A9382" opacity=".4"/>
+      <!-- 石の肩の苔 -->
+      <path d="M 300,540
+               C 292,452 312,380 360,334
+               C 374,376 352,398 388,404
+               C 424,410 414,358 452,370
+               C 486,382 456,428 500,432
+               C 538,436 528,394 564,408
+               C 590,418 572,462 608,468
+               C 630,472 638,448 656,458
+               C 646,548 610,616 512,620
+               C 398,622 310,606 300,540 Z" fill="url(#hMoss)"/>
+      <g fill="#6E824A" opacity=".4">
+        <circle cx="380" cy="500" r="5"/><circle cx="470" cy="540" r="5"/><circle cx="560" cy="520" r="5"/>
+        <circle cx="420" cy="440" r="4"/><circle cx="520" cy="470" r="4"/>
+      </g>
+      <!-- 地の苔（暗い） -->
+      <ellipse cx="512" cy="1030" rx="660" ry="150" fill="#26301A"/>
+      <!-- 銘 -->
+      <text x="512" y="806" text-anchor="middle" font-family="'Cinzel',serif" font-weight="500" font-size="74" letter-spacing="26" fill="#C9C2AE" opacity=".92">YARANAI</text>
+      <rect x="392" y="850" width="240" height="2" fill="#C9C2AE" opacity=".3"/>
+    </svg></span>
+    <div class="cap">元画像 1024</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>案I — 磨崖の銘</h2>
+<p class="concept"><b>石そのものに名を刻む</b>。画面の大半を石の面が占めて、「YARANAI」が彫り込まれとる。下から苔が這い上がって刻銘の縁に触れかけとる——時間が名前に届く絵。摩耗した石碑の厳かさ。</p>
+
+<div class="row">
+  <div class="cell">
+    <span class="icon sq s160"><svg viewBox="0 0 1024 1024" aria-hidden="true">
+      <defs>
+        <linearGradient id="iSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#EDE5CF"/>
+          <stop offset="100%" stop-color="#DAD1B6"/>
+        </linearGradient>
+        <linearGradient id="iStone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#6B6454"/>
+          <stop offset="45%" stop-color="#575143"/>
+          <stop offset="100%" stop-color="#3B372E"/>
+        </linearGradient>
+        <linearGradient id="iMoss" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#54673A"/>
+          <stop offset="100%" stop-color="#2C371D"/>
+        </linearGradient>
+        <filter id="iBlur"><feGaussianBlur stdDeviation="20"/></filter>
+      </defs>
+      <rect width="1024" height="1024" fill="url(#iSky)"/>
+      <!-- 石碑：不揃いな上端 -->
+      <path d="M 80,360
+               C 180,318 300,336 420,316
+               C 540,296 660,326 780,308
+               C 860,296 920,318 944,336
+               L 944,1024 L 80,1024 Z" fill="url(#iStone)"/>
+      <!-- 石の風化ムラ -->
+      <ellipse cx="300" cy="520" rx="150" ry="90" fill="#7A7261" opacity=".14" filter="url(#iBlur)"/>
+      <ellipse cx="740" cy="440" rx="130" ry="80" fill="#7A7261" opacity=".12" filter="url(#iBlur)"/>
+      <ellipse cx="520" cy="760" rx="200" ry="110" fill="#2A2721" opacity=".25" filter="url(#iBlur)"/>
+      <!-- 刻銘（彫り：下縁の受け光→本体） -->
+      <text x="512" y="576" text-anchor="middle" font-family="'Cinzel',serif" font-weight="600" font-size="106" letter-spacing="16" fill="#8A8271" opacity=".55" transform="translate(0,4)">YARANAI</text>
+      <text x="512" y="576" text-anchor="middle" font-family="'Cinzel',serif" font-weight="600" font-size="106" letter-spacing="16" fill="#1F1D19" opacity=".85">YARANAI</text>
+      <!-- 這い上がる苔 -->
+      <path d="M 80,1024 L 80,780
+               C 120,748 140,790 176,776
+               C 220,760 200,716 250,724
+               C 300,732 286,780 336,776
+               C 380,772 372,730 420,744
+               C 456,754 446,796 500,798
+               C 556,800 550,760 600,770
+               C 640,778 634,816 690,814
+               C 740,812 736,776 790,788
+               C 830,796 826,832 880,830
+               C 910,829 926,812 944,820
+               L 944,1024 Z" fill="url(#iMoss)"/>
+      <g fill="#6E824A" opacity=".45">
+        <circle cx="200" cy="880" r="6"/><circle cx="380" cy="900" r="6"/><circle cx="560" cy="880" r="6"/>
+        <circle cx="740" cy="910" r="6"/><circle cx="300" cy="820" r="5"/><circle cx="640" cy="840" r="5"/>
+        <circle cx="860" cy="870" r="5"/>
+      </g>
+      <!-- 苔の先端の欠片（銘に届きかけ） -->
+      <g fill="#46572F">
+        <ellipse cx="176" cy="768" rx="14" ry="9"/>
+        <ellipse cx="500" cy="790" rx="15" ry="9"/>
+        <ellipse cx="690" cy="806" rx="13" ry="8"/>
+      </g>
+      <!-- 上端の靄 -->
+      <rect x="0" y="0" width="1024" height="200" fill="#EDE5CF" opacity=".55" filter="url(#iBlur)"/>
+    </svg></span>
+    <div class="cap">元画像 1024</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>案J — 名に苔がむす</h2>
+<p class="concept"><b>ワードマークそのものが石</b>。生成りの余白に「Yaranai」を明朝で据えて、文字の足元に苔がむしとる。タイミー型の「名前＝アイコン」に一番忠実な案。文字が主役やけん、厳かさは余白と墨色で作る。</p>
+
+<div class="row">
+  <div class="cell">
+    <span class="icon sq s160"><svg viewBox="0 0 1024 1024" aria-hidden="true">
+      <defs>
+        <radialGradient id="jVig" cx="50%" cy="46%" r="75%">
+          <stop offset="0%" stop-color="#F5F1E6"/>
+          <stop offset="70%" stop-color="#F2EDE1"/>
+          <stop offset="100%" stop-color="#E2DBC8"/>
+        </radialGradient>
+        <linearGradient id="jMoss" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#54673A"/>
+          <stop offset="100%" stop-color="#313E23"/>
+        </linearGradient>
+        <filter id="jBlur"><feGaussianBlur stdDeviation="10"/></filter>
+      </defs>
+      <rect width="1024" height="1024" fill="url(#jVig)"/>
+      <!-- 文字の足元の影 -->
+      <ellipse cx="512" cy="600" rx="380" ry="26" fill="#8A8271" opacity=".22" filter="url(#jBlur)"/>
+      <!-- ワードマーク -->
+      <text x="512" y="576" text-anchor="middle" font-family="'Shippori Mincho',serif" font-weight="500" font-size="182" letter-spacing="2" fill="#2E2B26">Yaranai</text>
+      <!-- 足元にむす苔（文字のベースラインを覆う） -->
+      <g>
+        <path d="M 120,600
+                 C 150,570 176,596 210,584
+                 C 250,570 246,548 292,556
+                 C 336,564 326,590 372,586
+                 C 416,582 410,556 456,562
+                 C 500,568 492,592 540,590
+                 C 586,588 580,560 626,566
+                 C 668,572 662,594 708,592
+                 C 750,590 746,566 790,572
+                 C 830,578 826,600 866,596
+                 C 890,594 900,584 912,588
+                 C 918,606 908,622 880,628
+                 C 700,660 330,660 148,630
+                 C 126,626 114,612 120,600 Z" fill="url(#jMoss)"/>
+        <g fill="#6E824A" opacity=".5">
+          <circle cx="250" cy="606" r="5"/><circle cx="420" cy="612" r="5"/><circle cx="600" cy="608" r="5"/>
+          <circle cx="760" cy="604" r="5"/><circle cx="330" cy="590" r="4"/><circle cx="680" cy="590" r="4"/>
+        </g>
+        <g fill="#26301A" opacity=".55">
+          <circle cx="300" cy="622" r="4"/><circle cx="520" cy="628" r="4"/><circle cx="720" cy="620" r="4"/>
+        </g>
+      </g>
+      <!-- 文字に掛かる苔のひと房（aとnの足元） -->
+      <ellipse cx="452" cy="562" rx="20" ry="12" fill="#46572F"/>
+      <ellipse cx="700" cy="558" rx="16" ry="10" fill="#54673A"/>
+    </svg></span>
+    <div class="cap">元画像 1024</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>案K — 苔むすY（モノグラム＋銘）</h2>
+<p class="concept"><b>大きなYを石として立てて、苔がむす</b>。小サイズでは「Y」一字で識別、大サイズでは下の「YARANAI」の銘まで読める二段構え。48dp耐性とワードマークの両立を狙った、うちの本命。</p>
+
+<div class="row">
+  <div class="cell">
+    <span class="icon sq s160"><svg viewBox="0 0 1024 1024" aria-hidden="true">
+      <defs>
+        <linearGradient id="kBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#333F1F"/>
+          <stop offset="100%" stop-color="#1C2313"/>
+        </linearGradient>
+        <linearGradient id="kStone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#A39B87"/>
+          <stop offset="55%" stop-color="#7A7261"/>
+          <stop offset="100%" stop-color="#4C463A"/>
+        </linearGradient>
+        <filter id="kBlur"><feGaussianBlur stdDeviation="20"/></filter>
+      </defs>
+      <rect width="1024" height="1024" fill="url(#kBg)"/>
+      <!-- 微かな木漏れ日 -->
+      <ellipse cx="680" cy="180" rx="320" ry="240" fill="#F6ECC8" opacity=".06" filter="url(#kBlur)"/>
+      <!-- Yの落ち影 -->
+      <ellipse cx="520" cy="700" rx="240" ry="34" fill="#0E1208" opacity=".5" filter="url(#kBlur)"/>
+      <!-- 石のY -->
+      <text x="512" y="668" text-anchor="middle" font-family="'Cinzel',serif" font-weight="600" font-size="620" fill="url(#kStone)">Y</text>
+      <!-- Yの合流部と左肩にむす苔 -->
+      <g>
+        <path d="M 330,236
+                 C 360,222 380,244 408,238
+                 C 440,230 436,210 468,220
+                 C 496,228 490,252 458,262
+                 C 420,274 370,268 340,258
+                 C 322,252 318,242 330,236 Z" fill="#54673A"/>
+        <path d="M 462,438
+                 C 486,424 502,444 526,438
+                 C 552,432 550,414 576,422
+                 C 598,430 592,452 566,460
+                 C 534,470 494,466 470,456
+                 C 456,450 452,444 462,438 Z" fill="#46572F"/>
+        <ellipse cx="500" cy="586" rx="26" ry="14" fill="#3E4E2B"/>
+        <g fill="#6E824A" opacity=".55">
+          <circle cx="370" cy="250" r="5"/><circle cx="440" cy="240" r="5"/><circle cx="520" cy="446" r="5"/>
+          <circle cx="498" cy="580" r="4"/>
+        </g>
+      </g>
+      <!-- 地の苔 -->
+      <ellipse cx="512" cy="1040" rx="680" ry="160" fill="#26301A"/>
+      <g fill="#46572F" opacity=".7">
+        <ellipse cx="420" cy="672" rx="40" ry="14"/>
+        <ellipse cx="600" cy="676" rx="34" ry="12"/>
+      </g>
+      <!-- 銘 -->
+      <text x="512" y="852" text-anchor="middle" font-family="'Cinzel',serif" font-weight="500" font-size="58" letter-spacing="30" fill="#B8B19C" opacity=".85">YARANAI</text>
+    </svg></span>
+    <div class="cap">元画像 1024</div>
+  </div>
+</div>
+
+<div class="note">
+  <b>厳かさの作り方（v2からの変更）：</b>①新緑（<code>#BCCB86 / #C6D48F</code>）を捨てて mossDeep 系（<code>#54673A / #46572F / #313E23</code>）へ ②高彩度の粒を減らし、opacity を落とす ③欧文は碑文体 Cinzel（H・I・K）と明朝 Shippori Mincho（J）で比較 ④背景に暗のヴィネット、光は右上に一滴だけ。<br><br>
+  <b>要注意：</b>「YARANAI」7文字は48dpでは読めん（タイミーも同じで、小サイズは形と色で識別されとる）。文字が読める前提の案（I・J）は72dp以上での見え方を主戦場に、48dpはシルエット勝負になる。書き出し時は全 <code>text</code> 要素を必ずパス化。backgroundColor 案：H <code>#313E23</code> / I <code>#DAD1B6</code> / J <code>#F2EDE1</code> / K <code>#1C2313</code>。
+</div>
+
+<footer>Yaranai — アイコンモック v3 / 2026.07</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.row').forEach(function(row){
+  var src = row.querySelector('.icon.sq svg');
+  if(!src) return;
+  function make(cls, size, cap, withSafe){
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    var span = document.createElement('span');
+    span.className = 'icon ' + cls + ' ' + size;
+    var svg = src.cloneNode(true);
+    if(withSafe){
+      var ns = 'http://www.w3.org/2000/svg';
+      var c = document.createElementNS(ns, 'circle');
+      c.setAttribute('cx','512'); c.setAttribute('cy','512'); c.setAttribute('r','264');
+      c.setAttribute('fill','none'); c.setAttribute('stroke','#B0472F');
+      c.setAttribute('stroke-width','4'); c.setAttribute('stroke-dasharray','16 14');
+      svg.appendChild(c);
+    }
+    span.appendChild(svg);
+    var d = document.createElement('div');
+    d.className = 'cap'; d.textContent = cap;
+    cell.appendChild(span); cell.appendChild(d);
+    row.appendChild(cell);
+  }
+  make('circle','s160','円マスク', false);
+  make('squircle','s160','角丸マスク', false);
+  make('circle','s72','72dp', false);
+  make('circle','s48','48dp', false);
+  make('sq','s160','セーフゾーン528', true);
+});
+</script>
+</body>
+</html>
