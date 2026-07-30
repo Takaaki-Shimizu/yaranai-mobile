@@ -327,7 +327,7 @@ export default function Home() {
 
       {/* 固定フッター(言い訳カード §3)。ホームでは「庭」が選択中。
           閉じ際の演出が始まったら、ホームのUIと一緒に沈める(覆いを遮らない) */}
-      {!closing && <AppFooter active="garden" washi />}
+      {!closing && <AppFooter active="garden" />}
 
       {/* A〜E の覆い。文字・数値・アイコンは一切持たない(§5) */}
       {closing && <TojiruCurtain growth={growth} />}
