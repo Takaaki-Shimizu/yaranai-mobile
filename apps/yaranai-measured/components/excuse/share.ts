@@ -12,6 +12,7 @@ import * as Sharing from 'expo-sharing';
 
 import type { CardSize } from '../../lib/excuse/card-spec';
 import { logCardShared } from '../../lib/excuse/storage';
+import { withExternalUi } from '../../lib/external-ui';
 import { bakeCardImage, type CardContent } from './bake';
 
 export type ShareResult = 'shared' | 'unavailable' | 'failed';
@@ -44,7 +45,11 @@ async function openShareSheet(size: CardSize, bytes: Uint8Array): Promise<ShareR
     const file = new File(Paths.cache, `yaranai-excuse-${size}.png`);
     file.create({ overwrite: true });
     file.write(bytes);
-    await Sharing.shareAsync(file.uri, { mimeType: 'image/png', UTI: 'public.png' });
+    // シートを開いとる間は「アプリ内から開いた OS の画面」の印を立てる。共有せずに
+    // 戻ったときに起動演出の静止画を挟まんため(lib/external-ui.ts)
+    await withExternalUi(() =>
+      Sharing.shareAsync(file.uri, { mimeType: 'image/png', UTI: 'public.png' }),
+    );
   } catch (e) {
     console.warn('[excuse] share sheet failed:', e);
     return 'failed';

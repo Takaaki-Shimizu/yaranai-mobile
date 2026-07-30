@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { SessionContext, colors } from '@yaranai/core';
 import { LanguageProvider } from '../lib/i18n/context';
 import { isDeveloperEmail } from '../lib/developer';
+import { isExternalUiReturn } from '../lib/external-ui';
 import { LaunchOverlay } from '../components/launch/LaunchOverlay';
 
 export default function RootLayout() {
@@ -34,10 +35,14 @@ export default function RootLayout() {
 
   // バックグラウンド復帰では演出は流さず、最終フレームの静止画だけを見せる(§6)。
   // Android は active↔background の二値なので background からの active 復帰だけを見る。
+  //
+  // ただし共有シートのように「アプリの中から開いた OS の画面」から戻っただけのときは
+  // 挟まない ── 共有せずに戻った利用者はアプリを離れとらんけん、静止画が出ると
+  // 外から戻ってきたように見えてしまう(lib/external-ui.ts)。
   const appState = useRef(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
-      if (appState.current === 'background' && next === 'active') {
+      if (appState.current === 'background' && next === 'active' && !isExternalUiReturn()) {
         setLaunch((l) => ({ id: l.id + 1, visible: true, variant: 'still' }));
       }
       appState.current = next;

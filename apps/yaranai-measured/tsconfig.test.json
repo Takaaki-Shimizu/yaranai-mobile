@@ -12,6 +12,7 @@
   },
   "include": [
     "lib/dates.ts",
+    "lib/external-ui.ts",
     "lib/usage-buckets.ts",
     "lib/garden/**/*.ts",
     "lib/launch/**/*.ts",
