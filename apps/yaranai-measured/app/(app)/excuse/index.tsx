@@ -139,7 +139,9 @@ export default function ExcuseTab() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.usuzumi} />
         </View>
-        <AppMenuButton style={styles.menu} />
+        {/* この状態だけ見出しを出さないので、括り付ける行がない。
+            他の状態と同じ位置に来るよう、画面に対して直に座標を取る */}
+        <AppMenuButton style={styles.menuAlone} />
         <AppFooter active="excuse" />
       </View>
     );
@@ -149,14 +151,16 @@ export default function ExcuseTab() {
   if (!declaration) {
     return (
       <View style={styles.root}>
-        <Text style={styles.title}>{t.excuse.title}</Text>
+        <View>
+          <Text style={styles.title}>{t.excuse.title}</Text>
+          <AppMenuButton style={styles.menu} />
+        </View>
         <View style={styles.center}>
           <Text style={styles.emptyLede}>{t.excuse.emptyLede}</Text>
           <Pressable style={styles.action} onPress={() => router.push('/(app)/excuse/new')}>
             <Text style={styles.actionText}>{t.excuse.create}</Text>
           </Pressable>
         </View>
-        <AppMenuButton style={styles.menu} />
         <AppFooter active="excuse" />
       </View>
     );
@@ -194,7 +198,14 @@ export default function ExcuseTab() {
 
   return (
     <View style={styles.root}>
-      <Text style={[styles.title, hidden]}>{t.excuse.title}</Text>
+      {/* 見出しの行。三本線はこの行に括り付ける ── カードの版面より上にしか
+          居場所がないことを、座標の計算ではなく入れ子で保証する */}
+      <View>
+        <Text style={[styles.title, hidden]}>{t.excuse.title}</Text>
+        {/* メニュー(§5.3)。演出の間はフッターと同じく引っ込める ── 絶対配置なので
+            外しても版面は動かず、伏せたまま押せてしまうこともない */}
+        {!revealing && <AppMenuButton style={styles.menu} />}
+      </View>
 
       <View style={styles.cardBody}>
         {storyContent ? (
@@ -238,10 +249,6 @@ export default function ExcuseTab() {
         {message !== '' && <Text style={styles.note}>{message}</Text>}
       </View>
 
-      {/* メニュー(§5.3)。演出の間はフッターと同じく引っ込める ── 絶対配置なので
-          外しても版面は動かず、伏せたまま押せてしまうこともない */}
-      {!revealing && <AppMenuButton style={styles.menu} />}
-
       {/* フッターも演出の間は伏せる。掲げ終わってから、また導線に戻る */}
       {!revealing && <AppFooter active="excuse" />}
     </View>
@@ -259,10 +266,13 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     paddingBottom: 12,
   },
-  // 三本線の置き場所。見出し(paddingTop 64・20pt)の行の中央に来るよう、
-  // 上端から 64 の位置に見出し1行ぶんの箱を置いて、その中で縦中央に据える。
-  // 読みもの画面と同じ座標(タブを移っても入口が動かない)
-  menu: { position: 'absolute', top: 64, right: 28, height: 28, justifyContent: 'center' },
+  // 三本線の置き場所。見出しの行に重ね、上下を見出しと同じパディング(64 / 12)で
+  // 挟んで文字の行の高さぶんだけを取り、その中で縦中央に据える。
+  // 端末の設定で文字が大きくなっても行と一緒に下がるので、行の中でずれない ──
+  // カードの版面は見出しの行より下から始まるため、被ることも構造的に起きない
+  menu: { position: 'absolute', top: 64, bottom: 12, right: 28, justifyContent: 'center' },
+  // 見出しを持たない読み込み中だけ、同じ見え方になる寸法を画面に対して直に与える
+  menuAlone: { position: 'absolute', top: 64, right: 28, height: 28, justifyContent: 'center' },
   center: {
     flex: 1,
     alignItems: 'center',
