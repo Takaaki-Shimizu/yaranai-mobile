@@ -34,6 +34,7 @@ import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
 import { IdealHeader } from '../../components/IdealHeader';
 import { GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
 import { useLang, useT } from '../../lib/i18n/context';
+import { MAX_VOWS } from '../../lib/vows';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -161,6 +162,11 @@ export default function Home() {
 
   // 開発者モードのホームに常設する読みものの帯(発火判定を通らないため常に表示)。
   const devStripArticle = previewStripArticle(lang);
+
+  // observe への導線の重さは、誓い枠が空いとるかどうかで変わる。observe は宣言の
+  // 唯一の入口やけん、枠が空いとる間は主導線(枠あり)、3本埋まったら詳細ビューへの
+  // 脇道(枠なしの薄墨)へ引っ込む。枠は外れる方向にしか変わらん。
+  const slotsOpen = vows.length < MAX_VOWS;
 
   const onGardenPress = () => {
     // 庭モード(絵巻)は週の節目(土曜・日曜)にのみ開く。閉扉中は静かに何もしない
@@ -295,8 +301,15 @@ export default function Home() {
             );
           })}
 
-          <Pressable style={styles.observe} onPress={() => router.push('/(app)/observe')}>
-            <Text style={styles.observeText}>{t.home.observeLink}</Text>
+          {/* 誓い枠が空いとる間だけ枠付き(木札)。3本埋まったら枠を外して薄墨の文字へ。
+              文言・遷移先・タップ領域はどちらの状態でも変えん(演出も入れない) */}
+          <Pressable
+            style={slotsOpen ? styles.observe : styles.observeQuiet}
+            onPress={() => router.push('/(app)/observe')}
+          >
+            <Text style={slotsOpen ? styles.observeText : styles.observeQuietText}>
+              {t.home.observeLink}
+            </Text>
           </Pressable>
         </View>
         </>
@@ -434,13 +447,27 @@ const styles = StyleSheet.create({
   label: { fontFamily: fonts.serif, fontSize: 17, color: colors.sumi, letterSpacing: 1 },
   saved: { fontSize: 12, color: colors.usuzumi, letterSpacing: 1 },
 
+  // 誓い枠が空いとる間: 極細の実線枠(木札)。破線は「仮置き」の記号に見えるけん使わん。
   observe: {
     marginTop: 8,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.usuzumi,
-    borderStyle: 'dashed',
+    borderColor: 'rgba(43,39,35,0.22)', // sumi #2B2723 の22%
   },
   observeText: { fontFamily: fonts.serif, fontSize: 14, color: colors.sumi, letterSpacing: 4 },
+
+  // 3本埋まったら: 枠を外し薄墨テキストへ。
+  // paddingVertical はタップ領域確保のため維持する(見た目は文字だけ)。
+  observeQuiet: {
+    marginTop: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  observeQuietText: {
+    fontFamily: fonts.serif,
+    fontSize: 13,
+    color: colors.usuzumi,
+    letterSpacing: 4,
+  },
 });

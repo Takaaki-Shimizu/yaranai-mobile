@@ -14,8 +14,7 @@ import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
 import { formatMinutes } from '../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { useLang, useT } from '../../lib/i18n/context';
-
-const MAX_VOWS = 3;
+import { MAX_VOWS } from '../../lib/vows';
 
 // 候補の表示上限。並びは12週平均やけん、使い始めて日が浅いアプリは平均が
 // 希釈されて下位に沈む。直近7日に使っとる習慣を切り落とさんよう余裕を持たせる。
