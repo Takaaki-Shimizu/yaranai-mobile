@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
+import { Sumiire } from '../../components/Sumiire';
 import { IDEAL_MAX_LENGTH, idealLength, validateIdeal } from '../../lib/ideal/validate';
 import { loadIdeal, saveIdeal } from '../../lib/ideal/storage';
 import { useT } from '../../lib/i18n/context';
@@ -64,7 +65,7 @@ export default function Ideal() {
   };
 
   return (
-    <View style={styles.container}>
+    <Sumiire style={styles.container}>
       <Text style={styles.title}>{t.ideal.title}</Text>
 
       <View style={styles.form}>
@@ -95,7 +96,7 @@ export default function Ideal() {
 
         {error !== '' && <Text style={styles.error}>{error}</Text>}
       </View>
-    </View>
+    </Sumiire>
   );
 }
 
