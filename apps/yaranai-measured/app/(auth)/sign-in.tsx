@@ -6,6 +6,7 @@ import { Link, Redirect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { useT } from '../../lib/i18n/context';
+import { Sumiire } from '../../components/Sumiire';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -65,6 +66,8 @@ export default function SignIn() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* 墨入れ(画面遷移の所作)。キーボード回避は器に残し、内容だけが据わる */}
+      <Sumiire>
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
@@ -109,6 +112,7 @@ export default function SignIn() {
           </Link>
         )}
       </View>
+      </Sumiire>
     </KeyboardAvoidingView>
   );
 }

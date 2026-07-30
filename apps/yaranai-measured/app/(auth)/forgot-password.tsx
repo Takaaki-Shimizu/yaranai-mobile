@@ -7,6 +7,7 @@ import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
 import { colors, fonts } from '@yaranai/core';
 import { useT } from '../../lib/i18n/context';
+import { Sumiire } from '../../components/Sumiire';
 
 export default function ForgotPassword() {
   const t = useT();
@@ -42,6 +43,8 @@ export default function ForgotPassword() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* 墨入れ(画面遷移の所作)。キーボード回避は器に残し、内容だけが据わる */}
+      <Sumiire>
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
@@ -71,6 +74,7 @@ export default function ForgotPassword() {
           </Pressable>
         </Link>
       </View>
+      </Sumiire>
     </KeyboardAvoidingView>
   );
 }

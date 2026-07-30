@@ -15,6 +15,7 @@ import { formatMinutes } from '../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { useLang, useT } from '../../lib/i18n/context';
 import { MAX_VOWS } from '../../lib/vows';
+import { Sumiire } from '../../components/Sumiire';
 
 // 候補の表示上限。並びは12週平均やけん、使い始めて日が浅いアプリは平均が
 // 希釈されて下位に沈む。直近7日に使っとる習慣を切り落とさんよう余裕を持たせる。
@@ -122,6 +123,7 @@ export default function Observe() {
   const gathering = loaded && availableDays < BASELINE_MIN_DAYS;
 
   return (
+    <Sumiire style={styles.container}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{t.observe.title}</Text>
       <Text style={styles.subtitle}>{t.observe.subtitle}</Text>
@@ -175,6 +177,7 @@ export default function Observe() {
         <Text style={styles.backText}>{t.observe.back}</Text>
       </Pressable>
     </ScrollView>
+    </Sumiire>
   );
 }
 

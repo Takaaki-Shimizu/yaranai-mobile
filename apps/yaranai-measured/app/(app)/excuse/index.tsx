@@ -19,6 +19,7 @@ import { useSession, colors, fonts } from '@yaranai/core';
 
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 import { AppMenuButton } from '../../../components/AppMenu';
+import { Sumiire } from '../../../components/Sumiire';
 import { ExcuseCardView } from '../../../components/excuse/ExcuseCardView';
 import { ShareGlyph } from '../../../components/excuse/ShareGlyph';
 import type { CardContent } from '../../../components/excuse/bake';
@@ -133,15 +134,20 @@ export default function ExcuseTab() {
   };
 
   // ---- 読み込み中 --------------------------------------------------------
+  // 墨入れは内容だけに掛け、固定フッター(紙の帯)は動かさない。どの分岐も
+  // ルート直下の同じ位置に Sumiire を置くので、読み込み中→カード、掲げる⇔畳む
+  // の状態切替では再マウントされず、入場はタブへ来た一度きりしか流れない
   if (declaration === undefined) {
     return (
       <View style={styles.root}>
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.usuzumi} />
-        </View>
-        {/* この状態だけ見出しを出さないので、括り付ける行がない。
-            他の状態と同じ位置に来るよう、画面に対して直に座標を取る */}
-        <AppMenuButton style={styles.menuAlone} />
+        <Sumiire style={styles.grow}>
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.usuzumi} />
+          </View>
+          {/* この状態だけ見出しを出さないので、括り付ける行がない。
+              他の状態と同じ位置に来るよう、画面に対して直に座標を取る */}
+          <AppMenuButton style={styles.menuAlone} />
+        </Sumiire>
         <AppFooter active="excuse" />
       </View>
     );
@@ -151,16 +157,18 @@ export default function ExcuseTab() {
   if (!declaration) {
     return (
       <View style={styles.root}>
-        <View>
-          <Text style={styles.title}>{t.excuse.title}</Text>
-          <AppMenuButton style={styles.menu} />
-        </View>
-        <View style={styles.center}>
-          <Text style={styles.emptyLede}>{t.excuse.emptyLede}</Text>
-          <Pressable style={styles.action} onPress={() => router.push('/(app)/excuse/new')}>
-            <Text style={styles.actionText}>{t.excuse.create}</Text>
-          </Pressable>
-        </View>
+        <Sumiire style={styles.grow}>
+          <View>
+            <Text style={styles.title}>{t.excuse.title}</Text>
+            <AppMenuButton style={styles.menu} />
+          </View>
+          <View style={styles.center}>
+            <Text style={styles.emptyLede}>{t.excuse.emptyLede}</Text>
+            <Pressable style={styles.action} onPress={() => router.push('/(app)/excuse/new')}>
+              <Text style={styles.actionText}>{t.excuse.create}</Text>
+            </Pressable>
+          </View>
+        </Sumiire>
         <AppFooter active="excuse" />
       </View>
     );
@@ -170,6 +178,7 @@ export default function ExcuseTab() {
   if (presenting) {
     return (
       <View style={styles.root}>
+        <Sumiire style={styles.grow}>
         <View style={styles.presentBody}>
           {storyContent && (
             <ExcuseCardView
@@ -183,6 +192,7 @@ export default function ExcuseTab() {
         <Pressable style={styles.back} onPress={() => setPresenting(false)}>
           <Text style={styles.backText}>{t.excuse.back}</Text>
         </Pressable>
+        </Sumiire>
       </View>
     );
   }
@@ -198,6 +208,7 @@ export default function ExcuseTab() {
 
   return (
     <View style={styles.root}>
+      <Sumiire style={styles.grow}>
       {/* 見出しの行。三本線はこの行に括り付ける ── カードの版面より上にしか
           居場所がないことを、座標の計算ではなく入れ子で保証する */}
       <View>
@@ -248,6 +259,7 @@ export default function ExcuseTab() {
         </View>
         {message !== '' && <Text style={styles.note}>{message}</Text>}
       </View>
+      </Sumiire>
 
       {/* フッターも演出の間は伏せる。掲げ終わってから、また導線に戻る */}
       {!revealing && <AppFooter active="excuse" />}
@@ -257,6 +269,8 @@ export default function ExcuseTab() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.kinari },
+  // 墨入れの器。フッターは root 側に絶対配置で残るので、内容だけがこの中で据わる
+  grow: { flex: 1 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 20,

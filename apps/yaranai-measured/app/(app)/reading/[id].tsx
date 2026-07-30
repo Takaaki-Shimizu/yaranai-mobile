@@ -12,6 +12,7 @@ import { getArticle } from '../../../lib/articles/registry';
 import { parseArticleBody } from '../../../lib/articles/markdown';
 import { recordRead } from '../../../lib/articles/storage';
 import { useLang, useT } from '../../../lib/i18n/context';
+import { Sumiire } from '../../../components/Sumiire';
 
 export default function ArticleScreen() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function ArticleScreen() {
   const blocks = parseArticleBody(article.body[lang]);
 
   return (
-    <View style={styles.container}>
+    <Sumiire style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={styles.back}>{t.reading.back}</Text>
@@ -56,7 +57,7 @@ export default function ArticleScreen() {
         )}
         {/* 本文が終わったら余白で終わる。次の記事・おすすめは置かない(原則4) */}
       </ScrollView>
-    </View>
+    </Sumiire>
   );
 }
 

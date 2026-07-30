@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
+import { Sumiire } from '../../components/Sumiire';
 import { supabase } from '../../lib/supabase';
 import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../lib/baseline';
 import { formatMinutes } from '../../lib/format';
@@ -54,10 +55,12 @@ export default function Declare() {
     setDone(true);
   };
 
-  // 宣言(断つ)の儀式の完了画面
+  // 宣言(断つ)の儀式の完了画面。
+  // どの分岐もルートは同型の Sumiire(墨入れ)なので、分岐が切り替わっても
+  // 再マウントされず、入場はこの画面へ来た一度きりしか流れない
   if (done) {
     return (
-      <View style={styles.container}>
+      <Sumiire style={styles.container}>
         <View style={styles.doneBody}>
           <Text style={styles.doneLede}>{t.declare.doneLede(label)}</Text>
           <Text style={styles.worldview}>{t.declare.doneWorldview}</Text>
@@ -71,25 +74,25 @@ export default function Declare() {
             <Text style={styles.doneActionText}>{t.declare.toGarden}</Text>
           </Pressable>
         </View>
-      </View>
+      </Sumiire>
     );
   }
 
   if (!packageName) {
     return (
-      <View style={styles.container}>
+      <Sumiire style={styles.container}>
         <Text style={styles.description}>{t.declare.pickFromObserve}</Text>
         <Pressable style={styles.secondary} onPress={() => router.back()}>
           <Text style={styles.secondaryText}>{t.declare.back}</Text>
         </Pressable>
-      </View>
+      </Sumiire>
     );
   }
 
   // 履歴が28日に満たない間は宣言できない(機種変更直後など)
   if (baseline && baseline.status === 'insufficient') {
     return (
-      <View style={styles.container}>
+      <Sumiire style={styles.container}>
         <Text style={styles.title}>{t.declare.gatheringTitle}</Text>
         <Text style={styles.description}>
           {t.declare.gatheringBody(BASELINE_MIN_DAYS, baseline.availableDays)}
@@ -97,12 +100,12 @@ export default function Declare() {
         <Pressable style={styles.secondary} onPress={() => router.back()}>
           <Text style={styles.secondaryText}>{t.declare.back}</Text>
         </Pressable>
-      </View>
+      </Sumiire>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Sumiire style={styles.container}>
       <Text style={styles.title}>{t.declare.title}</Text>
 
       <View style={styles.form}>
@@ -133,7 +136,7 @@ export default function Declare() {
 
         {message !== '' && <Text style={styles.message}>{message}</Text>}
       </View>
-    </View>
+    </Sumiire>
   );
 }
 

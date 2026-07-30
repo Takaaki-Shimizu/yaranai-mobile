@@ -23,6 +23,7 @@ import {
   EXCUSE_MAX_WIDTH, excuseLines, excuseWidth, normalizeExcuse, validateExcuse,
 } from '../../../lib/excuse/validate';
 import { useLang, useT } from '../../../lib/i18n/context';
+import { Sumiire } from '../../../components/Sumiire';
 
 export default function ExcuseNew() {
   const session = useSession();
@@ -88,10 +89,12 @@ export default function ExcuseNew() {
   };
 
   // ---- 確認(一拍 §4.2-2) -----------------------------------------------
+  // どちらの分岐もルートは同型の Sumiire(墨入れ)なので、入力⇔確認の行き来では
+  // 再マウントされず、入場はこの画面へ来た一度きりしか流れない
   if (confirming) {
     const lines = excuseLines(text, lang);
     return (
-      <View style={styles.container}>
+      <Sumiire style={styles.container}>
         <View style={styles.confirmBody}>
           {/* 上限いっぱいの行(全角21字)は画面幅を超える。折り返さず、字ごと縮めて1行に収める */}
           {lines.map((line, i) => (
@@ -107,7 +110,7 @@ export default function ExcuseNew() {
             <Text style={styles.secondaryText}>{t.excuse.back}</Text>
           </Pressable>
         </View>
-      </View>
+      </Sumiire>
     );
   }
 
@@ -116,7 +119,7 @@ export default function ExcuseNew() {
   const preview = excuseLines(text, lang);
 
   return (
-    <View style={styles.container}>
+    <Sumiire style={styles.container}>
       <Text style={styles.title}>{t.excuse.title}</Text>
 
       <View style={styles.form}>
@@ -158,7 +161,7 @@ export default function ExcuseNew() {
 
         {error !== '' && <Text style={styles.error}>{error}</Text>}
       </View>
-    </View>
+    </Sumiire>
   );
 }
 

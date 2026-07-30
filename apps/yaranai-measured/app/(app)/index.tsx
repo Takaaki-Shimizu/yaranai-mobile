@@ -31,6 +31,7 @@ import { newestUnread, previewStripArticle, type ArticleListItem } from '../../l
 import type { ArticlesState } from '../../lib/articles/types';
 import { AppMenuButton } from '../../components/AppMenu';
 import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
+import { Sumiire } from '../../components/Sumiire';
 import { IdealHeader } from '../../components/IdealHeader';
 import { GoldRule, GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
 import { useLang, useT } from '../../lib/i18n/context';
@@ -204,6 +205,10 @@ export default function Home() {
 
   return (
     <View style={styles.root}>
+      {/* 墨入れ(画面遷移の所作)。内容だけが据わり、固定フッター・障子の覆い・
+          grain は動かさない。コールド起動では起動演出の覆いの下で流れ終わるので、
+          目に入るのはサインイン直後や replace でホームへ還ったときだけ */}
+      <Sumiire style={styles.container}>
       {/* 区間 A(§3): ホームのUIはここごとフェードアウトする。
           ヘッダー・数字・記録カード・とじるボタン自身が、まとめて退場する */}
       <Animated.ScrollView
@@ -331,6 +336,7 @@ export default function Home() {
           <Text style={styles.tojiruText}>{t.home.tojiru}</Text>
         </Pressable>
       </Animated.ScrollView>
+      </Sumiire>
 
       {/* 固定フッター(言い訳カード §3)。ホームでは「庭」が選択中。
           閉じ際の演出が始まったら、ホームのUIと一緒に沈める(覆いを遮らない) */}

@@ -19,6 +19,7 @@ import {
 import { useLang, useT } from '../../../lib/i18n/context';
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 import { AppMenuButton } from '../../../components/AppMenu';
+import { Sumiire } from '../../../components/Sumiire';
 
 const EMPTY_SECTIONS: ArticleListSections = { standing: [], conditional: [] };
 
@@ -65,6 +66,9 @@ export default function ReadingList() {
 
   return (
     <View style={styles.root}>
+      {/* 墨入れは内容と三本線だけ。固定フッター(紙の帯)は3画面で同じものなので
+          動かさない ── 帯まで浮かせると、タブ移動のたびに帯が揺れて見える */}
+      <Sumiire style={styles.container}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.title}>{t.reading.listTitle}</Text>
 
@@ -92,6 +96,7 @@ export default function ReadingList() {
       {/* メニュー(§5.3)。庭と同じ右上に、見出しの行と同じ高さで置く。
           一覧と一緒に流れると入口が消えるので、スクロールの外に固定する */}
       <AppMenuButton style={styles.menu} />
+      </Sumiire>
 
       {/* 固定フッター(言い訳カード §3)。読みものは3タブの真ん中 */}
       <AppFooter active="reading" />

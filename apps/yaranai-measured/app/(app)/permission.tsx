@@ -8,6 +8,7 @@ import {
   openUsageAccessSettings,
 } from '../../modules/usage-stats';
 import { useT } from '../../lib/i18n/context';
+import { Sumiire } from '../../components/Sumiire';
 
 export default function Permission() {
   const router = useRouter();
@@ -35,15 +36,15 @@ export default function Permission() {
 
   if (!isUsageStatsAvailable) {
     return (
-      <View style={styles.container}>
+      <Sumiire style={styles.container}>
         <Text style={styles.wordmark}>Yaranai</Text>
         <Text style={styles.body}>{t.permission.androidOnly}</Text>
-      </View>
+      </Sumiire>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Sumiire style={styles.container}>
       <Text style={styles.wordmark}>Yaranai</Text>
 
       <View style={styles.form}>
@@ -54,7 +55,7 @@ export default function Permission() {
           <Text style={styles.primaryText}>{t.permission.openSettings}</Text>
         </Pressable>
       </View>
-    </View>
+    </Sumiire>
   );
 }
 
