@@ -12,15 +12,16 @@
 // マスクを紙片群にかける。Skia の PerlinNoise は SVG の feTurbulence と同系の
 // 実装のため、同じ baseFrequency / octaves / seed でモックと同じムラが出る。
 
+import { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import {
-  Canvas, ColorMatrix, Fill, FractalNoise, Group, Mask, Path, Rect,
+  Canvas, ColorMatrix, Fill, FractalNoise, Group, LinearGradient, Mask, Path, Rect, vec,
 } from '@shopify/react-native-skia';
 import type { Transforms3d } from '@shopify/react-native-skia';
 import {
-  FOOTER_BASE_HEIGHT, FOOTER_FOILS, FOOTER_PIECES, GRAIN, GRAIN_DESATURATE_MATRIX,
+  FOOTER_BASE_HEIGHT, FOOTER_FOILS, FOOTER_PIECES, GOLD_RULE, GRAIN, GRAIN_DESATURATE_MATRIX,
   HEADER_FOILS, HEADER_MOTIF_HEIGHT, HEADER_PIECES, MOTIF_BASE_WIDTH, MOTTLE,
-  MOTTLE_ALPHA_MATRIX, piecePath, type Foil, type PaperPiece,
+  MOTTLE_ALPHA_MATRIX, PIECE_EDGE, piecePath, type Foil, type PaperPiece,
 } from '../../lib/washi/motif';
 
 // マスク用ノイズ矩形の外周余白。紙片の頂点が負座標(帯の外)まで届くため、
@@ -58,7 +59,19 @@ function MottledPieces({ pieces, freqY, baseHeight, transform }: {
     >
       <Group transform={transform}>
         {pieces.map((p, i) => (
-          <Path key={i} path={piecePath(p)} color={p.fill} opacity={p.opacity} />
+          <Path key={`fill-${i}`} path={piecePath(p)} color={p.fill} opacity={p.opacity} />
+        ))}
+        {/* 紙片の際。塗りを全部描いたあとに重ねるので、下の紙の縁も上の紙の上に出る
+            ── 実際の重ね貼りと同じで、透けた縁が見えるほうが紙らしい */}
+        {pieces.map((p, i) => (
+          <Path
+            key={`edge-${i}`}
+            path={piecePath(p)}
+            style="stroke"
+            strokeWidth={PIECE_EDGE.width}
+            color={PIECE_EDGE.color}
+            opacity={PIECE_EDGE.opacity}
+          />
         ))}
       </Group>
     </Mask>
@@ -146,6 +159,47 @@ export function FooterWashi({ height }: { height: number }) {
 }
 
 /**
+ * 金の界線: 題字(Yaranai)から真横に一本。
+ *
+ * ヘッダー行(題字 / 界線 / 三本線)の真ん中の子として流し込む。行は
+ * alignItems: 'baseline' なので、高さを持たないこの View は下端が題字の
+ * ベースラインに揃う ── 界線の縦位置は数値で当てず、字から取る。
+ * 幅は残りいっぱい(flex: 1)を取り、両端の間合いだけ margin で空ける。
+ *
+ * グラデーションの端を実幅に合わせる必要があるので、onLayout で測ってから描く
+ * (測る前の1フレームは何も出ないが、静止画なので破綻しない)。
+ */
+export function GoldRule() {
+  const [width, setWidth] = useState(0);
+  return (
+    <View
+      pointerEvents="none"
+      style={styles.goldRule}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width > 0 && (
+        <Canvas style={StyleSheet.absoluteFill}>
+          <Rect
+            x={0}
+            y={0}
+            width={width}
+            height={GOLD_RULE.thickness}
+            opacity={GOLD_RULE.opacity}
+          >
+            <LinearGradient
+              start={vec(0, 0)}
+              end={vec(width, 0)}
+              colors={[...GOLD_RULE.colors]}
+              positions={[...GOLD_RULE.stops]}
+            />
+          </Rect>
+        </Canvas>
+      )}
+    </View>
+  );
+}
+
+/**
  * grain 紙肌(§7): 画面全体をコンテンツより前面から multiply 0.05 で覆う。
  * ノイズシェーダは無限平面なのでタイル繰り返しは不要(見た目はモックの
  * 220dpタイルと同等で、継ぎ目が出ないぶん素直)。タップは素通しする。
@@ -170,6 +224,12 @@ export function GrainOverlay() {
 
 const styles = StyleSheet.create({
   headerMotif: { position: 'absolute', top: 0, left: 0, right: 0 },
+  goldRule: {
+    flex: 1,
+    height: GOLD_RULE.thickness,
+    marginLeft: GOLD_RULE.gapStart,
+    marginRight: GOLD_RULE.gapEnd,
+  },
   footerClip: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   grain: {
     ...StyleSheet.absoluteFillObject,

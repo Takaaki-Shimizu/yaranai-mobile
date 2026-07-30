@@ -53,11 +53,38 @@ export const HEADER_PIECES: readonly PaperPiece[] = [
   { points: [[60, -60], [210, -40], [230, 80], [130, 120], [40, 40]], fill: WASHI.washi2, opacity: 0.45 },
 ];
 
-/** ヘッダー意匠: 金箔2粒(§4) */
+/**
+ * ヘッダー意匠: 金箔2粒(§4)。
+ * 2粒目は元々 (268, 70) にあったが、題字のベースライン(y≈82)に金の界線
+ * (GOLD_RULE)を通したことで線のすぐ上に浮くかたちになったため、上へ逃がした。
+ * 金の主役は界線で、箔はその余韻に留める。
+ */
 export const HEADER_FOILS: readonly Foil[] = [
   { x: 96, y: 34, size: 9, rotate: 16, fill: WASHI.foil1, opacity: 0.7 },
-  { x: 268, y: 70, size: 8, rotate: -14, fill: WASHI.foil2, opacity: 0.6 },
+  { x: 296, y: 52, size: 8, rotate: -14, fill: WASHI.foil2, opacity: 0.55 },
 ];
+
+/**
+ * 金の界線: 題字(Yaranai)のベースラインから真横に引く一本。
+ *
+ * 金箔を増やすと視線を散らす粒が増えるだけなので、金は「面」ではなく「線」で入れる。
+ * 装飾経の界線に倣った引き方で、粒より静かなまま金の格だけが上がる。
+ *
+ * 両端は地(生成り)に溶かす。始端を切り落とすと題字に付いた下線に見え、
+ * 終端を切り落とすと三本線に突き当たって見えるため、どちらもグラデーションで抜く。
+ */
+export const GOLD_RULE = {
+  /** 線の太さ(dp)。1 より太いと箔ではなく罫に見える */
+  thickness: 1,
+  /** 題字の右端との間合い(dp)。下線と読ませないための間 */
+  gapStart: 16,
+  /** 三本線との間合い(dp)。線がボタンに触れない距離 */
+  gapEnd: 20,
+  /** 端から順に: 透明 → 金 → 金(明) → 透明 */
+  colors: ['#C9A84C00', WASHI.foil1, WASHI.foil2, '#D9BC6A00'] as const,
+  stops: [0, 0.18, 0.6, 1] as const,
+  opacity: 0.75,
+} as const;
 
 /**
  * フッター帯のローカル座標の基準高さ(dp)。実際の帯の高さが異なる場合は
@@ -85,6 +112,25 @@ export const FOOTER_FOILS: readonly Foil[] = [
   { x: 338, y: 14, size: 9, rotate: -14, fill: WASHI.foil2, opacity: 0.6 },
   { x: 72, y: 42, size: 8, rotate: 20, fill: WASHI.foil1, opacity: 0.6 },
 ];
+
+/**
+ * 紙片の際(きわ)。
+ *
+ * 「ぱっと見で和紙と分からない」原因は紙片が薄いことではなく、輪郭が無いこと。
+ * 塗りだけだと地との差が数%しかなく面として溶けるが、境目に細い線が一本入ると
+ * 「紙が重なっている」ことは同じ濃度のままでも読める。全体を濃くせずに
+ * 存在感だけを上げたいので、opacity ではなく輪郭で稼ぐ。
+ *
+ * 線は塗りと同じ mottle マスクの下に置く ── マスクのムラで線が途切れ、
+ * 描いた輪郭ではなく紙の耳(deckle edge)として掠れる。
+ */
+export const PIECE_EDGE = {
+  /** 紙片より半段濃い色。単独では使わず、必ずマスク越しに出す */
+  color: '#A2957B',
+  width: 1,
+  /** マスク(平均 alpha ≈ 0.28)を通ると実効 0.15 前後まで落ちる前提の値 */
+  opacity: 0.5,
+} as const;
 
 /** 紙片の質感 mottle(§6): FractalNoise の輝度をアルファに変換して紙片にムラをかける */
 export const MOTTLE = {

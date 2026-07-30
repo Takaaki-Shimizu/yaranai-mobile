@@ -32,7 +32,7 @@ import type { ArticlesState } from '../../lib/articles/types';
 import { AppMenuButton } from '../../components/AppMenu';
 import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
 import { IdealHeader } from '../../components/IdealHeader';
-import { GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
+import { GoldRule, GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
 import { useLang, useT } from '../../lib/i18n/context';
 import { MAX_VOWS } from '../../lib/vows';
 import type { GrowthParams } from '../../lib/garden/growth';
@@ -220,6 +220,9 @@ export default function Home() {
           <HeaderWashi />
           <View style={styles.header}>
             <Text style={styles.wordmark}>Yaranai</Text>
+            {/* 金の界線: 題字のベースラインから三本線の手前まで真横に一本。
+                行が baseline 揃えなので、縦位置は字から取れる(数値で当てない) */}
+            <GoldRule />
             {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
             <AppMenuButton />
           </View>
