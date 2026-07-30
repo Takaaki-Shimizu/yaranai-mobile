@@ -75,7 +75,7 @@ type Href = Parameters<ReturnType<typeof useRouter>['navigate']>[0];
 
 type Item = { tab: FooterTab; href: Href; label: string; icon: (p: { color: string }) => ReactElement };
 
-export function AppFooter({ active, washi }: { active: FooterTab; washi?: boolean }) {
+export function AppFooter({ active }: { active: FooterTab }) {
   const router = useRouter();
   const t = useT();
   const insets = useSafeAreaInsets();
@@ -89,9 +89,11 @@ export function AppFooter({ active, washi }: { active: FooterTab; washi?: boolea
 
   return (
     <View style={[styles.bar, { height: barHeight, paddingBottom: insets.bottom }]}>
-      {/* 和紙意匠(ホームのみ §5)。帯に内包して境界でクリップし、アイコンより背面に敷く。
+      {/* 和紙意匠(§5)。フッターは3画面で同じ帯なので、意匠もここで常に敷く
+          ── 画面ごとに有無が変わると、タブを移った瞬間に地が入れ替わって見える。
+          帯に内包して境界でクリップし、アイコンより背面に置く。
           帯の実高(下インセット込み)へ縦をストレッチして端末差に追従する */}
-      {washi && <FooterWashi height={barHeight} />}
+      <FooterWashi height={barHeight} />
       {items.map(({ tab, href, label, icon: Icon }) => (
         <Pressable
           key={tab}
