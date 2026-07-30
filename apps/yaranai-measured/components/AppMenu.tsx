@@ -1,5 +1,9 @@
 // ハンバーガーメニュー(実装仕様書 §5.3)。ヘッダー右上の「退出」を差し替える入口。
 //
+// 入口(三本線)は AppMenuButton として同じファイルに置き、フッターを持つ3画面
+// (庭/読みもの/言い訳カード)の右上に同じ形で出す ── 理想も言語もログアウトも
+// 画面を選ばない設定なので、庭に戻らないと開けないのは、ただの遠回りになる。
+//
 // 項目は上から: 理想を入力 / 言語(罫線で区切る) / ログアウト(罫線で区切り最下部)。
 //
 // 「読みもの」はフッターの2つめのタブが持つのでここには置かない。理想は庭の掛け軸
@@ -16,7 +20,10 @@
 // 言語(yaranai.language.v1)も同様に残る。
 
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, Text, View, StyleSheet, Alert, Animated, Easing } from 'react-native';
+import {
+  Modal, Pressable, Text, View, StyleSheet, Alert, Animated, Easing,
+  type StyleProp, type ViewStyle,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../lib/supabase';
@@ -130,10 +137,42 @@ export function AppMenu({ visible, onClose }: Props) {
   );
 }
 
+/**
+ * メニューの入口(三本線)。開閉の状態はここで持つので、置く側は場所を決めるだけでよい。
+ * 庭はヘッダー帯の行の中に流し込み、読みもの・言い訳カードは見出しの行の右端へ
+ * style で絶対配置する ── 画面ごとに三本線の寸法や色が散らないよう、絵はここにだけ置く。
+ */
+export function AppMenuButton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const [open, setOpen] = useState(false);
+  const t = useT();
+  return (
+    <>
+      <Pressable
+        style={style}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={t.menu.a11yLabel}
+        onPress={() => setOpen(true)}
+      >
+        <View style={styles.hamburger}>
+          <View style={styles.hbLine} />
+          <View style={styles.hbLine} />
+          <View style={styles.hbLine} />
+        </View>
+      </Pressable>
+      <AppMenu visible={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
 // 面の紙。地(生成り)と同色だと背景に沈んでのっぺり見えるため、半段だけ明るい紙を使う。
 const WASHI = '#F6F1E6';
 
 const styles = StyleSheet.create({
+  // 三本線(§5.3)。20x14 の中に 1px の線を3本。色は薄墨 ── 看板より前に出させない
+  hamburger: { width: 20, height: 14, justifyContent: 'space-between' },
+  hbLine: { height: 1, backgroundColor: colors.usuzumi },
+
   backdrop: { flex: 1, backgroundColor: 'rgba(43, 39, 35, 0.28)' },
   backdropFill: { flex: 1, justifyContent: 'flex-start', alignItems: 'flex-end' },
   // 影の層。角丸で切らない(overflow: hidden を置くと影ごと消える)。
