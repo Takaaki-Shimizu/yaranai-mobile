@@ -29,7 +29,7 @@ import { evaluateCrashedDay, evaluateStanding } from '../../lib/articles/evaluat
 import { loadArticlesState } from '../../lib/articles/storage';
 import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
 import type { ArticlesState } from '../../lib/articles/types';
-import { AppMenu } from '../../components/AppMenu';
+import { AppMenuButton } from '../../components/AppMenu';
 import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
 import { IdealHeader } from '../../components/IdealHeader';
 import { GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
@@ -71,7 +71,6 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   // 読みもの(§5.1): 記事状態を素のまま持ち、未読の帯の1本はレンダー時に言語をかけて選ぶ。
   const [articlesState, setArticlesState] = useState<ArticlesState | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   // 閉じ際演出「とじる」(§1)。演出中はホームのUIを退場させ、覆いに任せる。
   const [closing, setClosing] = useState(false);
   const contentOpacity = useSharedValue(1);
@@ -216,21 +215,13 @@ export default function Home() {
           <View style={styles.header}>
             <Text style={styles.wordmark}>Yaranai</Text>
             {/* §5.3: 「退出」を撤去し、ハンバーガー(三本線)へ差し替える */}
-            <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityLabel={t.menu.a11yLabel}>
-              <View style={styles.hamburger}>
-                <View style={styles.hbLine} />
-                <View style={styles.hbLine} />
-                <View style={styles.hbLine} />
-              </View>
-            </Pressable>
+            <AppMenuButton />
           </View>
 
           {/* 理想(WHAT)は庭の直上に常設する。開発者モードでも同じ枠を使い、
               未入力でも高さを確保するので庭の描画開始位置は動かない */}
           <IdealHeader />
         </View>
-
-        <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
         {/* 開発者モード(§2): 庭のパラメータ手動注入UI。実測・高水位・差分演出は通さない */}
         {isDeveloper ? (
@@ -390,8 +381,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   wordmark: { fontFamily: fonts.serif, fontSize: 16, letterSpacing: 6, color: colors.sumi },
-  hamburger: { width: 20, height: 14, justifyContent: 'space-between' },
-  hbLine: { height: 1, backgroundColor: colors.usuzumi },
 
   // 読みものの帯(§5.1): 上下1pxの罫線のみ。背景色・影・角丸なし。
   strip: {

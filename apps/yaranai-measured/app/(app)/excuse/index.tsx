@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession, colors, fonts } from '@yaranai/core';
 
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
+import { AppMenuButton } from '../../../components/AppMenu';
 import { ExcuseCardView } from '../../../components/excuse/ExcuseCardView';
 import { ShareGlyph } from '../../../components/excuse/ShareGlyph';
 import type { CardContent } from '../../../components/excuse/bake';
@@ -138,6 +139,7 @@ export default function ExcuseTab() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.usuzumi} />
         </View>
+        <AppMenuButton style={styles.menu} />
         <AppFooter active="excuse" />
       </View>
     );
@@ -154,6 +156,7 @@ export default function ExcuseTab() {
             <Text style={styles.actionText}>{t.excuse.create}</Text>
           </Pressable>
         </View>
+        <AppMenuButton style={styles.menu} />
         <AppFooter active="excuse" />
       </View>
     );
@@ -235,6 +238,10 @@ export default function ExcuseTab() {
         {message !== '' && <Text style={styles.note}>{message}</Text>}
       </View>
 
+      {/* メニュー(§5.3)。演出の間はフッターと同じく引っ込める ── 絶対配置なので
+          外しても版面は動かず、伏せたまま押せてしまうこともない */}
+      {!revealing && <AppMenuButton style={styles.menu} />}
+
       {/* フッターも演出の間は伏せる。掲げ終わってから、また導線に戻る */}
       {!revealing && <AppFooter active="excuse" />}
     </View>
@@ -252,6 +259,10 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     paddingBottom: 12,
   },
+  // 三本線の置き場所。見出し(paddingTop 64・20pt)の行の中央に来るよう、
+  // 上端から 64 の位置に見出し1行ぶんの箱を置いて、その中で縦中央に据える。
+  // 読みもの画面と同じ座標(タブを移っても入口が動かない)
+  menu: { position: 'absolute', top: 64, right: 28, height: 28, justifyContent: 'center' },
   center: {
     flex: 1,
     alignItems: 'center',

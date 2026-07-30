@@ -18,6 +18,7 @@ import {
 } from '../../../lib/articles/select';
 import { useLang, useT } from '../../../lib/i18n/context';
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
+import { AppMenuButton } from '../../../components/AppMenu';
 
 const EMPTY_SECTIONS: ArticleListSections = { standing: [], conditional: [] };
 
@@ -88,6 +89,10 @@ export default function ReadingList() {
         </Pressable>
       </ScrollView>
 
+      {/* メニュー(§5.3)。庭と同じ右上に、見出しの行と同じ高さで置く。
+          一覧と一緒に流れると入口が消えるので、スクロールの外に固定する */}
+      <AppMenuButton style={styles.menu} />
+
       {/* 固定フッター(言い訳カード §3)。読みものは3タブの真ん中 */}
       <AppFooter active="reading" />
     </View>
@@ -106,6 +111,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 40,
   },
+  // 三本線の置き場所。見出し(paddingTop 64・20pt)の行の中央に来るよう、
+  // 上端から 64 の位置に見出し1行ぶんの箱を置いて、その中で縦中央に据える
+  menu: { position: 'absolute', top: 64, right: 28, height: 28, justifyContent: 'center' },
   list: { gap: 4 },
   row: {
     flexDirection: 'row',
