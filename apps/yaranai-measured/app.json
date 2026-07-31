@@ -4,6 +4,7 @@
     "slug": "yaranai-measured",
     "version": "1.0.0",
     "orientation": "portrait",
+    "backgroundColor": "#F1EBDE",
     "icon": "./assets/icon.png",
     "scheme": "yaranaimeasured",
     "userInterfaceStyle": "automatic",

@@ -6,7 +6,7 @@ import {
 import Animated, {
   Easing, useAnimatedStyle, useSharedValue, withTiming,
 } from 'react-native-reanimated';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncAll } from '../../lib/usage-sync';
@@ -31,7 +31,7 @@ import { newestUnread, previewStripArticle, type ArticleListItem } from '../../l
 import type { ArticlesState } from '../../lib/articles/types';
 import { AppMenuButton } from '../../components/AppMenu';
 import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { IdealHeader } from '../../components/IdealHeader';
 import { GoldRule, GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
 import { useLang, useT } from '../../lib/i18n/context';
@@ -54,7 +54,8 @@ type Totals = {
 export default function Home() {
   const session = useSession();
   const isDeveloper = useIsDeveloper();
-  const router = useRouter();
+  // 遷移は「筆を引いてから移る」(components/Sumiire.tsx)。router を直接叩かない
+  const router = useSumiireRouter();
   const { lang } = useLang();
   const t = useT();
   const { width: windowWidth } = useWindowDimensions();

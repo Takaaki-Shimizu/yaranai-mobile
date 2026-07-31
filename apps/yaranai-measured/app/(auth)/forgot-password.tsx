@@ -2,14 +2,14 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { Link } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase } from '../../lib/supabase';
 import { colors, fonts } from '@yaranai/core';
 import { useT } from '../../lib/i18n/context';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 
 export default function ForgotPassword() {
+  const router = useSumiireRouter();
   const t = useT();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -68,11 +68,10 @@ export default function ForgotPassword() {
         {notice !== '' && <Text style={styles.notice}>{notice}</Text>}
         {message !== '' && <Text style={styles.message}>{message}</Text>}
 
-        <Link href="/(auth)/sign-in" asChild>
-          <Pressable style={styles.link}>
-            <Text style={styles.linkText}>{t.auth.backToSignIn}</Text>
-          </Pressable>
-        </Link>
+        {/* Link ではなく「筆を引く」ルーターを通す。navigate なので履歴は伸びない */}
+        <Pressable style={styles.link} onPress={() => router.navigate('/(auth)/sign-in')}>
+          <Text style={styles.linkText}>{t.auth.backToSignIn}</Text>
+        </Pressable>
       </View>
       </Sumiire>
     </KeyboardAvoidingView>

@@ -11,13 +11,13 @@ import { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { colors, fonts } from '@yaranai/core';
 
 import { HomeGarden } from './HomeGarden';
 import { buildGrowthFromDebug } from './load';
+import { useSumiireRouter } from '../Sumiire';
 import { HOME_ASPECT } from '../../lib/garden/scene';
 import { FULL_DAYS, MOSS_FULL_HOURS } from '../../lib/garden/growth';
 
@@ -110,7 +110,7 @@ function DebugSlider({ label, value, min, max, step, unit, onChange }: SliderPro
 
 export function DevGarden() {
   const { width } = useWindowDimensions();
-  const router = useRouter();
+  const router = useSumiireRouter();
   const [days, setDays] = useState(42);
   const [savedHours, setSavedHours] = useState(Math.round(MOSS_FULL_HOURS / 2));
 

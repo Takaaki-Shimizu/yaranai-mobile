@@ -19,6 +19,7 @@ import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
 import { colors } from '@yaranai/core';
 import { useT } from '../lib/i18n/context';
 import { FooterWashi } from './washi/Washi';
+import { useSumiireRouter } from './Sumiire';
 
 export type FooterTab = 'garden' | 'reading' | 'excuse';
 
@@ -76,7 +77,8 @@ type Href = Parameters<ReturnType<typeof useRouter>['navigate']>[0];
 type Item = { tab: FooterTab; href: Href; label: string; icon: (p: { color: string }) => ReactElement };
 
 export function AppFooter({ active }: { active: FooterTab }) {
-  const router = useRouter();
+  // タブ移動も「筆を引いてから移る」。帯そのものは3画面で共通なので動かない
+  const router = useSumiireRouter();
   const t = useT();
   const insets = useSafeAreaInsets();
   const barHeight = FOOTER_HEIGHT + insets.bottom;

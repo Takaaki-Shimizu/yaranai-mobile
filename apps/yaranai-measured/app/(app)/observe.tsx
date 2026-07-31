@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
 } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncLocalUsage } from '../../lib/usage-sync';
@@ -15,7 +15,7 @@ import { formatMinutes } from '../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { useLang, useT } from '../../lib/i18n/context';
 import { MAX_VOWS } from '../../lib/vows';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 
 // 候補の表示上限。並びは12週平均やけん、使い始めて日が浅いアプリは平均が
 // 希釈されて下位に沈む。直近7日に使っとる習慣を切り落とさんよう余裕を持たせる。
@@ -37,7 +37,7 @@ type ObserveRow = {
 };
 
 export default function Observe() {
-  const router = useRouter();
+  const router = useSumiireRouter();
   const { lang } = useLang();
   const t = useT();
   const [rows, setRows] = useState<ObserveRow[]>([]);

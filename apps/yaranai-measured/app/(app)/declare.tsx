@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { supabase } from '../../lib/supabase';
 import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../lib/baseline';
 import { formatMinutes } from '../../lib/format';
@@ -12,7 +12,7 @@ import { useLang, useT } from '../../lib/i18n/context';
 
 export default function Declare() {
   const session = useSession();
-  const router = useRouter();
+  const router = useSumiireRouter();
   const { lang } = useLang();
   const t = useT();
   const params = useLocalSearchParams<{ packageName?: string; label?: string }>();

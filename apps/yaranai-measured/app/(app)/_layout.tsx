@@ -25,13 +25,13 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.kinari },
-        // 画面遷移の所作「墨入れ」(components/Sumiire.tsx)。全画面が同じ生成りの
-        // 地を敷いているので、フェードにすると紙は動かず墨(内容)だけが入れ替わって
-        // 見える。庭の「控えめなフェード」(§5.3)もこの既定に含まれる。
-        // 各画面は Sumiire で内容の浮き上がりをこの上に重ねる。
-        // animationDuration は対応環境(iOS)でのみ効き、Android はOSのフェードに従う
+        // 画面遷移の所作「墨入れ」(components/Sumiire.tsx)。所作の本体はJS側
+        // (筆を引く→間→墨入れ)が持ち、Stack の fade は「同色の紙同士の継ぎ目消し」
+        // だけを担う。Android の fade は 150ms 固定で、遷移中は新旧両画面の
+        // 不透明度が同時に下がりウィンドウ背景が透けるため、app.json の
+        // backgroundColor を生成りに固定してある(未指定だとOSテーマの色で暗転が出る)。
+        // 庭の「控えめなフェード」(§5.3)もこの既定に含まれる
         animation: 'fade',
-        animationDuration: 300,
       }}
     />
   );

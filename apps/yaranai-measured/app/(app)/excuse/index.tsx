@@ -13,13 +13,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ActivityIndicator, useWindowDimensions, BackHandler,
 } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession, colors, fonts } from '@yaranai/core';
 
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 import { AppMenuButton } from '../../../components/AppMenu';
-import { Sumiire } from '../../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
 import { ExcuseCardView } from '../../../components/excuse/ExcuseCardView';
 import { ShareGlyph } from '../../../components/excuse/ShareGlyph';
 import type { CardContent } from '../../../components/excuse/bake';
@@ -35,7 +35,7 @@ import { useReduceMotion } from '../../../lib/use-reduce-motion';
 
 export default function ExcuseTab() {
   const session = useSession();
-  const router = useRouter();
+  const router = useSumiireRouter();
   const t = useT();
   const { lang } = useLang();
   const reduceMotion = useReduceMotion();

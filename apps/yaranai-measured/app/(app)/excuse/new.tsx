@@ -13,7 +13,6 @@ import { useRef, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 
 import { pickPlaceholder } from '../../../lib/excuse/placeholders';
@@ -23,11 +22,11 @@ import {
   EXCUSE_MAX_WIDTH, excuseLines, excuseWidth, normalizeExcuse, validateExcuse,
 } from '../../../lib/excuse/validate';
 import { useLang, useT } from '../../../lib/i18n/context';
-import { Sumiire } from '../../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
 
 export default function ExcuseNew() {
   const session = useSession();
-  const router = useRouter();
+  const router = useSumiireRouter();
   const t = useT();
   const { lang } = useLang();
   const userId = session?.user?.id;
