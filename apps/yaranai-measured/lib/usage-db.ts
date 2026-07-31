@@ -83,42 +83,6 @@ export async function getMinutesForPackage(
   return Math.round((row?.ms ?? 0) / 60000);
 }
 
-// 範囲内で「何かしらの行がある日」の集合。hasAnyDataForDate の範囲版
-// (どのアプリの行も無い日 = 記録なし、の意味論をそのまま複数日へ広げたもの)。
-// 誓い別詳細画面の日別ログが使う。1日ずつN回クエリせず、1回のSELECTで引く。
-export async function getRecordedDatesInRange(
-  fromDate: string,
-  toDate: string,
-): Promise<Set<string>> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<{ record_date: string }>(
-    'select distinct record_date from usage_daily where record_date between ? and ?',
-    fromDate,
-    toDate,
-  );
-  return new Set(rows.map((r) => r.record_date));
-}
-
-// 範囲内の指定アプリの日別実測(分)。行が無い日はキーごと無い。
-// 「記録なし(その日に行が一切ない)」との区別は getRecordedDatesInRange と
-// 突き合わせて呼び出し側(lib/vow-log.ts)が行う。
-export async function getMinutesByDateForPackage(
-  packageName: string,
-  fromDate: string,
-  toDate: string,
-): Promise<Map<string, number>> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<{ record_date: string; ms: number }>(
-    `select record_date, foreground_ms as ms
-     from usage_daily
-     where package_name = ? and record_date between ? and ?`,
-    packageName,
-    fromDate,
-    toDate,
-  );
-  return new Map(rows.map((r) => [r.record_date, Math.round(r.ms / 60000)]));
-}
-
 export type WeeklyUsage = {
   packageName: string;
   totalMinutes: number;

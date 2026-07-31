@@ -3,30 +3,33 @@
 // 素の使用時間の推移は出さない(Digital Wellbeing化の禁止)。
 // 崩れた日を責めない: 赤・警告・叱責・「連続◯日」系の表現は置かない。
 //
-// データソースは端末内DB(usage_daily)のみ。この画面のためにSupabaseへ
-// 新たに送るデータは増やさない(五原則4)。
-// 既知の制約: ローカルDBは機種変更・再インストールで消えるため、この画面の
-// 日別ログも同様に消える(既知のデータ復元課題の一部)。データ復元を実装する
-// ときは、この画面の材料(usage_daily の履歴)も復元対象に含めること。
+// データソースはSupabaseの measured_daily。ホームの累計(measured_saved ビュー)と
+// 同じ行を同じ規則で合算するけん、個別合計を足すと総計に必ず一致する(検算)。
+// 端末内DB(usage_daily)からは計算しない: 端末DBは再インストール・機種変更で
+// 履歴が欠け、サーバーに残る過去分とズレるため。この画面のためにSupabaseへ
+// 新たに送るデータは増やさない(五原則4。読むだけ)。
+// オフライン時は最後にサーバーから取得できた写し(vow-log-cache.ts)をそのまま
+// 出す。別ソースで計算し直さないけん、古いことはあってもズレることはない。
 
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import { colors, fonts } from '@yaranai/core';
+import { colors, fonts, useSession } from '@yaranai/core';
 import { supabase } from '../../../lib/supabase';
-import { syncLocalUsage } from '../../../lib/usage-sync';
-import { getMinutesByDateForPackage, getRecordedDatesInRange } from '../../../lib/usage-db';
+import { syncAll } from '../../../lib/usage-sync';
 import { recordDateDaysAgo } from '../../../lib/dates';
 import { formatMinutes } from '../../../lib/format';
 import {
-  buildVowLog,
+  buildVowLogFromDailyRows,
   formatFullDate,
   formatMonthDay,
   stepChartPaths,
   totalSavedMinutes,
+  type ServerDailyRow,
   type VowLogEntry,
 } from '../../../lib/vow-log';
+import { loadVowLogSnapshot, saveVowLogSnapshot } from '../../../lib/vow-log-cache';
 import { getAppLabels } from '../../../modules/usage-stats';
 import { useLang, useT } from '../../../lib/i18n/context';
 import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
@@ -43,6 +46,7 @@ const H_PADDING = 28;
 
 export default function VowDetail() {
   const router = useSumiireRouter();
+  const session = useSession();
   const { lang } = useLang();
   const t = useT();
   const { width: windowWidth } = useWindowDimensions();
@@ -54,37 +58,56 @@ export default function VowDetail() {
 
   const loadAll = useCallback(async () => {
     if (!vowId) return;
-    const { data } = await supabase
-      .from('measured_vows')
-      .select('package_name, app_label, baseline_minutes, declared_on')
-      .eq('id', vowId)
-      .maybeSingle();
-    if (!data) {
+    // 先に端末→サーバーの同期を走らせ、確定済みの昨日分までをサーバーに載せる。
+    // syncAll は失敗を握って静かに戻るけん、オフラインでもここで止まらない。
+    if (session) await syncAll(session.user.id);
+
+    const [vowRes, dailyRes] = await Promise.all([
+      supabase
+        .from('measured_vows')
+        .select('package_name, app_label, baseline_minutes, declared_on')
+        .eq('id', vowId)
+        .maybeSingle(),
+      supabase
+        .from('measured_daily')
+        .select('record_date, actual_minutes')
+        .eq('vow_id', vowId),
+    ]);
+
+    // 読み取り失敗(オフライン等)は最後の写しで受ける。写しも無ければ生成りの地の
+    // まま静かに待つ(loaded は立てない: 誓いが無いと誤認してホームへ流さない)。
+    if (vowRes.error || dailyRes.error) {
+      const snapshot = await loadVowLogSnapshot(vowId);
+      if (snapshot) {
+        setVow(snapshot.vow);
+        setOfficialLabel(
+          getAppLabels([snapshot.vow.package_name])[snapshot.vow.package_name] ?? null,
+        );
+        setEntries(snapshot.entries);
+        setLoaded(true);
+      }
+      return;
+    }
+    if (!vowRes.data) {
       setLoaded(true);
       return;
     }
-    const info = data as VowInfo;
+    const info = vowRes.data as VowInfo;
     setVow(info);
     setOfficialLabel(getAppLabels([info.package_name])[info.package_name] ?? null);
 
-    // 昨日以前だけが確定。当日は増え続けるけん、この画面には一切出さない。
-    await syncLocalUsage();
-    const yesterday = recordDateDaysAgo(1);
-    const [recordedDates, actualMinutesByDate] = await Promise.all([
-      getRecordedDatesInRange(info.declared_on, yesterday),
-      getMinutesByDateForPackage(info.package_name, info.declared_on, yesterday),
-    ]);
-    setEntries(
-      buildVowLog({
-        declaredOn: info.declared_on,
-        lastConfirmedDate: yesterday,
-        baselineMinutes: Number(info.baseline_minutes),
-        recordedDates,
-        actualMinutesByDate,
-      }),
-    );
+    // 昨日以前だけが確定。当日は増え続けるけん、この画面には一切出さない
+    // (同期も当日行を書かんけん、サーバー行をそのまま信じてよい)。
+    const built = buildVowLogFromDailyRows({
+      declaredOn: info.declared_on,
+      lastConfirmedDate: recordDateDaysAgo(1),
+      baselineMinutes: Number(info.baseline_minutes),
+      rows: (dailyRes.data ?? []) as ServerDailyRow[],
+    });
+    setEntries(built);
     setLoaded(true);
-  }, [vowId]);
+    saveVowLogSnapshot(vowId, { vow: info, entries: built });
+  }, [vowId, session]);
 
   useFocusEffect(
     useCallback(() => {

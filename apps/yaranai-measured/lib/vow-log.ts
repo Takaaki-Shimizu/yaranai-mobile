@@ -98,6 +98,34 @@ export function totalSavedMinutes(entries: readonly VowLogEntry[]): number {
   return entries.length === 0 ? 0 : entries[entries.length - 1].cumulativeMinutes;
 }
 
+// Supabase measured_daily の1行(この画面が読むのは日付と実測分だけ)。
+export type ServerDailyRow = {
+  /** record_date (YYYY-MM-DD) */
+  record_date: string;
+  actual_minutes: number;
+};
+
+// サーバー行 → 日別ログ。ホームの累計(measured_saved ビュー)と同じ行を材料に
+// 同じ規則(per-app クリップ)で組むけん、個別合計と総計の検算が構造的に一致する。
+//
+// 行の意味論は usage-sync.ts の書き込み規則そのまま:
+//   行がある   = その日は端末に記録があった(開かんかった日も actual 0 の行が入る)
+//   行がない   = 記録なし(欠測)。none として横ばいにする
+export function buildVowLogFromDailyRows(args: {
+  declaredOn: string;
+  lastConfirmedDate: string;
+  baselineMinutes: number;
+  rows: readonly ServerDailyRow[];
+}): VowLogEntry[] {
+  return buildVowLog({
+    declaredOn: args.declaredOn,
+    lastConfirmedDate: args.lastConfirmedDate,
+    baselineMinutes: args.baselineMinutes,
+    recordedDates: new Set(args.rows.map((r) => r.record_date)),
+    actualMinutesByDate: new Map(args.rows.map((r) => [r.record_date, r.actual_minutes])),
+  });
+}
+
 export type StepChartPaths = {
   /** 階段の折れ線(SVGパス) */
   line: string;

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildVowLog,
+  buildVowLogFromDailyRows,
   dailySavedMinutes,
   formatFullDate,
   formatMonthDay,
@@ -151,6 +152,44 @@ test('buildVowLog: 宣言当日(確定日なし)は空。累計0', () => {
   });
   assert.deepEqual(log, [] as VowLogEntry[]);
   assert.equal(totalSavedMinutes(log), 0);
+});
+
+// ---- サーバー行からの組み立て --------------------------------------------
+
+test('buildVowLogFromDailyRows: 行がある日は記録あり、行がない日は none で横ばい', () => {
+  const log = buildVowLogFromDailyRows({
+    ...args,
+    rows: [
+      { record_date: '2026-07-10', actual_minutes: 20 }, // +40
+      { record_date: '2026-07-11', actual_minutes: 90 }, // 超過 → 0 (zero)
+      // 7/12 は行なし = 記録なし(欠測)
+      { record_date: '2026-07-13', actual_minutes: 0 }, // 開かんかった日 → +60
+      { record_date: '2026-07-14', actual_minutes: 30 }, // +30
+    ],
+  });
+  assert.deepEqual(
+    log.map((e) => [e.date, e.state, e.savedMinutes, e.cumulativeMinutes]),
+    [
+      ['2026-07-10', 'saved', 40, 40],
+      ['2026-07-11', 'zero', 0, 40],
+      ['2026-07-12', 'none', 0, 40],
+      ['2026-07-13', 'saved', 60, 100],
+      ['2026-07-14', 'saved', 30, 130],
+    ],
+  );
+});
+
+test('buildVowLogFromDailyRows: 累計が measured_saved ビューの合算と一致する(検算)', () => {
+  // ビューは sum(greatest(0, baseline − actual)) を行の有無に関わらず全行で取る。
+  // この画面の累計も同じ行・同じクリップで組むけん、必ず同じ値になる。
+  const rows = [
+    { record_date: '2026-07-10', actual_minutes: 10 },
+    { record_date: '2026-07-12', actual_minutes: 120 },
+    { record_date: '2026-07-14', actual_minutes: 55 },
+  ];
+  const log = buildVowLogFromDailyRows({ ...args, rows });
+  const viewSum = rows.reduce((sum, r) => sum + Math.max(0, 60 - r.actual_minutes), 0);
+  assert.equal(totalSavedMinutes(log), viewSum);
 });
 
 // ---- 階段グラフ ----------------------------------------------------------
