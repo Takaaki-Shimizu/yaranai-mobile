@@ -68,6 +68,19 @@ export type AppStrings = {
      */
     tojiru: string;
   };
+  /** 誓い別詳細(アプリごとの取り戻しログ)。過去形・断定・静か。叱責しない */
+  vowDetail: {
+    declaredLine: (date: string) => string;
+    baselineLine: (time: string) => string;
+    totalHeadline: (time: string) => string;
+    /** 取り戻した日の値。「+42分」 */
+    rowSaved: (time: string) => string;
+    /** 記録なし日の印。獲得0の「0分」と混同しない */
+    noRecordMark: string;
+    /** 記録なし日がリストにあるときだけ添える脚注(一行のみ) */
+    noRecordNote: string;
+    back: string;
+  };
   reading: {
     listTitle: string;
     empty: string;
@@ -207,6 +220,15 @@ const ja: AppStrings = {
     observeLink: '時間の行き先を見る',
     stripLabel: '読みもの',
     tojiru: 'とじる',
+  },
+  vowDetail: {
+    declaredLine: (date) => `${date}から`,
+    baselineLine: (time) => `ふだん ${time}/日`,
+    totalHeadline: (time) => `これまでに ${time}、\n戻ってきました。`,
+    rowSaved: (time) => `+${time}`,
+    noRecordMark: '—',
+    noRecordNote: '記録のない日は「—」で表しています。',
+    back: '戻る',
   },
   reading: {
     listTitle: '読みもの',
@@ -350,6 +372,15 @@ const en: AppStrings = {
     stripLabel: 'Reading',
     // 「戻る」= Back と一語一義で分ける。閉じ際の儀式だけが Close
     tojiru: 'Close',
+  },
+  vowDetail: {
+    declaredLine: (date) => `Since ${date}`,
+    baselineLine: (time) => `Usually ${time} a day`,
+    totalHeadline: (time) => `So far, ${time}\nhas come back to you.`,
+    rowSaved: (time) => `+${time}`,
+    noRecordMark: '—',
+    noRecordNote: 'Days without a record are shown as "—".',
+    back: 'Back',
   },
   reading: {
     listTitle: 'Reading',
