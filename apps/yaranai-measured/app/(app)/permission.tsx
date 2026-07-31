@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, AppState } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import {
   hasUsageAccess,
@@ -8,10 +8,10 @@ import {
   openUsageAccessSettings,
 } from '../../modules/usage-stats';
 import { useT } from '../../lib/i18n/context';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 
 export default function Permission() {
-  const router = useRouter();
+  const router = useSumiireRouter();
   const t = useT();
 
   const checkAndLeave = useCallback(() => {

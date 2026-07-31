@@ -24,10 +24,10 @@ import {
   Modal, Pressable, Text, View, StyleSheet, Alert, Animated, Easing,
   type StyleProp, type ViewStyle,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../lib/supabase';
 import { useLang, useT } from '../lib/i18n/context';
+import { useSumiireRouter } from './Sumiire';
 
 type Props = {
   visible: boolean;
@@ -35,7 +35,7 @@ type Props = {
 };
 
 export function AppMenu({ visible, onClose }: Props) {
-  const router = useRouter();
+  const router = useSumiireRouter();
   const { lang, setLang } = useLang();
   const t = useT();
 

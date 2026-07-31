@@ -11,7 +11,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
-import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../../../lib/supabase';
@@ -29,7 +29,7 @@ import {
 } from '../../../lib/vow-log';
 import { getAppLabels } from '../../../modules/usage-stats';
 import { useLang, useT } from '../../../lib/i18n/context';
-import { Sumiire } from '../../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
 
 type VowInfo = {
   package_name: string;
@@ -42,7 +42,7 @@ const CHART_HEIGHT = 160;
 const H_PADDING = 28;
 
 export default function VowDetail() {
-  const router = useRouter();
+  const router = useSumiireRouter();
   const { lang } = useLang();
   const t = useT();
   const { width: windowWidth } = useWindowDimensions();

@@ -2,16 +2,17 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { Link, Redirect } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { useT } from '../../lib/i18n/context';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 
 type Mode = 'signIn' | 'signUp';
 
 export default function SignIn() {
   const session = useSession();
+  const router = useSumiireRouter();
   const t = useT();
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
@@ -104,12 +105,11 @@ export default function SignIn() {
           </Text>
         </Pressable>
 
+        {/* Link ではなく「筆を引く」ルーターを通す(墨入れの所作を挟むため) */}
         {isSignIn && (
-          <Link href="/(auth)/forgot-password" asChild>
-            <Pressable style={styles.link}>
-              <Text style={styles.linkText}>{t.auth.forgotPassword}</Text>
-            </Pressable>
-          </Link>
+          <Pressable style={styles.link} onPress={() => router.push('/(auth)/forgot-password')}>
+            <Text style={styles.linkText}>{t.auth.forgotPassword}</Text>
+          </Pressable>
         )}
       </View>
       </Sumiire>

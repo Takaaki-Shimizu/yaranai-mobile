@@ -7,16 +7,15 @@ import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
-import { Sumiire } from '../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { IDEAL_MAX_LENGTH, idealLength, validateIdeal } from '../../lib/ideal/validate';
 import { loadIdeal, saveIdeal } from '../../lib/ideal/storage';
 import { useT } from '../../lib/i18n/context';
 
 export default function Ideal() {
   const session = useSession();
-  const router = useRouter();
+  const router = useSumiireRouter();
   const t = useT();
   const userId = session?.user?.id;
 

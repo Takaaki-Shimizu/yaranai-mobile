@@ -5,17 +5,17 @@
 
 import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { useIsDeveloper } from '../../../lib/developer';
 import { getArticle } from '../../../lib/articles/registry';
 import { parseArticleBody } from '../../../lib/articles/markdown';
 import { recordRead } from '../../../lib/articles/storage';
 import { useLang, useT } from '../../../lib/i18n/context';
-import { Sumiire } from '../../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
 
 export default function ArticleScreen() {
-  const router = useRouter();
+  const router = useSumiireRouter();
   const isDeveloper = useIsDeveloper();
   const { lang } = useLang();
   const t = useT();

@@ -6,7 +6,7 @@
 
 import { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { useIsDeveloper } from '../../../lib/developer';
 import { loadArticlesState } from '../../../lib/articles/storage';
@@ -19,12 +19,12 @@ import {
 import { useLang, useT } from '../../../lib/i18n/context';
 import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
 import { AppMenuButton } from '../../../components/AppMenu';
-import { Sumiire } from '../../../components/Sumiire';
+import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
 
 const EMPTY_SECTIONS: ArticleListSections = { standing: [], conditional: [] };
 
 export default function ReadingList() {
-  const router = useRouter();
+  const router = useSumiireRouter();
   const isDeveloper = useIsDeveloper();
   const { lang } = useLang();
   const t = useT();
