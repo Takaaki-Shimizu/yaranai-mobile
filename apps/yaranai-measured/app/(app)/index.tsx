@@ -294,18 +294,31 @@ export default function Home() {
             // 正式名が引けんときは宣言時に保存した名前をそのまま出す。
             const label = officialLabels[vow.package_name]?.trim() || vow.app_label;
             return (
-              <View key={vow.vow_id} style={styles.row}>
-                <Text style={styles.label}>{label}</Text>
-                <Text style={styles.saved}>
-                  {actual != null
-                    ? t.home.rowSaved(
-                        formatMinutes(actual, lang),
-                        formatMinutes(vow.baseline_minutes, lang),
-                        formatMinutes(vow.baseline_minutes - actual, lang),
-                      )
-                    : t.home.rowWaiting}
-                </Text>
-              </View>
+              // 行ごと誓い別詳細(取り戻しログ)へ。「昨日の実測を待っています。」の
+              // 行も開ける(詳細画面は確定済みの過去だけを見せるけん、待ちとは独立)。
+              // 押下の返事は控えめな沈み込みだけ。リップルや色変化は付けない。
+              <Pressable
+                key={vow.vow_id}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                onPress={() => router.push(`/(app)/vow/${vow.vow_id}`)}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+              >
+                <View style={styles.rowBody}>
+                  <Text style={styles.label}>{label}</Text>
+                  <Text style={styles.saved}>
+                    {actual != null
+                      ? t.home.rowSaved(
+                          formatMinutes(actual, lang),
+                          formatMinutes(vow.baseline_minutes, lang),
+                          formatMinutes(vow.baseline_minutes - actual, lang),
+                        )
+                      : t.home.rowWaiting}
+                  </Text>
+                </View>
+                {/* 「押せ」ではなく「開いている」の印。主張しない */}
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
             );
           })}
 
@@ -452,7 +465,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   list: { gap: 28, paddingHorizontal: 28 },
-  row: { gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  rowPressed: { opacity: 0.6 },
+  rowBody: { flex: 1, gap: 8 },
+  // シェブロンは usuzumi より淡く(#8C8577 の55%)。テーマに同トーンが無いけん薄めた値
+  chevron: { marginLeft: 12, fontSize: 15, lineHeight: 20, color: 'rgba(140,133,119,0.55)' },
   label: { fontFamily: fonts.serif, fontSize: 17, color: colors.sumi, letterSpacing: 1 },
   saved: { fontSize: 12, color: colors.usuzumi, letterSpacing: 1 },
 
