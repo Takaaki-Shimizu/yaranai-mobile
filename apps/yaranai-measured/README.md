@@ -7,7 +7,10 @@
 ## 五原則
 
 1. **観測は無制限** — 全アプリの利用時間を受動的に記録する。選ばせない、煽らない、通知しない。
-2. **誓いは3本** — 「やらない」と宣言できるのは同時に3アプリまで。
+2. **挑戦中の誓いは3本** — 「やらない」と挑戦できるのは同時に3アプリまで。
+   枠が空くのは**卒業(直近7日、一度も使っていない)したときだけ**で、
+   負けているアプリを外す道は用意しない。卒業した誓いは枠から外れるが、
+   計測と取り戻しのカウントは続く(ぶり返したら計測に戻せる)。
 3. **基準線は宣言時スナップショットで固定** — 過去12週(84日)の1日平均。以後変更しない。
 4. **ローカルファースト** — 全アプリの利用ログは端末内DBのみ。Supabaseに出るのは誓い対象アプリの日次合計と基準線だけ。
 5. **ロックなし** — ブロック・強制・ペナルティなし。基準線を超えた日は獲得0になるだけで、庭は縮まない。
@@ -75,8 +78,9 @@ npx expo start --dev-client
 1. supabase.com で新規プロジェクトを作成
 2. SQL Editor で `supabase/001_schema.sql` を全文実行
 3. SQL Editor で `supabase/002_excuse_declarations.sql` を全文実行(言い訳カード)
-4. Authentication → Providers で Email を有効にする
-5. `apps/yaranai-measured/.env` に接続情報を置く:
+4. SQL Editor で `supabase/003_graduation.sql` を全文実行(誓いの卒業)
+5. Authentication → Providers で Email を有効にする
+6. `apps/yaranai-measured/.env` に接続情報を置く:
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
@@ -212,6 +216,46 @@ npx tsc -p tsconfig.test.json
 node scripts/render-excuse-cards.js /tmp/excuse-cards
 # 出力されたSVGをブラウザで開いて docs/mocks の言い訳カード モックv3 と見比べる
 # mock/longest/single の3ケース × 2サイズ
+```
+
+## 誓いの卒業 — 2026-08
+
+誓いを断ち切れた人が、次のアプリに挑戦できるようにする仕組み。「入れ替え」ではなく
+「卒業」── **成功によってのみ枠が空く一方通行**で、負けているアプリを外す逃げ道は
+構造的に作らない。ただし卒業後にぶり返したら「計測に戻す」ことができる。
+
+非交渉の制約(製品として動かさない線):
+
+- **卒業は成功でしか起きない。** 条件は「直近7日、一度も使っていない」だけ。
+  挑戦中(使用が残っている)の誓いを外す手段はアプリのどこにも無い。
+- **卒業しても計測と取り戻しのカウントは続く。** 卒業 = 挑戦の3枠から外れるだけで、
+  誓いそのものは生き続ける(消えない蓄積)。`syncMeasuredDaily` の対象フィルタに
+  `graduated_on is null` を足してはならない。
+- **基準線は永久に固定。** 卒業でも復帰でも再計算しない(五原則3)。
+- **通知・プッシュ・煽りは一切なし**(五原則1)。卒業可能になっても静かに導線が
+  現れるだけ。復帰も、ぶり返したアプリが時間の行き先に再浮上したときだけ。
+- **庭・苔・敷石・光のロジックには触れない。** 単調非減少に影響する変更は不可。
+
+誓いの3状態(`measured_vows`):
+
+| 状態 | 条件 | 3本に数える | 同期・カウント |
+|---|---|---|---|
+| active(挑戦中) | `discontinued_on` null / `graduated_on` null | 数える | する |
+| graduated(卒業) | `discontinued_on` null / `graduated_on` あり | 数えない | **する** |
+| discontinued(廃止) | `discontinued_on` あり | 数えない | しない |
+
+枠の担保は DB トリガー `check_measured_vow_limit()` が唯一の正
+(active になる行だけを制限対象にする)。復帰は `graduated_on` を NULL へ戻す
+UPDATE なので、3本挑戦中ならトリガーが弾く。クライアント側の事前チェックは補助。
+卒業済みパッケージへの新規宣言は既存の unique index `measured_vows_active_pkg`
+(`where discontinued_on is null`)が弾く ── 卒業したアプリにできるのは復帰だけ。
+
+```
+lib/graduation.ts   卒業判定の純関数(node:test でテスト)
+lib/dates.ts        判定窓 = 時間の行き先の候補窓(recentWindowDates。定義はここだけ)
+app/(app)/graduate.tsx  卒業の儀式(確認 → 完了画面)。実行前に条件を再評価する
+app/(app)/declare.tsx   卒業済みパッケージでは復帰モードで描画(基準線は再計算しない)
+supabase/003_graduation.sql  graduated_on + トリガー差し替え + ビュー作り直し
 ```
 
 ## 開発者モード(庭デバッグ)

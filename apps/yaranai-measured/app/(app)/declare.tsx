@@ -9,6 +9,15 @@ import { supabase } from '../../lib/supabase';
 import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../lib/baseline';
 import { formatMinutes } from '../../lib/format';
 import { useLang, useT } from '../../lib/i18n/context';
+import { MAX_VOWS } from '../../lib/vows';
+
+// 卒業済みの誓い(卒業機能 §5-3)。この画面は宣言と復帰の二役を持つ。
+// 同じパッケージに生きた誓いがあるなら新規宣言はありえん(unique index が弾く)ので、
+// 復帰モードで描く。基準線はいかなる経路でも再計算しない(五原則3)。
+type GraduatedVow = {
+  id: string;
+  baseline_minutes: number;
+};
 
 export default function Declare() {
   const session = useSession();
@@ -20,13 +29,52 @@ export default function Declare() {
   const label = typeof params.label === 'string' ? params.label : packageName;
 
   const [baseline, setBaseline] = useState<BaselineResult | null>(null);
+  const [graduated, setGraduated] = useState<GraduatedVow | null>(null);
+  // 復帰の可否を先に確かめる間は、宣言のUIも復帰のUIも出さない(ちらつき防止)
+  const [checking, setChecking] = useState(true);
+  const [slotsOpen, setSlotsOpen] = useState(true);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  // 基準線は宣言時スナップショット。この画面で見た平均が、そのまま固定される。
+  // このパッケージに卒業済みの誓いがあれば復帰モード、無ければ新規宣言。
+  // 復帰なら基準線は再計算せず、宣言時に固定された値をそのまま出す(五原則3)。
   useEffect(() => {
-    if (packageName) setBaseline(computeBaseline(packageName));
+    if (!packageName) {
+      setChecking(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [existing, active] = await Promise.all([
+        supabase
+          .from('measured_vows')
+          .select('id, baseline_minutes, graduated_on')
+          .eq('package_name', packageName)
+          .is('discontinued_on', null)
+          .maybeSingle(),
+        // 枠の担保はDBトリガーが唯一の正。これは満杯を先に伝えるための補助で、
+        // 押してから断られるより、押せんと分かっとるほうが静かやけん置いとる。
+        supabase
+          .from('measured_vows')
+          .select('id', { count: 'exact', head: true })
+          .is('discontinued_on', null)
+          .is('graduated_on', null),
+      ]);
+      if (cancelled) return;
+      const row = existing.data;
+      if (row?.graduated_on) {
+        setGraduated({ id: row.id as string, baseline_minutes: row.baseline_minutes as number });
+        setSlotsOpen((active.count ?? 0) < MAX_VOWS);
+      } else {
+        // 基準線は宣言時スナップショット。この画面で見た平均が、そのまま固定される。
+        setBaseline(computeBaseline(packageName));
+      }
+      setChecking(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [packageName]);
 
   const declare = async () => {
@@ -53,6 +101,31 @@ export default function Declare() {
     }
     // 宣言の完了。世界観の一文を添えた完了画面を挟んでから庭へ戻る(§変更5)
     setDone(true);
+  };
+
+  // 復帰(卒業機能 §5-3)。graduated_on を NULL に戻すフリップだけ。行の作り直しも
+  // 再宣言もせん ── declared_on も基準線も、宣言したその日のまま動かない。
+  // 儀式は宣言のときに一度済んどるけん、完了画面は挟まず静かに庭へ還す。
+  const restore = async () => {
+    if (!graduated || busy) return;
+    setBusy(true);
+    setMessage('');
+    const { error } = await supabase
+      .from('measured_vows')
+      .update({ graduated_on: null })
+      .eq('id', graduated.id);
+    setBusy(false);
+
+    if (error) {
+      // 挑戦中3本の状態での復帰はDBトリガーが止める(DB側のメッセージは日本語固定)
+      if (error.message.includes('手元におけるのは最大3つまで')) {
+        setMessage(t.declare.limitReached);
+      } else {
+        setMessage(t.declare.restoreFailed);
+      }
+      return;
+    }
+    router.replace('/(app)');
   };
 
   // 宣言(断つ)の儀式の完了画面。
@@ -85,6 +158,40 @@ export default function Declare() {
         <Pressable style={styles.secondary} onPress={() => router.back()}>
           <Text style={styles.secondaryText}>{t.declare.back}</Text>
         </Pressable>
+      </Sumiire>
+    );
+  }
+
+  // 誓いの状態を確かめとる間は、生成りの地だけを敷いて待つ(宣言と復帰のちらつき防止)
+  if (checking) return <Sumiire style={styles.container}><View /></Sumiire>;
+
+  // 復帰モード(§5-3)。基準線は再計算せず、固定された値をそのまま見せる。
+  // 挑戦中が3本埋まっとるときは、復帰ボタンの代わりに枠の一文を出す
+  // (押してからDBトリガーに断られるより静か。担保はあくまでトリガー側)
+  if (graduated) {
+    return (
+      <Sumiire style={styles.container}>
+        <View style={styles.form}>
+          <Text style={styles.appLabel}>{label}</Text>
+          <Text style={styles.baseline}>
+            {t.declare.restoreBaseline(formatMinutes(graduated.baseline_minutes, lang))}
+          </Text>
+          <Text style={styles.note}>{t.declare.restoreNote}</Text>
+
+          {slotsOpen ? (
+            <Pressable style={styles.primary} onPress={restore} disabled={busy}>
+              <Text style={styles.primaryText}>{t.declare.restore}</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.message}>{t.declare.limitReached}</Text>
+          )}
+
+          <Pressable style={styles.secondary} onPress={() => router.back()}>
+            <Text style={styles.secondaryText}>{t.declare.back}</Text>
+          </Pressable>
+
+          {message !== '' && <Text style={styles.message}>{message}</Text>}
+        </View>
       </Sumiire>
     );
   }

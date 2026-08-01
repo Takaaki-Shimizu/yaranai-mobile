@@ -62,6 +62,12 @@ type ActiveVow = {
 // 誓い対象アプリの「確定した日」(昨日以前)の実測合計をSupabaseへ。
 // 当日は未確定(まだ増える)やけん送らない。宣言日以降のみが対象。
 // 端末にデータが無い日は行を作らない = その日の獲得は0のまま。
+//
+// 対象は discontinued_on is null の誓い ── つまり卒業済み(graduated_on あり)も
+// ここに含まれる。これは意図的で、この機能の芯にあたる:
+// 卒業は「挑戦の3枠から外れる」だけで、誓いそのものは生き続ける。ユーザーが
+// 実際に取り戻しとる時間を庭が無視したら「消えない蓄積」の約束が崩れる。
+// ゆえに、ここに and graduated_on is null を足してはならない。
 export async function syncMeasuredDaily(userId: string): Promise<void> {
   const today = getTodayRecordDate();
   const { data: vows } = await supabase
