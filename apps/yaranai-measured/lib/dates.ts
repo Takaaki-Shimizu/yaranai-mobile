@@ -22,20 +22,35 @@ export function recordDateDaysAgo(n: number): string {
   return toRecordDate(d);
 }
 
-// 「時間の行き先」の候補窓 = 卒業判定の窓。この2つは必ず同じ窓を見る。
-// 「時間の行き先から消えた = 卒業できる」の厳密な一致がその機能のUXの核やけん、
-// 窓の定義はこの1箇所だけに置き、observe も lib/graduation.ts もここを参照する。
+// 「時間の行き先」の候補窓と卒業判定の窓。日数(7)はここで共有するが、窓は1日ずれる:
+//   候補窓   = 当日を含む7暦日(今も続いとる習慣を見るけん、進行中の今日も入れる)
+//   卒業判定 = 前日までの7暦日(当日を含めると「実質6日と数時間」の判定になり、
+//              成立が日中の使用で揺れる。確定した日だけで判定する)
+// 「消えた = 卒業できる」の対応は、窓の一致ではなく observe 側の免除
+// (誓いのなかのアプリは足切りせず、1分でも使えば並び続ける)で保証する。
 export const RECENT_WINDOW_DAYS = 7;
 
-// 直近7暦日の始まり(当日を含めて7日ぶん遡った日)。
+// 候補窓の始まり(当日を含めて7日ぶん遡った日)。
 export function recentWindowStart(): string {
   return recordDateDaysAgo(RECENT_WINDOW_DAYS - 1);
 }
 
-// 直近7暦日を昇順で。両端(6日前と当日)を含む。
+// 候補窓の7暦日を昇順で。両端(6日前と当日)を含む。
 export function recentWindowDates(): string[] {
   const dates: string[] = [];
   for (let i = RECENT_WINDOW_DAYS - 1; i >= 0; i--) dates.push(recordDateDaysAgo(i));
+  return dates;
+}
+
+// 卒業判定の窓の始まり(前日を含めて7日ぶん遡った日)。
+export function graduationWindowStart(): string {
+  return recordDateDaysAgo(RECENT_WINDOW_DAYS);
+}
+
+// 卒業判定の7暦日を昇順で。両端(7日前と前日)を含み、当日は含まない。
+export function graduationWindowDates(): string[] {
+  const dates: string[] = [];
+  for (let i = RECENT_WINDOW_DAYS; i >= 1; i--) dates.push(recordDateDaysAgo(i));
   return dates;
 }
 
