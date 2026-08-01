@@ -60,18 +60,24 @@ type Totals = {
 // として引き直し、全行を挑戦中(graduated_on: null)として返す ── 旧スキーマに
 // 卒業済みは存在せんけん、意味もこれで合う。畳まれるのは卒業の導線だけで、
 // 計測中の誓いの表示は一行も欠けない。
+// 並びは宣言日 → パッケージ名。declared_on は暦日やけん同日宣言で並ぶことがあり、
+// タイブレークを置かんとビューの作り直し(003)のたびに物理順で入れ替わって見える。
+// 意味のある第2キー(宣言時刻)はビューに出とらんけん、決定的で説明のつく
+// パッケージ名で留める。
 async function fetchVowSummaries() {
   const columns =
     'vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on';
   const full = await supabase
     .from('measured_saved')
     .select(`${columns}, graduated_on`)
-    .order('declared_on', { ascending: true });
+    .order('declared_on', { ascending: true })
+    .order('package_name', { ascending: true });
   if (!isMissingGraduatedOn(full.error)) return full;
   const legacy = await supabase
     .from('measured_saved')
     .select(columns)
-    .order('declared_on', { ascending: true });
+    .order('declared_on', { ascending: true })
+    .order('package_name', { ascending: true });
   return {
     ...legacy,
     data: legacy.data?.map((v) => ({ ...v, graduated_on: null })) ?? null,
