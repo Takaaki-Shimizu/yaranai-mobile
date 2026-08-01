@@ -62,6 +62,10 @@ export type AppStrings = {
     rowWaiting: string;
     observeLink: string;
     stripLabel: string;
+    /** 卒業できる誓いにだけ静かに現れる一行。促さない(卒業機能 §5-1) */
+    graduateLink: string;
+    /** 卒業済みの誓いに添える小さなラベル。数字は出さない */
+    graduatedLabel: string;
     /**
      * 閉じ際の儀式「とじる」。一語一義: この語はホーム最下部のこのボタンにだけ使う。
      * 画面を離れてホームへ帰るだけの遷移は、どこであれ「戻る」(reading.back など)。
@@ -113,6 +117,25 @@ export type AppStrings = {
     pickFromObserve: string;
     gatheringTitle: string;
     gatheringBody: (need: number, have: number) => string;
+    /** 復帰モード(卒業機能 §5-3)。基準線は再計算せず、固定された値をそのまま出す */
+    restoreBaseline: (time: string) => string;
+    restoreNote: string;
+    restore: string;
+    restoreFailed: string;
+  };
+  /**
+   * 卒業の儀式(卒業機能 §5-2)。成功でしか通らない画面やけん、
+   * 労わず、褒めそやさず、ただ事実と次の一歩だけを置く。
+   */
+  graduate: {
+    lede: (label: string) => string;
+    note: string;
+    graduate: string;
+    back: string;
+    failed: string;
+    doneLede: (label: string) => string;
+    doneWorldview: string;
+    toGarden: string;
   };
   observe: {
     title: string;
@@ -121,6 +144,8 @@ export type AppStrings = {
     avgPerDay: (time: string) => string;
     vowed: string;
     declareLink: string;
+    /** 卒業済みのアプリがぶり返して再浮上したときだけ出る(卒業機能 §5-3) */
+    restoreLink: string;
     gathering: (need: number, have: number) => string;
     empty: string;
     back: string;
@@ -219,6 +244,8 @@ const ja: AppStrings = {
     rowWaiting: '昨日の実測を待っています。',
     observeLink: '時間の行き先を見る',
     stripLabel: '読みもの',
+    graduateLink: '卒業する',
+    graduatedLabel: '卒業',
     tojiru: 'とじる',
   },
   vowDetail: {
@@ -263,6 +290,20 @@ const ja: AppStrings = {
     gatheringTitle: 'ふだんの記録を集めています',
     gatheringBody: (need, have) =>
       `この端末の記録が${need}日ぶんに満ちると、宣言できるようになります。\nいまは${have}日ぶんです。`,
+    restoreBaseline: (time) => `あなたの「ふだん」は、\n${time}のまま変わりません。`,
+    restoreNote: 'ここから、もう一度。',
+    restore: '計測に戻す',
+    restoreFailed: '計測に戻せませんでした。もう一度お試しください。',
+  },
+  graduate: {
+    lede: (label) => `${label}は、この7日、\n一度も開かれていません。`,
+    note: '卒業しても、この誓いは静かに数え続けます。\nぶり返したときは、いつでも手元に戻せます。',
+    graduate: '卒業する',
+    back: '戻る',
+    failed: '卒業できませんでした。もう一度お試しください。',
+    doneLede: (label) => `${label}を、卒業しました。`,
+    doneWorldview: '空いた手で、次の『やらない』を。',
+    toGarden: '庭へ',
   },
   observe: {
     title: '時間の行き先',
@@ -271,6 +312,7 @@ const ja: AppStrings = {
     avgPerDay: (time) => `1日 平均${time}`,
     vowed: '誓いのなか',
     declareLink: 'これをやらないと宣言する',
+    restoreLink: '計測に戻す',
     gathering: (need, have) =>
       `まだ記録を集めています。\nこの端末の記録が${need}日ぶんに満ちると、\n時間の行き先が見えるようになります。\nいまは${have}日ぶんです。`,
     empty: 'まだ観測が集まっていません。\nこの端末を使ううちに、静かに集まります。',
@@ -370,6 +412,8 @@ const en: AppStrings = {
     rowWaiting: "Waiting for yesterday's measurement.",
     observeLink: 'See where your time goes',
     stripLabel: 'Reading',
+    graduateLink: 'Graduate',
+    graduatedLabel: 'graduated',
     // 「戻る」= Back と一語一義で分ける。閉じ際の儀式だけが Close
     tojiru: 'Close',
   },
@@ -415,6 +459,20 @@ const en: AppStrings = {
     gatheringTitle: 'Learning your usual',
     gatheringBody: (need, have) =>
       `Once this device holds ${need} days of records,\nyou'll be able to declare. So far, it has ${have}.`,
+    restoreBaseline: (time) => `Your "usual" is still ${time}.\nIt hasn't changed.`,
+    restoreNote: 'From here, once more.',
+    restore: 'Measure this again',
+    restoreFailed: "Couldn't put it back under measurement. Please try again.",
+  },
+  graduate: {
+    lede: (label) => `You haven't opened ${label} once\nin the last seven days.`,
+    note: 'Even after you graduate, this vow keeps counting, quietly.\nIf it comes back, you can bring it to hand again.',
+    graduate: 'Graduate',
+    back: 'Back',
+    failed: "Couldn't graduate. Please try again.",
+    doneLede: (label) => `You've graduated from ${label}.`,
+    doneWorldview: 'With a free hand, the next "I won\'t."',
+    toGarden: 'To the garden',
   },
   observe: {
     title: 'Where your time goes',
@@ -423,6 +481,7 @@ const en: AppStrings = {
     avgPerDay: (time) => `avg ${time}/day`,
     vowed: 'under a vow',
     declareLink: 'Declare: I won’t use this',
+    restoreLink: 'Measure this again',
     gathering: (need, have) =>
       `Still gathering records.\nOnce this device holds ${need} days' worth,\nyou'll see where your time goes.\nSo far, it has ${have}.`,
     empty: "No observations yet.\nThey'll gather quietly as you use this device.",

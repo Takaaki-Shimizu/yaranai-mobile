@@ -7,7 +7,7 @@ import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncLocalUsage } from '../../lib/usage-sync';
 import { getWeeklyTopApps } from '../../lib/usage-db';
-import { recordDateDaysAgo } from '../../lib/dates';
+import { recentWindowStart } from '../../lib/dates';
 import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../lib/baseline';
 import { averageMinutesPerDay } from '../../lib/usage-buckets';
 import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
@@ -36,6 +36,9 @@ type ObserveRow = {
   avgMinutesPerDay: number;
 };
 
+// 誓いの状態(卒業機能 §1)。挑戦中だけが3本の枠を占める。
+type VowState = 'active' | 'graduated';
+
 export default function Observe() {
   const router = useSumiireRouter();
   const { lang } = useLang();
@@ -43,7 +46,9 @@ export default function Observe() {
   const [rows, setRows] = useState<ObserveRow[]>([]);
   // 端末に登録された正式なアプリ名。引けんパッケージはキーが無く、表示は整形へ倒れる。
   const [officialLabels, setOfficialLabels] = useState<Record<string, string>>({});
-  const [vowedPackages, setVowedPackages] = useState<Set<string>>(new Set());
+  // 誓いのあるパッケージと、その状態。挑戦中と卒業済みで行の見え方が変わる
+  // (卒業機能 §5-3)。廃止した誓いはここに入れん(= もう一度宣言できる)。
+  const [vowStates, setVowStates] = useState<Map<string, VowState>>(new Map());
   const [availableDays, setAvailableDays] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
@@ -52,11 +57,14 @@ export default function Observe() {
     // 直近7日に使ったアプリだけを候補にする(今も続いとる習慣のフィルタ)。
     // 並び順と表示は12週平均: 一時的な急増は平均に吸収され、
     // やめ済みアプリを宣言して基準線だけ稼ぐ抜け道も防ぐ。
+    // 候補窓は卒業判定とまったく同じ7日(lib/dates.ts に定義を一本化)。
+    // 「時間の行き先から消えた = 卒業できる」の一致がこの機能のUXの核やけん、
+    // どちらか片方だけ窓を動かすことは無い。
     const [recent, vowsRes] = await Promise.all([
-      getWeeklyTopApps(recordDateDaysAgo(6), 100),
+      getWeeklyTopApps(recentWindowStart(), 100),
       supabase
         .from('measured_vows')
-        .select('package_name')
+        .select('package_name, graduated_on')
         .is('discontinued_on', null),
     ]);
     const baseline = measureBaselineWindow();
@@ -105,7 +113,14 @@ export default function Observe() {
       setRows([]);
       setOfficialLabels({});
     }
-    setVowedPackages(new Set((vowsRes.data ?? []).map((v) => v.package_name)));
+    setVowStates(
+      new Map(
+        (vowsRes.data ?? []).map((v) => [
+          v.package_name as string,
+          (v.graduated_on ? 'graduated' : 'active') as VowState,
+        ]),
+      ),
+    );
     setLoaded(true);
   }, []);
 
@@ -119,7 +134,10 @@ export default function Observe() {
     }, [loadAll, router])
   );
 
-  const slotsOpen = vowedPackages.size < MAX_VOWS;
+  // 枠を占めるのは挑戦中の誓いだけ。卒業済みは数えん(卒業機能 §1)。
+  // ここを discontinued_on だけで数えると、卒業で空いたはずの枠が埋まったままになる。
+  const activeCount = [...vowStates.values()].filter((s) => s === 'active').length;
+  const slotsOpen = activeCount < MAX_VOWS;
   const gathering = loaded && availableDays < BASELINE_MIN_DAYS;
 
   return (
@@ -131,7 +149,7 @@ export default function Observe() {
 
       <View style={styles.list}>
         {rows.map((row) => {
-          const vowed = vowedPackages.has(row.packageName);
+          const vowState = vowStates.get(row.packageName);
           const label = labelForPackage(row.packageName, officialLabels);
           return (
             <View key={row.packageName} style={styles.row}>
@@ -142,21 +160,34 @@ export default function Observe() {
                 </Text>
               </View>
               <View style={styles.rowFoot}>
-                {vowed ? (
-                  <Text style={styles.vowed}>{t.observe.vowed}</Text>
-                ) : (
-                  slotsOpen && (
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: '/(app)/declare',
-                          params: { packageName: row.packageName, label },
-                        })
-                      }
-                    >
-                      <Text style={styles.declareLink}>{t.observe.declareLink}</Text>
-                    </Pressable>
-                  )
+                {vowState === 'active' && <Text style={styles.vowed}>{t.observe.vowed}</Text>}
+                {/* 卒業済みのアプリがここに並んどるということは、ぶり返して
+                    時間の行き先に再浮上したということ。復帰の導線はこの一箇所だけで、
+                    こちらから知らせには行かない(五原則1)。宣言ではなく復帰やけん、
+                    基準線は declare 側でも再計算せん */}
+                {vowState === 'graduated' && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(app)/declare',
+                        params: { packageName: row.packageName, label },
+                      })
+                    }
+                  >
+                    <Text style={styles.declareLink}>{t.observe.restoreLink}</Text>
+                  </Pressable>
+                )}
+                {vowState === undefined && slotsOpen && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(app)/declare',
+                        params: { packageName: row.packageName, label },
+                      })
+                    }
+                  >
+                    <Text style={styles.declareLink}>{t.observe.declareLink}</Text>
+                  </Pressable>
                 )}
               </View>
             </View>

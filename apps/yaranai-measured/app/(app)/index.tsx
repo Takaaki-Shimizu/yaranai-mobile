@@ -10,7 +10,9 @@ import { useFocusEffect } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncAll } from '../../lib/usage-sync';
-import { recordDateDaysAgo } from '../../lib/dates';
+import { recentWindowDates, recentWindowStart, recordDateDaysAgo } from '../../lib/dates';
+import { getPackageForegroundMsByDateSince, getRecordedDatesSince } from '../../lib/usage-db';
+import { computeGraduationEligibility } from '../../lib/graduation';
 import { formatMinutes } from '../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { HomeGarden } from '../../components/garden/HomeGarden';
@@ -45,6 +47,8 @@ type VowSummary = {
   baseline_minutes: number;
   saved_minutes: number;
   discontinued_on: string | null;
+  // 卒業日(卒業機能 §1)。null = 挑戦中。値が入っとっても計測と取り戻しは続く
+  graduated_on: string | null;
 };
 
 type Totals = {
@@ -60,6 +64,10 @@ export default function Home() {
   const t = useT();
   const { width: windowWidth } = useWindowDimensions();
   const [vows, setVows] = useState<VowSummary[]>([]);
+  // 卒業済みの誓い(卒業機能 §5-1)。挑戦中の下に淡色で名前だけ並べる
+  const [graduatedVows, setGraduatedVows] = useState<VowSummary[]>([]);
+  // 卒業条件が成立した挑戦中の誓い。この集合の行にだけ「卒業する」が現れる
+  const [graduableVowIds, setGraduableVowIds] = useState<Set<string>>(new Set());
   const [totalSavedMinutes, setTotalSavedMinutes] = useState(0);
   // 誓いの行に出す名前は、宣言時に保存した app_label より端末の正式名を優先する
   // (「Mitene」で宣言済みの誓いも、次の表示から「みてね」になる)。
@@ -83,12 +91,14 @@ export default function Home() {
   const diffUntil = useRef(0);
 
   const loadAll = useCallback(async () => {
-    // 累計はやめた誓いも含めた全体。行の表示はアクティブな誓いだけ。
+    // 累計はやめた誓い・卒業した誓いも含めた全体。行に数字を出すのは挑戦中の誓いだけ。
     const [totalsRes, vowsRes, dailyRes, growthRes] = await Promise.all([
       supabase.from('garden_state').select('longest_days').maybeSingle(),
       supabase
         .from('measured_saved')
-        .select('vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on')
+        .select(
+          'vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on, graduated_on',
+        )
         .order('declared_on', { ascending: true }),
       supabase
         .from('measured_daily')
@@ -98,14 +108,34 @@ export default function Home() {
     ]);
     const allVows = (vowsRes.data ?? []) as VowSummary[];
     setTotals(totalsRes.data ?? null);
-    const activeVows = allVows.filter((v) => v.discontinued_on === null);
+    // 挑戦中(3本の枠に数える)と卒業済み(数えない)を分ける。廃止はどちらにも出さない。
+    const living = allVows.filter((v) => v.discontinued_on === null);
+    const activeVows = living.filter((v) => v.graduated_on === null);
+    const graduated = living.filter((v) => v.graduated_on !== null);
     setVows(activeVows);
-    setOfficialLabels(getAppLabels(activeVows.map((v) => v.package_name)));
+    setGraduatedVows(graduated);
+    setOfficialLabels(getAppLabels(living.map((v) => v.package_name)));
+    // 累計はやめた誓いも卒業した誓いも含めた全体(消えない蓄積)。
     setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
     setYesterdayMinutes(
       new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
     );
     setGrowth(growthRes);
+
+    // 卒業判定(卒業機能 §4)。窓は「時間の行き先」の候補窓とまったく同じ7日で、
+    // 材料は端末内DBだけ ── サーバーには問い合わせん。成立した誓いの行にだけ、
+    // 静かなテキストリンクが1行増える。促しも通知もここには無い(五原則1)。
+    const since = recentWindowStart();
+    const windowDates = recentWindowDates();
+    const recordedDates = await getRecordedDatesSince(since);
+    const graduable = new Set<string>();
+    for (const vow of activeVows) {
+      const foregroundMsByDate = await getPackageForegroundMsByDateSince(vow.package_name, since);
+      if (computeGraduationEligibility({ windowDates, recordedDates, foregroundMsByDate })) {
+        graduable.add(vow.vow_id);
+      }
+    }
+    setGraduableVowIds(graduable);
 
     // §変更4: 前回表示時の状態と比べ、変化があれば差分演出+一行を用意し、現在状態を保存する。
     // 初回(スナップショットなし)は演出をスキップし、現在状態をそのまま保存する。
@@ -295,31 +325,65 @@ export default function Home() {
             // 正式名が引けんときは宣言時に保存した名前をそのまま出す。
             const label = officialLabels[vow.package_name]?.trim() || vow.app_label;
             return (
-              // 行ごと誓い別詳細(取り戻しログ)へ。「昨日の実測を待っています。」の
-              // 行も開ける(詳細画面は確定済みの過去だけを見せるけん、待ちとは独立)。
-              // 押下の返事は控えめな沈み込みだけ。リップルや色変化は付けない。
-              <Pressable
-                key={vow.vow_id}
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                onPress={() => router.push(`/(app)/vow/${vow.vow_id}`)}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-              >
-                <View style={styles.rowBody}>
-                  <Text style={styles.label}>{label}</Text>
-                  <Text style={styles.saved}>
-                    {actual != null
-                      ? t.home.rowSaved(
-                          formatMinutes(actual, lang),
-                          formatMinutes(vow.baseline_minutes, lang),
-                          formatMinutes(vow.baseline_minutes - actual, lang),
-                        )
-                      : t.home.rowWaiting}
-                  </Text>
-                </View>
-                {/* 「押せ」ではなく「開いている」の印。主張しない */}
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
+              <View key={vow.vow_id} style={styles.rowGroup}>
+                {/* 行ごと誓い別詳細(取り戻しログ)へ。「昨日の実測を待っています。」の
+                    行も開ける(詳細画面は確定済みの過去だけを見せるけん、待ちとは独立)。
+                    押下の返事は控えめな沈み込みだけ。リップルや色変化は付けない。 */}
+                <Pressable
+                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                  onPress={() => router.push(`/(app)/vow/${vow.vow_id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                >
+                  <View style={styles.rowBody}>
+                    <Text style={styles.label}>{label}</Text>
+                    <Text style={styles.saved}>
+                      {actual != null
+                        ? t.home.rowSaved(
+                            formatMinutes(actual, lang),
+                            formatMinutes(vow.baseline_minutes, lang),
+                            formatMinutes(vow.baseline_minutes - actual, lang),
+                          )
+                        : t.home.rowWaiting}
+                    </Text>
+                  </View>
+                  {/* 「押せ」ではなく「開いている」の印。主張しない */}
+                  <Text style={styles.chevron}>›</Text>
+                </Pressable>
+
+                {/* 卒業の導線(卒業機能 §5-1)。直近7日、一度も開かれとらん誓いに
+                    だけ静かに現れる一行。バッジも祝いも添えない ── 現れたこと自体が
+                    知らせで、押すかどうかは本人が決める */}
+                {graduableVowIds.has(vow.vow_id) && (
+                  <Pressable
+                    style={styles.graduate}
+                    hitSlop={12}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(app)/graduate',
+                        params: { vowId: vow.vow_id, packageName: vow.package_name, label },
+                      })
+                    }
+                  >
+                    <Text style={styles.graduateText}>{t.home.graduateLink}</Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })}
+
+          {/* 卒業済み(卒業機能 §5-1)。挑戦中の下に淡色で、名前と「卒業」だけ。
+              日次の数字は出さない ── 取り戻しは合計値に含まれ続けとる(静けさ優先)。
+              計測に戻す導線はここには置かない。ぶり返して「時間の行き先」に
+              再浮上したときだけ、observe から静かに戻せる */}
+          {graduatedVows.map((vow) => {
+            const label = officialLabels[vow.package_name]?.trim() || vow.app_label;
+            return (
+              <View key={vow.vow_id} style={styles.graduatedRow}>
+                <Text style={styles.graduatedLabel}>{label}</Text>
+                <Text style={styles.graduatedMark}>{t.home.graduatedLabel}</Text>
+              </View>
             );
           })}
 
@@ -466,6 +530,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   list: { gap: 28, paddingHorizontal: 28 },
+  // 誓いの行と、その下に付きうる卒業の導線をひとまとめに。list の gap(28)は
+  // 誓いと誓いの間にだけ効き、導線は行のすぐ下(12)に寄る
+  rowGroup: { gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowPressed: { opacity: 0.6 },
   rowBody: { flex: 1, gap: 8 },
@@ -473,6 +540,16 @@ const styles = StyleSheet.create({
   chevron: { marginLeft: 12, fontSize: 15, lineHeight: 20, color: 'rgba(140,133,119,0.55)' },
   label: { fontFamily: fonts.serif, fontSize: 17, color: colors.sumi, letterSpacing: 1 },
   saved: { fontSize: 12, color: colors.usuzumi, letterSpacing: 1 },
+
+  // 卒業の導線(§5-1): observe の declareLink に準ずる控えめなテキストリンク。
+  // 枠・背景・印は付けない。行の右端に寄せて、数字の並びを乱さない
+  graduate: { alignSelf: 'flex-end' },
+  graduateText: { fontSize: 12, color: colors.shu, letterSpacing: 1 },
+
+  // 卒業済みの行(§5-1): 淡色(薄墨)で名前と「卒業」だけ。タップ先も数字も無い
+  graduatedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  graduatedLabel: { fontFamily: fonts.serif, fontSize: 15, color: colors.usuzumi, letterSpacing: 1 },
+  graduatedMark: { fontSize: 11, color: colors.usuzumi, letterSpacing: 2 },
 
   // 誓い枠が空いとる間: 極細の実線枠(木札)。破線は「仮置き」の記号に見えるけん使わん。
   observe: {

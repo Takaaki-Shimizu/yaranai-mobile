@@ -83,6 +83,34 @@ export async function getMinutesForPackage(
   return Math.round((row?.ms ?? 0) / 60000);
 }
 
+// 指定日以降で、1行でも観測がある日。卒業判定のガード(「データが無い日」と
+// 「使わなかった日」を分ける)に使う。getRecordedDates と違い窓で絞る。
+export async function getRecordedDatesSince(sinceRecordDate: string): Promise<Set<string>> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ record_date: string }>(
+    'select distinct record_date from usage_daily where record_date >= ?',
+    sinceRecordDate,
+  );
+  return new Set(rows.map((r) => r.record_date));
+}
+
+// 指定日以降の、指定アプリの日別前景時間(ms)。行が無い日はキーごと入らない
+// (= 欠損か、開かんかったかの区別は getRecordedDatesSince が持つ)。
+// 卒業判定は「1分でも使っとったら不成立」やけん、分に丸めずmsのまま渡す。
+export async function getPackageForegroundMsByDateSince(
+  packageName: string,
+  sinceRecordDate: string,
+): Promise<Map<string, number>> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ record_date: string; foreground_ms: number }>(
+    `select record_date, foreground_ms from usage_daily
+     where package_name = ? and record_date >= ?`,
+    packageName,
+    sinceRecordDate,
+  );
+  return new Map(rows.map((r) => [r.record_date, r.foreground_ms]));
+}
+
 export type WeeklyUsage = {
   packageName: string;
   totalMinutes: number;
