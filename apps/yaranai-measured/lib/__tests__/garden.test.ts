@@ -173,6 +173,67 @@ test('単調非減少: 崩れた日を含む84日系列で庭の要素が後退�
   }
 });
 
+// 翼(絵巻の左右)の苔。週末に開扉して左右へ振ったとき、取り戻した時間が庭のどこにも
+// 等しく現れていることが翼を持たせた理由。中央だけが育つ実装に戻さないための錠。
+const TOTAL_CENTER_TUFTS = 36;
+const TOTAL_WING_TUFTS = 44;
+function tuftCoverage(m: number): { center: number; wing: number } {
+  const scene = buildScene(deriveGrowth(snap(84, 210 * m, 3)));
+  let center = 0;
+  let wing = 0;
+  for (const layer of scene.layers) {
+    for (const group of layer.groups) {
+      for (const prim of group.prims) {
+        if (prim.kind !== 'tuft') continue;
+        // 'path' レイヤーの房は石の根元に無条件で置かれる装飾なので数えない
+        if (layer.id.startsWith('wing-')) wing++;
+        else if (layer.id !== 'path' && prim.x >= FRAME_X && prim.x <= FRAME_X + FRAME_W) center++;
+      }
+    }
+  }
+  return { center: center / TOTAL_CENTER_TUFTS, wing: wing / TOTAL_WING_TUFTS };
+}
+
+test('翼の苔は中央と同水準に育つ(序盤から現れ、中央の密度を超えない)', () => {
+  // 序盤から翼にも苔がある。旧実装は m<0.3(63h)まで翼が完全な更地だった
+  assert.ok(tuftCoverage(0.05).wing > 0, 'm=0.05 で翼に房が一つも無い');
+  assert.ok(tuftCoverage(0.1).wing > 0.05, 'm=0.1 で翼の苔が乏しすぎる');
+
+  // かつ、取り戻した時間より多くは見せない: どの m でも翼の被覆率が中央を上回らない
+  // (順位の量子化ぶんの誤差 1房 = 約2.3pt は許容)
+  for (let mi = 0; mi <= 40; mi++) {
+    const m = mi / 40;
+    const { center, wing } = tuftCoverage(m);
+    assert.ok(
+      wing <= center + 1 / TOTAL_WING_TUFTS + 1e-9,
+      `m=${m}: 翼 ${(wing * 100).toFixed(1)}% が中央 ${(center * 100).toFixed(1)}% を超過`,
+    );
+  }
+});
+
+test('翼の苔は満開(m=1)で全て本来の大きさに達する', () => {
+  // thr の分母を頭打ちにすると、閾値の高い房が満開でも 0.6 倍のまま伸びきらない
+  const full = buildScene(deriveGrowth(snap(84, 210, 3)));
+  const mid = buildScene(deriveGrowth(snap(84, 105, 3)));
+  const wingTufts = (s: Scene) => {
+    const out = new Map<string, number>();
+    for (const layer of s.layers) {
+      for (const group of layer.groups) {
+        for (const prim of group.prims) {
+          if (prim.kind === 'tuft' && layer.id.startsWith('wing-')) out.set(`${prim.x},${prim.y}`, prim.scale);
+        }
+      }
+    }
+    return out;
+  };
+  const atFull = wingTufts(full);
+  assert.equal(atFull.size, TOTAL_WING_TUFTS);
+  // 満開の房は m=0.5 時点の同じ房より必ず大きい(= 0.6 倍で止まっていない)
+  for (const [key, s] of wingTufts(mid)) {
+    assert.ok(atFull.get(key)! > s, `満開で房 ${key} が伸びていない`);
+  }
+});
+
 test('房のスケールも m に対して単調非減少', () => {
   let prevScales: Map<string, number> | null = null;
   for (let mi = 0; mi <= 20; mi++) {
