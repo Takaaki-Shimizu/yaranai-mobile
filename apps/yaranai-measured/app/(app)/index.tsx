@@ -10,7 +10,7 @@ import { useFocusEffect } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncAll } from '../../lib/usage-sync';
-import { recentWindowDates, recentWindowStart, recordDateDaysAgo } from '../../lib/dates';
+import { graduationWindowDates, graduationWindowStart, recordDateDaysAgo } from '../../lib/dates';
 import { getPackageForegroundMsByDateSince, getRecordedDatesSince } from '../../lib/usage-db';
 import { computeGraduationEligibility } from '../../lib/graduation';
 import { formatMinutes } from '../../lib/format';
@@ -60,18 +60,24 @@ type Totals = {
 // として引き直し、全行を挑戦中(graduated_on: null)として返す ── 旧スキーマに
 // 卒業済みは存在せんけん、意味もこれで合う。畳まれるのは卒業の導線だけで、
 // 計測中の誓いの表示は一行も欠けない。
+// 並びは宣言日 → パッケージ名。declared_on は暦日やけん同日宣言で並ぶことがあり、
+// タイブレークを置かんとビューの作り直し(003)のたびに物理順で入れ替わって見える。
+// 意味のある第2キー(宣言時刻)はビューに出とらんけん、決定的で説明のつく
+// パッケージ名で留める。
 async function fetchVowSummaries() {
   const columns =
     'vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on';
   const full = await supabase
     .from('measured_saved')
     .select(`${columns}, graduated_on`)
-    .order('declared_on', { ascending: true });
+    .order('declared_on', { ascending: true })
+    .order('package_name', { ascending: true });
   if (!isMissingGraduatedOn(full.error)) return full;
   const legacy = await supabase
     .from('measured_saved')
     .select(columns)
-    .order('declared_on', { ascending: true });
+    .order('declared_on', { ascending: true })
+    .order('package_name', { ascending: true });
   return {
     ...legacy,
     data: legacy.data?.map((v) => ({ ...v, graduated_on: null })) ?? null,
@@ -147,11 +153,12 @@ export default function Home() {
       // 累計はやめた誓いも卒業した誓いも含めた全体(消えない蓄積)。
       setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
 
-      // 卒業判定(卒業機能 §4)。窓は「時間の行き先」の候補窓とまったく同じ7日で、
-      // 材料は端末内DBだけ ── サーバーには問い合わせん。成立した誓いの行にだけ、
-      // 静かなテキストリンクが1行増える。促しも通知もここには無い(五原則1)。
-      const since = recentWindowStart();
-      const windowDates = recentWindowDates();
+      // 卒業判定(卒業機能 §4)。窓は前日までの7暦日(当日は含めない。含めると
+      // 実質6日と数時間の判定になる)。材料は端末内DBだけ ── サーバーには
+      // 問い合わせん。成立した誓いの行にだけ、静かなテキストリンクが1行増える。
+      // 促しも通知もここには無い(五原則1)。
+      const since = graduationWindowStart();
+      const windowDates = graduationWindowDates();
       const recordedDates = await getRecordedDatesSince(since);
       const graduable = new Set<string>();
       for (const vow of activeVows) {

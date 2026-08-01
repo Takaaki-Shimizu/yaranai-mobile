@@ -1,7 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeGraduationEligibility } from '../graduation';
-import { RECENT_WINDOW_DAYS, recentWindowDates, recentWindowStart } from '../dates';
+import {
+  RECENT_WINDOW_DAYS,
+  getTodayRecordDate,
+  graduationWindowDates,
+  graduationWindowStart,
+  recentWindowDates,
+  recentWindowStart,
+  recordDateDaysAgo,
+} from '../dates';
 
 // 判定窓は「直近7暦日」。テストでは固定の7日を使う(当日 = 2026-08-01 相当)
 const WINDOW = [
@@ -18,7 +26,7 @@ const allRecorded = new Set(WINDOW);
 
 // ---- 窓の定義(observe と共用) -------------------------------------------
 
-test('窓は当日を含む7暦日。observe の候補窓と同じ定義を共有する', () => {
+test('候補窓(observe)は当日を含む7暦日', () => {
   assert.equal(RECENT_WINDOW_DAYS, 7);
   const dates = recentWindowDates();
   assert.equal(dates.length, 7);
@@ -26,6 +34,20 @@ test('窓は当日を含む7暦日。observe の候補窓と同じ定義を共�
   assert.deepEqual(dates, [...dates].sort());
   assert.equal(new Set(dates).size, 7);
   assert.equal(dates[0], recentWindowStart());
+  assert.equal(dates[dates.length - 1], getTodayRecordDate());
+});
+
+test('卒業判定の窓は前日までの7暦日。当日を含まない', () => {
+  const dates = graduationWindowDates();
+  assert.equal(dates.length, 7);
+  assert.deepEqual(dates, [...dates].sort());
+  assert.equal(new Set(dates).size, 7);
+  assert.equal(dates[0], graduationWindowStart());
+  // 終わりは前日。当日を含めると「実質6日と数時間」の判定になってしまう
+  assert.equal(dates[dates.length - 1], recordDateDaysAgo(1));
+  assert.equal(dates.includes(getTodayRecordDate()), false);
+  // 候補窓を1日だけ過去へずらした窓であること(日数の定義は共有)
+  assert.deepEqual(dates, [graduationWindowStart(), ...recentWindowDates().slice(0, -1)]);
 });
 
 // ---- 成立・不成立 ---------------------------------------------------------

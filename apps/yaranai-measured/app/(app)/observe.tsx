@@ -24,7 +24,8 @@ const MAX_CANDIDATES = 30;
 // 「使った」とみなす直近7日の合計の下限。システムが一瞬だけ前面に出す部品
 // (検索セレクタ・動画プレイヤー・Wellbeing など)やアラーム解除だけの時計が
 // 候補に並ぶと、本人が使っとる認識のないアプリだらけになるけん足切りする。
-const MIN_WEEKLY_TOTAL_MINUTES = 10;
+// 誓いのなか・卒業済みのアプリはこの足切りを免除する(下の shown を参照)。
+const MIN_WEEKLY_TOTAL_MINUTES = 5;
 
 // 12週平均がこれ未満(四捨五入で表示が「0分」になる)のアプリは、
 // 宣言しても取り戻せる時間がないけん候補に出さない。
@@ -77,9 +78,9 @@ export default function Observe() {
     // 直近7日に使ったアプリだけを候補にする(今も続いとる習慣のフィルタ)。
     // 並び順と表示は12週平均: 一時的な急増は平均に吸収され、
     // やめ済みアプリを宣言して基準線だけ稼ぐ抜け道も防ぐ。
-    // 候補窓は卒業判定とまったく同じ7日(lib/dates.ts に定義を一本化)。
-    // 「時間の行き先から消えた = 卒業できる」の一致がこの機能のUXの核やけん、
-    // どちらか片方だけ窓を動かすことは無い。
+    // 候補窓は当日を含む7日。卒業判定は前日までの7日(lib/dates.ts)で1日ずれるが、
+    // 「消えた = 卒業できる」の対応は誓いのなかのアプリの足切り免除で保証する:
+    // 1分でも使えばここに並び続けるけん、「並んどらんのに卒業できん」は起きん。
     const [recent, vowsRes] = await Promise.all([
       getWeeklyTopApps(recentWindowStart(), 100),
       fetchLivingVows(),
@@ -93,6 +94,11 @@ export default function Observe() {
         `coveredMs=${baseline.window.coveredMs} recent7d=${recent.length}`,
     );
     if (baseline.availableDays >= BASELINE_MIN_DAYS) {
+      // 誓いのある(挑戦中・卒業済み)パッケージは足切りと件数上限を免除する。
+      // 卒業済みが1分でも使えばここに再浮上して「計測に戻す」が届き、
+      // 挑戦中は「時間の行き先から消えた = 卒業できる」の対応が崩れん。
+      // 廃止済みは vowsRes に含まれん(= ただの候補として扱う)。
+      const vowedPkgs = new Set((vowsRes.data ?? []).map((v) => v.package_name as string));
       const candidates = recent
         .filter((r) => !isNoisePackage(r.packageName))
         .map((r) => ({
@@ -104,10 +110,11 @@ export default function Observe() {
       const shown = candidates
         .filter(
           (r) =>
-            r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
-            r.avgMinutesPerDay >= MIN_AVG_MINUTES,
+            vowedPkgs.has(r.packageName) ||
+            (r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
+              r.avgMinutesPerDay >= MIN_AVG_MINUTES),
         )
-        .slice(0, MAX_CANDIDATES);
+        .filter((r, i) => i < MAX_CANDIDATES || vowedPkgs.has(r.packageName));
       setRows(shown);
       setOfficialLabels(getAppLabels(shown.map((r) => r.packageName)));
       // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
