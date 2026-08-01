@@ -16,6 +16,7 @@
     "lib/graduation.ts",
     "lib/usage-buckets.ts",
     "lib/vow-log.ts",
+    "lib/vows.ts",
     "lib/garden/**/*.ts",
     "lib/launch/**/*.ts",
     "lib/tojiru/timeline.ts",

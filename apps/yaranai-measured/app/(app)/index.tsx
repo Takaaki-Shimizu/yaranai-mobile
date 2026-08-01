@@ -37,7 +37,7 @@ import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { IdealHeader } from '../../components/IdealHeader';
 import { GoldRule, GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
 import { useLang, useT } from '../../lib/i18n/context';
-import { MAX_VOWS } from '../../lib/vows';
+import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
 import type { GrowthParams } from '../../lib/garden/growth';
 
 type VowSummary = {
@@ -54,6 +54,29 @@ type VowSummary = {
 type Totals = {
   longest_days: number;
 };
+
+// ホームに出す誓い一覧。graduated_on はマイグレーション 003 で入る列で、未適用の
+// Supabase に対しては select ごと 42703 で落ちる。その一点だけは列なしの旧スキーマ
+// として引き直し、全行を挑戦中(graduated_on: null)として返す ── 旧スキーマに
+// 卒業済みは存在せんけん、意味もこれで合う。畳まれるのは卒業の導線だけで、
+// 計測中の誓いの表示は一行も欠けない。
+async function fetchVowSummaries() {
+  const columns =
+    'vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on';
+  const full = await supabase
+    .from('measured_saved')
+    .select(`${columns}, graduated_on`)
+    .order('declared_on', { ascending: true });
+  if (!isMissingGraduatedOn(full.error)) return full;
+  const legacy = await supabase
+    .from('measured_saved')
+    .select(columns)
+    .order('declared_on', { ascending: true });
+  return {
+    ...legacy,
+    data: legacy.data?.map((v) => ({ ...v, graduated_on: null })) ?? null,
+  };
+}
 
 export default function Home() {
   const session = useSession();
@@ -94,48 +117,51 @@ export default function Home() {
     // 累計はやめた誓い・卒業した誓いも含めた全体。行に数字を出すのは挑戦中の誓いだけ。
     const [totalsRes, vowsRes, dailyRes, growthRes] = await Promise.all([
       supabase.from('garden_state').select('longest_days').maybeSingle(),
-      supabase
-        .from('measured_saved')
-        .select(
-          'vow_id, package_name, app_label, baseline_minutes, saved_minutes, discontinued_on, graduated_on',
-        )
-        .order('declared_on', { ascending: true }),
+      fetchVowSummaries(),
       supabase
         .from('measured_daily')
         .select('vow_id, actual_minutes')
         .eq('record_date', recordDateDaysAgo(1)),
       session ? loadGrowth(session.user.id) : Promise.resolve(null),
     ]);
-    const allVows = (vowsRes.data ?? []) as VowSummary[];
     setTotals(totalsRes.data ?? null);
-    // 挑戦中(3本の枠に数える)と卒業済み(数えない)を分ける。廃止はどちらにも出さない。
-    const living = allVows.filter((v) => v.discontinued_on === null);
-    const activeVows = living.filter((v) => v.graduated_on === null);
-    const graduated = living.filter((v) => v.graduated_on !== null);
-    setVows(activeVows);
-    setGraduatedVows(graduated);
-    setOfficialLabels(getAppLabels(living.map((v) => v.package_name)));
-    // 累計はやめた誓いも卒業した誓いも含めた全体(消えない蓄積)。
-    setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
     setYesterdayMinutes(
       new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
     );
     setGrowth(growthRes);
 
-    // 卒業判定(卒業機能 §4)。窓は「時間の行き先」の候補窓とまったく同じ7日で、
-    // 材料は端末内DBだけ ── サーバーには問い合わせん。成立した誓いの行にだけ、
-    // 静かなテキストリンクが1行増える。促しも通知もここには無い(五原則1)。
-    const since = recentWindowStart();
-    const windowDates = recentWindowDates();
-    const recordedDates = await getRecordedDatesSince(since);
-    const graduable = new Set<string>();
-    for (const vow of activeVows) {
-      const foregroundMsByDate = await getPackageForegroundMsByDateSince(vow.package_name, since);
-      if (computeGraduationEligibility({ windowDates, recordedDates, foregroundMsByDate })) {
-        graduable.add(vow.vow_id);
+    if (vowsRes.error) {
+      // 誓いが引けんかった回は、前回表示した誓いをそのまま残す。ここで空配列に
+      // 上書きすると、通信断やスキーマ不一致のたびに計測中の誓いが全部消えて
+      // 「まだ何も宣言しとらん」初回モードに化ける(見た目のデータ消失)。
+      console.log(`[home] vows load failed: ${vowsRes.error.code} ${vowsRes.error.message}`);
+    } else {
+      const allVows = (vowsRes.data ?? []) as VowSummary[];
+      // 挑戦中(3本の枠に数える)と卒業済み(数えない)を分ける。廃止はどちらにも出さない。
+      const living = allVows.filter((v) => v.discontinued_on === null);
+      const activeVows = living.filter((v) => v.graduated_on === null);
+      const graduated = living.filter((v) => v.graduated_on !== null);
+      setVows(activeVows);
+      setGraduatedVows(graduated);
+      setOfficialLabels(getAppLabels(living.map((v) => v.package_name)));
+      // 累計はやめた誓いも卒業した誓いも含めた全体(消えない蓄積)。
+      setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
+
+      // 卒業判定(卒業機能 §4)。窓は「時間の行き先」の候補窓とまったく同じ7日で、
+      // 材料は端末内DBだけ ── サーバーには問い合わせん。成立した誓いの行にだけ、
+      // 静かなテキストリンクが1行増える。促しも通知もここには無い(五原則1)。
+      const since = recentWindowStart();
+      const windowDates = recentWindowDates();
+      const recordedDates = await getRecordedDatesSince(since);
+      const graduable = new Set<string>();
+      for (const vow of activeVows) {
+        const foregroundMsByDate = await getPackageForegroundMsByDateSince(vow.package_name, since);
+        if (computeGraduationEligibility({ windowDates, recordedDates, foregroundMsByDate })) {
+          graduable.add(vow.vow_id);
+        }
       }
+      setGraduableVowIds(graduable);
     }
-    setGraduableVowIds(graduable);
 
     // §変更4: 前回表示時の状態と比べ、変化があれば差分演出+一行を用意し、現在状態を保存する。
     // 初回(スナップショットなし)は演出をスキップし、現在状態をそのまま保存する。

@@ -14,7 +14,7 @@ import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
 import { formatMinutes } from '../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { useLang, useT } from '../../lib/i18n/context';
-import { MAX_VOWS } from '../../lib/vows';
+import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
 import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 
 // 候補の表示上限。並びは12週平均やけん、使い始めて日が浅いアプリは平均が
@@ -39,6 +39,26 @@ type ObserveRow = {
 // 誓いの状態(卒業機能 §1)。挑戦中だけが3本の枠を占める。
 type VowState = 'active' | 'graduated';
 
+// 生きた誓いの一覧。マイグレーション 003 未適用の Supabase では graduated_on 列が
+// 無く 42703 で落ちるけん、そのときだけ列なしで引き直し、全行を挑戦中として扱う
+// (旧スキーマに卒業済みは存在せん)。空扱いに落とすと、誓いの立っとるアプリに
+// 「宣言する」が出て、枠判定も狂う。
+async function fetchLivingVows() {
+  const full = await supabase
+    .from('measured_vows')
+    .select('package_name, graduated_on')
+    .is('discontinued_on', null);
+  if (!isMissingGraduatedOn(full.error)) return full;
+  const legacy = await supabase
+    .from('measured_vows')
+    .select('package_name')
+    .is('discontinued_on', null);
+  return {
+    ...legacy,
+    data: legacy.data?.map((v) => ({ ...v, graduated_on: null })) ?? null,
+  };
+}
+
 export default function Observe() {
   const router = useSumiireRouter();
   const { lang } = useLang();
@@ -62,10 +82,7 @@ export default function Observe() {
     // どちらか片方だけ窓を動かすことは無い。
     const [recent, vowsRes] = await Promise.all([
       getWeeklyTopApps(recentWindowStart(), 100),
-      supabase
-        .from('measured_vows')
-        .select('package_name, graduated_on')
-        .is('discontinued_on', null),
+      fetchLivingVows(),
     ]);
     const baseline = measureBaselineWindow();
     setAvailableDays(baseline.availableDays);
@@ -113,14 +130,18 @@ export default function Observe() {
       setRows([]);
       setOfficialLabels({});
     }
-    setVowStates(
-      new Map(
-        (vowsRes.data ?? []).map((v) => [
-          v.package_name as string,
-          (v.graduated_on ? 'graduated' : 'active') as VowState,
-        ]),
-      ),
-    );
+    // 誓いが引けんかった回は前回の状態を残す。空の Map に落とすと、誓いの
+    // 立っとるアプリにまで「宣言する」が並んでしまう。
+    if (!vowsRes.error) {
+      setVowStates(
+        new Map(
+          (vowsRes.data ?? []).map((v) => [
+            v.package_name as string,
+            (v.graduated_on ? 'graduated' : 'active') as VowState,
+          ]),
+        ),
+      );
+    }
     setLoaded(true);
   }, []);
 

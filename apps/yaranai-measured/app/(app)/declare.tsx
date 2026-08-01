@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../lib/baseline';
 import { formatMinutes } from '../../lib/format';
 import { useLang, useT } from '../../lib/i18n/context';
-import { MAX_VOWS } from '../../lib/vows';
+import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
 
 // 卒業済みの誓い(卒業機能 §5-3)。この画面は宣言と復帰の二役を持つ。
 // 同じパッケージに生きた誓いがあるなら新規宣言はありえん(unique index が弾く)ので、
@@ -45,22 +45,44 @@ export default function Declare() {
       return;
     }
     let cancelled = false;
+    // マイグレーション 003 未適用の Supabase では graduated_on 列が無く 42703 で
+    // 落ちるけん、そのときだけ旧スキーマとして引き直す。旧スキーマに卒業済みは
+    // 存在せんけん、既存行 = 挑戦中、生きた誓い = 枠を占める誓い、でよい。
+    const fetchExisting = async () => {
+      const full = await supabase
+        .from('measured_vows')
+        .select('id, baseline_minutes, graduated_on')
+        .eq('package_name', packageName)
+        .is('discontinued_on', null)
+        .maybeSingle();
+      if (!isMissingGraduatedOn(full.error)) return full;
+      const legacy = await supabase
+        .from('measured_vows')
+        .select('id, baseline_minutes')
+        .eq('package_name', packageName)
+        .is('discontinued_on', null)
+        .maybeSingle();
+      return {
+        ...legacy,
+        data: legacy.data ? { ...legacy.data, graduated_on: null } : null,
+      };
+    };
+    const fetchActiveCount = async () => {
+      const full = await supabase
+        .from('measured_vows')
+        .select('id', { count: 'exact', head: true })
+        .is('discontinued_on', null)
+        .is('graduated_on', null);
+      if (!isMissingGraduatedOn(full.error)) return full;
+      return supabase
+        .from('measured_vows')
+        .select('id', { count: 'exact', head: true })
+        .is('discontinued_on', null);
+    };
     (async () => {
-      const [existing, active] = await Promise.all([
-        supabase
-          .from('measured_vows')
-          .select('id, baseline_minutes, graduated_on')
-          .eq('package_name', packageName)
-          .is('discontinued_on', null)
-          .maybeSingle(),
-        // 枠の担保はDBトリガーが唯一の正。これは満杯を先に伝えるための補助で、
-        // 押してから断られるより、押せんと分かっとるほうが静かやけん置いとる。
-        supabase
-          .from('measured_vows')
-          .select('id', { count: 'exact', head: true })
-          .is('discontinued_on', null)
-          .is('graduated_on', null),
-      ]);
+      // 枠の担保はDBトリガーが唯一の正。count は満杯を先に伝えるための補助で、
+      // 押してから断られるより、押せんと分かっとるほうが静かやけん置いとる。
+      const [existing, active] = await Promise.all([fetchExisting(), fetchActiveCount()]);
       if (cancelled) return;
       const row = existing.data;
       if (row?.graduated_on) {
