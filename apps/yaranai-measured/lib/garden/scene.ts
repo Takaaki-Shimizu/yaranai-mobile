@@ -512,27 +512,76 @@ function tuftScaleAt(t: TuftSpec, thr: number, m: number): number | null {
 // 翼の苔房を中央パネル [900,2400] の外側にだけ散らす。苔は中央と同じく苔充実度 m で育つ
 // (取り戻した時間の反映)。ハードスケープの motif(三尊石・蹲踞・飛び石・庭の竹)だけが
 // 完成形固定(借景と同じ)。位置は決定論的、y は north-star 800系(wy() で新世界へ)。
-type WT = { x: number; y: number; s: number; rot: number; thr: number };
+//
+// 閾値は「中央パネルの縁からの距離」ではなく「その翼自身の石からの距離」で配る。
+// 縁からの距離で決めると翼は中央の付属物になり、m が中盤に達するまで左右は更地のまま、
+// 外周に至っては終盤まで何も生えない。週末に絵巻を開いて左右へ振ったとき、取り戻した
+// 時間が庭のどこにも等しく現れていること — それが翼を持たせた理由なので、中央が主石の
+// 根元から広がるのと同じ文法を、各翼に自分の石(左=三尊石・右=蹲踞)で持たせる。
+type WT = { x: number; y: number; s: number; rot: number; thr: number; jitter: number };
 function wingScatter(rng: Rng, xMin: number, xMax: number, count: number, band: [number, number], sRange: [number, number]): WT[] {
   const out: WT[] = [];
   for (let i = 0; i < count; i++) {
     const x = range(rng, xMin, xMax);
-    // 中央パネルの縁から遠いほど遅く現れる(外周へ広がる)
-    const d = Math.min(Math.abs(x - FRAME_X), Math.abs(x - (FRAME_X + FRAME_W)));
-    const thr = clamp01(0.3 + 0.6 * (d / FRAME_X) + range(rng, -0.06, 0.06));
-    out.push({ x, y: range(rng, band[0], band[1]), s: range(rng, sRange[0], sRange[1]), rot: range(rng, -8, 8), thr });
+    // 閾値のゆらぎ。抽選の順序(x → ゆらぎ → y → s → rot)は房の配置そのものなので変えない
+    const jitter = range(rng, -0.06, 0.06);
+    out.push({
+      x, y: range(rng, band[0], band[1]), s: range(rng, sRange[0], sRange[1]), rot: range(rng, -8, 8),
+      thr: 1, jitter,
+    });
   }
   return out;
 }
+
+/** 翼の苔の起点(世界座標)。左翼=三尊石の主石、右翼=蹲踞 */
+const WING_NUCLEUS_L: [number, number] = [350, 700];
+const WING_NUCLEUS_R: [number, number] = [2800, 756];
+// 閾値レンジ。下限は中央 tuftThresholds の最初の一房と同じ 0.03。
+// どの m でも翼の苔の密度が中央を超えないこと(取り戻した時間より多くは見せない)が
+// 非交渉ラインで、上限はそれを満たす値として選んである。中央の上限 0.95 をそのまま
+// 使うと、翼は房の数が中央より多い(44 対 36)ぶん終盤で中央を追い越す(m=0.94 で
+// +2.7房)。1.0 まで伸ばすと全域で乖離が 0.4 房以内に収まり、満開(m=1)で 44/44 に
+// 達する点は変わらない。
+const WING_THR_LO = 0.03;
+const WING_THR_HI = 1.0;
+
+/**
+ * 翼の房に閾値を配る。起点の石から近い順に WING_THR_LO〜WING_THR_HI を均等配分
+ * (中央 tuftThresholds と同じ規則)。左右それぞれ独立に配ること。両翼をまとめて
+ * 一つの順位にすると片方の翼だけ後回しになり、振ったときに「片側だけ更地」になる。
+ */
+function assignWingThresholds(tufts: WT[], [nx, ny]: [number, number]): void {
+  const dist = (t: WT) => Math.hypot(t.x - nx, wy(t.y) - ny);
+  [...tufts].sort((a, b) => dist(a) - dist(b)).forEach((t, i) => {
+    const base = tufts.length === 1
+      ? WING_THR_LO
+      : WING_THR_LO + ((WING_THR_HI - WING_THR_LO) * i) / (tufts.length - 1);
+    // ゆらぎで下限を割らせない。WING_THR_LO は中央の最初の一房と同じ位置に置いた床で、
+    // ここを割ると取り戻し時間がほぼゼロの Day 1 の庭に苔が生えてしまう
+    t.thr = Math.min(WING_THR_HI, Math.max(WING_THR_LO, base + t.jitter));
+  });
+}
+
 const WING = (() => {
   const rng = mulberry32(WING_SEED);
-  const far = [...wingScatter(rng, 260, 880, 7, [440, 462], [0.45, 0.6]), ...wingScatter(rng, 2420, 3080, 4, [440, 462], [0.45, 0.6])];
-  const mid = [...wingScatter(rng, 230, 880, 10, [478, 566], [0.85, 1.2]), ...wingScatter(rng, 2420, 3100, 5, [478, 566], [0.8, 1.1])];
-  const fore = [...wingScatter(rng, 130, 880, 10, [640, 770], [1.2, 2.2]), ...wingScatter(rng, 2420, 3220, 8, [618, 774], [1.1, 1.9])];
-  // 前景の苔面 [cx, cy(800系), rx, ry, deep, thr]
+  const farL = wingScatter(rng, 260, 880, 7, [440, 462], [0.45, 0.6]);
+  const farR = wingScatter(rng, 2420, 3080, 4, [440, 462], [0.45, 0.6]);
+  const midL = wingScatter(rng, 230, 880, 10, [478, 566], [0.85, 1.2]);
+  const midR = wingScatter(rng, 2420, 3100, 5, [478, 566], [0.8, 1.1]);
+  const foreL = wingScatter(rng, 130, 880, 10, [640, 770], [1.2, 2.2]);
+  const foreR = wingScatter(rng, 2420, 3220, 8, [618, 774], [1.1, 1.9]);
+  assignWingThresholds([...farL, ...midL, ...foreL], WING_NUCLEUS_L);
+  assignWingThresholds([...farR, ...midR, ...foreR], WING_NUCLEUS_R);
+  const far = [...farL, ...farR];
+  const mid = [...midL, ...midR];
+  const fore = [...foreL, ...foreR];
+  // 前景の苔面 [cx, cy(800系), rx, ry, deep, thr]。連続した面は点在する房より先に
+  // 「小さくても整った場所」を作るので、中央 FORE_BLOBS と同水準の閾値にする
+  // (中央は4枚中2枚が 0.05 / 残り2枚が 0.42)。翼は6枚を 0.05×3 / 0.42×3 とし、
+  // 被覆率を中央と一致させる。0.05 の3枚は各翼の起点の石に近い順に選んだ。
   const blobs: [number, number, number, number, boolean, number][] = [
-    [430, 786, 150, 70, true, 0.35], [760, 800, 130, 62, false, 0.55], [120, 775, 130, 64, false, 0.75],
-    [2450, 792, 140, 64, true, 0.5], [2900, 788, 150, 70, false, 0.7], [3220, 795, 130, 62, true, 0.85],
+    [430, 786, 150, 70, true, 0.05], [760, 800, 130, 62, false, 0.42], [120, 775, 130, 64, false, 0.05],
+    [2450, 792, 140, 64, true, 0.42], [2900, 788, 150, 70, false, 0.05], [3220, 795, 130, 62, true, 0.42],
   ];
   return { far, mid, fore, blobs };
 })();
@@ -540,7 +589,9 @@ const WING = (() => {
 /** 苔充実度 m での翼房。m<thr は現れない。単調非減少 */
 function wingTuftPrim(t: WT, m: number): Prim | null {
   if (m < t.thr) return null;
-  const k = lerp(0.6, 1, clamp01((m - t.thr) / Math.max(0.05, 1 - t.thr)));
+  // 分母は 1-thr のまま(中央 tuftScaleAt と同一)。ここを Math.max(0.05, …) で
+  // 頭打ちにすると、thr が 0.95 を超える房が満開でも 0.6 倍のまま伸びきらない
+  const k = lerp(0.6, 1, t.thr >= 1 ? 1 : clamp01((m - t.thr) / (1 - t.thr)));
   return { kind: 'tuft', x: t.x, y: wy(t.y), scale: t.s * SX * k, rotateDeg: t.rot };
 }
 
@@ -668,7 +719,9 @@ function buildWingLayers(m: number, frontY: number, reach: number): SceneLayer[]
   const blobPrims: Prim[] = [];
   for (const [cx, cy, rx, ry, deep, thr] of WING.blobs) {
     if (m < thr) continue;
-    const k = lerp(0.6, 1, clamp01((m - thr) / Math.max(0.05, 1 - thr)));
+    // 早期に現れる面は中央の早期 blob と同じく、小さく芽生えてから広がる(中央は 0.43 起点)。
+    // 現れた瞬間から 0.6 の大きさで置くと、序盤の翼が中央より整って見えてしまう
+    const k = lerp(thr <= 0.05 ? 0.45 : 0.6, 1, clamp01((m - thr) / Math.max(0.05, 1 - thr)));
     blobPrims.push({ kind: 'ellipse', cx, cy: wy(cy), rx: rx * k, ry: ry * k * SY, paint: ref(deep ? 'mossDeep' : 'mossMid') });
   }
   layers.push({
