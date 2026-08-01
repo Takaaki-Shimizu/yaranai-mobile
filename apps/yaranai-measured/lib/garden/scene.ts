@@ -519,6 +519,8 @@ function tuftScaleAt(t: TuftSpec, thr: number, m: number): number | null {
 // 時間が庭のどこにも等しく現れていること — それが翼を持たせた理由なので、中央が主石の
 // 根元から広がるのと同じ文法を、各翼に自分の石(左=三尊石・右=蹲踞)で持たせる。
 type WT = { x: number; y: number; s: number; rot: number; thr: number; jitter: number };
+/** 翼の奥行きの帯。房も苔の面もこの三層に属し、帯ごとのレイヤー(視差・ぼかし)に積む */
+type WingBand = 'far' | 'mid' | 'fore';
 function wingScatter(rng: Rng, xMin: number, xMax: number, count: number, band: [number, number], sRange: [number, number]): WT[] {
   const out: WT[] = [];
   for (let i = 0; i < count; i++) {
@@ -575,13 +577,37 @@ const WING = (() => {
   const far = [...farL, ...farR];
   const mid = [...midL, ...midR];
   const fore = [...foreL, ...foreR];
-  // 前景の苔面 [cx, cy(800系), rx, ry, deep, thr]。連続した面は点在する房より先に
-  // 「小さくても整った場所」を作るので、中央 FORE_BLOBS と同水準の閾値にする
-  // (中央は4枚中2枚が 0.05 / 残り2枚が 0.42)。翼は6枚を 0.05×3 / 0.42×3 とし、
-  // 被覆率を中央と一致させる。0.05 の3枚は各翼の起点の石に近い順に選んだ。
-  const blobs: [number, number, number, number, boolean, number][] = [
-    [430, 786, 150, 70, true, 0.05], [760, 800, 130, 62, false, 0.42], [120, 775, 130, 64, false, 0.05],
-    [2450, 792, 140, 64, true, 0.42], [2900, 788, 150, 70, false, 0.05], [3220, 795, 130, 62, true, 0.42],
+  // 苔の面 [cx, cy(800系), rx, ry, deep, thr, 帯]。帯は房と同じ三層の奥行き
+  // (far=地平線際 / mid=中景 / fore=前景)で、その帯のレイヤーに積む(§下の buildWingLayers)。
+  //
+  // 面を fore にだけ置くと、絵巻を左右へ振ったとき苔の塊が全部足元に並び、奥行きのある
+  // 庭ではなく「手前に苔を貼った書き割り」に見える。房は三層に散っているのに面だけが
+  // 手前に揃うと、その食い違いが余計に目につく。各翼 fore 2・mid 1・far 1 に散らす。
+  // 大きさは帯の遠近に従わせること(房の s が far 0.45-0.6 / mid 0.8-1.2 / fore 1.1-2.2 と
+  // 縮むのと同じ比率)。奥の面を手前と同じ大きさで置くと遠近が壊れる。
+  // x は中央パネルの窓 [975,2325] に掛からない所まで(cx±rx で判定。ホームの静止画は変えない)。
+  // far/mid は同じ帯の房の下に敷くので、房が密な所に置くと丸ごと隠れて置いた意味がなくなる。
+  // その帯の房の隙間(左 far は x≈750-850、左 mid は x≈700-780)に、房が縁に少し乗る程度で置く。
+  //
+  // 連続した面は点在する房より先に「小さくても整った場所」を作るので、閾値は中央
+  // FORE_BLOBS と同水準にする(中央は4枚中2枚が 0.05 / 残り2枚が 0.42)。翼は8枚を
+  // 0.05×4 / 0.42×4 とし、被覆率を中央と一致させる。0.05 の4枚は各翼の起点の石
+  // (WING_NUCLEUS_L/R)に近い順に選んだ — 房の閾値と同じ「石の根元から広がる」文法。
+  const blobs: [number, number, number, number, boolean, number, WingBand][] = [
+    // 深い色(deep)は fore では変化をつけるためだが、mid/far では読めるかどうかの分かれ目に
+    // なる。奥の帯は blur と opacity で既に退いているので、色まで淡い mossMid にすると地面に
+    // 溶けて「そこに苔の面がある」と読めない。mid/far は deep で置くこと。
+    //
+    // 左翼(起点 = 三尊石の主石 350,700)。近い順: fore 200 → mid 730 → fore 648 → far 792
+    [730, 542, 88, 26, true, 0.05, 'mid'],
+    [200, 762, 142, 66, true, 0.05, 'fore'],
+    [648, 792, 122, 58, false, 0.42, 'fore'],
+    [792, 458, 58, 12, true, 0.42, 'far'],
+    // 右翼(起点 = 蹲踞 2800,756)。近い順: mid 2958 → far 2566 → fore 3046 → fore 2522
+    [2958, 552, 90, 26, true, 0.05, 'mid'],
+    [2566, 456, 60, 12, true, 0.05, 'far'],
+    [3046, 784, 140, 66, false, 0.42, 'fore'],
+    [2522, 796, 120, 58, true, 0.42, 'fore'],
   ];
   return { far, mid, fore, blobs };
 })();
@@ -669,6 +695,18 @@ function steppingStone(x: number, y: number, sz: number, op: number): Prim[] {
 function buildWingLayers(m: number, frontY: number, reach: number): SceneLayer[] {
   const layers: SceneLayer[] = [];
   const tufts = (list: WT[]) => list.map((t) => wingTuftPrim(t, m)).filter((p): p is Prim => p != null);
+  // 苔の面。帯ごとに取り出し、その帯のレイヤーで房の下に敷く(面 → 房の順は中央 fore と同じ)
+  const blobs = (band: WingBand): Prim[] => {
+    const out: Prim[] = [];
+    for (const [cx, cy, rx, ry, deep, thr, b] of WING.blobs) {
+      if (b !== band || m < thr) continue;
+      // 早期に現れる面は中央の早期 blob と同じく、小さく芽生えてから広がる(中央は 0.43 起点)。
+      // 現れた瞬間から 0.6 の大きさで置くと、序盤の翼が中央より整って見えてしまう
+      const k = lerp(thr <= 0.05 ? 0.45 : 0.6, 1, clamp01((m - thr) / Math.max(0.05, 1 - thr)));
+      out.push({ kind: 'ellipse', cx, cy: wy(cy), rx: rx * k, ry: ry * k * SY, paint: ref(deep ? 'mossDeep' : 'mossMid') });
+    }
+    return out;
+  };
 
   // wing-field (0.8): 遠中景の苔 + 光だまり(中央 field と同じく reach で手前へ滲む)
   const poolPrims: Prim[] = [];
@@ -680,8 +718,8 @@ function buildWingLayers(m: number, frontY: number, reach: number): SceneLayer[]
   layers.push({
     id: 'wing-field', parallax: 0.8,
     groups: [
-      { blur: 1.2, opacity: 0.85, prims: tufts(WING.far) },
-      { wobble: 'soft', prims: tufts(WING.mid) },
+      { blur: 1.2, opacity: 0.85, prims: [...blobs('far'), ...tufts(WING.far)] },
+      { wobble: 'soft', prims: [...blobs('mid'), ...tufts(WING.mid)] },
       ...(poolPrims.length ? [{ blur: 4, prims: poolPrims } as SceneGroup] : []),
     ],
   });
@@ -716,18 +754,10 @@ function buildWingLayers(m: number, frontY: number, reach: number): SceneLayer[]
   layers.push({ id: 'wing-motif', parallax: 1.0, groups: [{ wobble: 'soft', prims: motif }] });
 
   // wing-fore (1.1): 前景の苔(面+房)。面も m で育つ
-  const blobPrims: Prim[] = [];
-  for (const [cx, cy, rx, ry, deep, thr] of WING.blobs) {
-    if (m < thr) continue;
-    // 早期に現れる面は中央の早期 blob と同じく、小さく芽生えてから広がる(中央は 0.43 起点)。
-    // 現れた瞬間から 0.6 の大きさで置くと、序盤の翼が中央より整って見えてしまう
-    const k = lerp(thr <= 0.05 ? 0.45 : 0.6, 1, clamp01((m - thr) / Math.max(0.05, 1 - thr)));
-    blobPrims.push({ kind: 'ellipse', cx, cy: wy(cy), rx: rx * k, ry: ry * k * SY, paint: ref(deep ? 'mossDeep' : 'mossMid') });
-  }
   layers.push({
     id: 'wing-fore', parallax: 1.1,
     groups: [
-      { wobble: 'strong', prims: blobPrims },
+      { wobble: 'strong', prims: blobs('fore') },
       { wobble: 'soft', prims: tufts(WING.fore) },
     ],
   });
