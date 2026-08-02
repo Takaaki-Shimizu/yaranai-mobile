@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { supabase } from '../../lib/supabase';
 import { syncLocalUsage } from '../../lib/usage-sync';
@@ -64,6 +64,10 @@ export default function Observe() {
   const router = useSumiireRouter();
   const { lang } = useLang();
   const t = useT();
+  // オンボーディング文脈(オンボーディング §5)。ホームから onboarding=1 で入ってくる。
+  // 一覧・並び・宣言の導線は通常時と同一で、変わるのは画面下部の一行だけ
+  const params = useLocalSearchParams<{ onboarding?: string }>();
+  const onboarding = params.onboarding === '1';
   const [rows, setRows] = useState<ObserveRow[]>([]);
   // 端末に登録された正式なアプリ名。引けんパッケージはキーが無く、表示は整形へ倒れる。
   const [officialLabels, setOfficialLabels] = useState<Record<string, string>>({});
@@ -168,6 +172,14 @@ export default function Observe() {
   const slotsOpen = activeCount < MAX_VOWS;
   const gathering = loaded && availableDays < BASELINE_MIN_DAYS;
 
+  // オンボーディング中に履歴28日未満と分かったら、待機モード([F'])へ移す
+  // (通常はホームの門が先に振り分けるけん、ここは日付跨ぎ等の際の受け皿)
+  useEffect(() => {
+    if (onboarding && gathering) {
+      router.replace({ pathname: '/(app)/waiting', params: { days: String(availableDays) } });
+    }
+  }, [onboarding, gathering, availableDays, router]);
+
   return (
     <Sumiire style={styles.container}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -232,9 +244,16 @@ export default function Observe() {
         )}
       </View>
 
-      <Pressable style={styles.back} onPress={() => router.back()}>
-        <Text style={styles.backText}>{t.observe.back}</Text>
-      </Pressable>
+      {/* オンボーディング時のみ、画面下部に道しるべの一行(§5)。宣言の入口は
+          各行の「これをやらないと宣言する」で、ここから飛ばしはしない。
+          戻る先のないオンボーディングでは「戻る」を出さない */}
+      {onboarding ? (
+        <Text style={styles.guide}>{t.observe.onboardingGuide}</Text>
+      ) : (
+        <Pressable style={styles.back} onPress={() => router.back()}>
+          <Text style={styles.backText}>{t.observe.back}</Text>
+        </Pressable>
+      )}
     </ScrollView>
     </Sumiire>
   );
@@ -288,4 +307,13 @@ const styles = StyleSheet.create({
   },
   back: { marginTop: 48, paddingVertical: 10, alignItems: 'center' },
   backText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
+  guide: {
+    marginTop: 48,
+    paddingVertical: 10,
+    fontFamily: fonts.serif,
+    fontSize: 14,
+    color: colors.sumi,
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
 });

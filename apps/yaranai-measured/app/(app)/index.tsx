@@ -39,6 +39,22 @@ import { GoldRule, GrainOverlay, HeaderWashi } from '../../components/washi/Wash
 import { useLang, useT } from '../../lib/i18n/context';
 import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
 import type { GrowthParams } from '../../lib/garden/growth';
+import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../lib/baseline';
+import {
+  clearWaitingMode,
+  isDisclosureSeen,
+  isOnboardingDone,
+  isPermissionDeferred,
+  isWaitingMode,
+  markOnboardingDone,
+} from '../../lib/onboarding';
+
+// ホームの門(オンボーディング §0)。焦点が当たるたびに、どの姿で出すかを決める:
+//   checking  判定中(生成りの地だけ)
+//   noAccess  許可を「あとで」にした人の観測なしの状態(例外系①)
+//   waiting   履歴28日未満の待機モード(例外系③)
+//   ready     ふだんのホーム
+type HomeGate = 'checking' | 'noAccess' | 'waiting' | 'ready';
 
 type VowSummary = {
   vow_id: string;
@@ -111,6 +127,10 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   // 読みもの(§5.1): 記事状態を素のまま持ち、未読の帯の1本はレンダー時に言語をかけて選ぶ。
   const [articlesState, setArticlesState] = useState<ArticlesState | null>(null);
+  // ホームの門(オンボーディング §0)。判定が済むまでは生成りの地だけを敷く
+  const [gate, setGate] = useState<HomeGate>('checking');
+  // 待機モードの「いま◯日目」(§5)。カウントダウンにはしない
+  const [waitingDays, setWaitingDays] = useState(1);
   // 閉じ際演出「とじる」(§1)。演出中はホームのUIを退場させ、覆いに任せる。
   const [closing, setClosing] = useState(false);
   const contentOpacity = useSharedValue(1);
@@ -201,13 +221,74 @@ export default function Home() {
       // 開発者モード(§5): 実測パイプラインには触れない。
       // 許可も促さず、Supabase の読み込みもしない。庭はスライダーで組む。
       if (isDeveloper) return;
-      // 許可がなければ、まず許可の画面へ
-      if (!isUsageStatsAvailable || !hasUsageAccess()) {
-        router.replace('/(app)/permission');
-        return;
-      }
-      loadAll();
-    }, [isDeveloper, loadAll, router])
+      let cancelled = false;
+      (async () => {
+        // 許可がなければ、まず目立つ開示([D])→ 許可([E])へ。開示を通過済みなら
+        // [E] から再開する(§7)。「あとで」を選んだ人は連れ戻さず、観測なしの
+        // 静かな案内を出す(例外系①)
+        if (!isUsageStatsAvailable || !hasUsageAccess()) {
+          if (await isPermissionDeferred()) {
+            if (!cancelled) setGate('noAccess');
+            return;
+          }
+          const seen = await isDisclosureSeen();
+          if (!cancelled) router.replace(seen ? '/(app)/permission' : '/(app)/disclosure');
+          return;
+        }
+
+        // オンボーディング未完(オンボーディング §0)。宣言が既にあれば完了の導出
+        // (既存ユーザー・機種変の復元)。無ければ [F] 時間の行き先へ ── ただし
+        // 履歴28日未満の端末は [F'] 待機モードへ(例外系③)
+        if (session && !(await isOnboardingDone(session.user.id))) {
+          const { count, error } = await supabase
+            .from('measured_vows')
+            .select('id', { count: 'exact', head: true })
+            .is('discontinued_on', null);
+          if (cancelled) return;
+          if (!error && (count ?? 0) === 0) {
+            const { availableDays } = measureBaselineWindow();
+            router.replace(
+              availableDays < BASELINE_MIN_DAYS
+                ? { pathname: '/(app)/waiting', params: { days: String(availableDays) } }
+                : { pathname: '/(app)/observe', params: { onboarding: '1' } },
+            );
+            return;
+          }
+          if (!error) await markOnboardingDone(session.user.id);
+          // 引けんかった回(通信断など)はそのままホームを出し、次の focus で判定し直す
+        }
+
+        // 待機モード(§5): 28日に達した起動で [F]→[G] へ自然に誘導する。
+        // push なので、選ばず戻ってきてもホームには帰れる(強制ではない)
+        if (session && (await isWaitingMode(session.user.id))) {
+          const { availableDays } = measureBaselineWindow();
+          if (cancelled) return;
+          if (availableDays >= BASELINE_MIN_DAYS) {
+            await clearWaitingMode(session.user.id);
+            if (!cancelled) {
+              setGate('ready');
+              loadAll();
+              router.push({ pathname: '/(app)/observe', params: { onboarding: '1' } });
+            }
+            return;
+          }
+          if (!cancelled) {
+            setGate('waiting');
+            setWaitingDays(Math.max(1, availableDays));
+            loadAll();
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setGate('ready');
+          loadAll();
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [isDeveloper, session, loadAll, router])
   );
 
   const onRefresh = async () => {
@@ -314,7 +395,35 @@ export default function Home() {
               />
             )}
           </>
-        ) : (
+        ) : gate === 'noAccess' ? (
+          /* 観測なしの状態(オンボーディング §4 例外系①)。庭は出さず、静かな案内と
+             開示([D])への再訪だけを置く。強制・警告色は使わない(五原則) */
+          <View style={styles.empty}>
+            <Text style={styles.quietNotice}>{t.home.noAccessNotice}</Text>
+            <Pressable
+              style={styles.quietLink}
+              hitSlop={12}
+              accessibilityRole="button"
+              onPress={() => router.push('/(app)/disclosure')}
+            >
+              <Text style={styles.quietLinkText}>{t.home.noAccessLink}</Text>
+            </Pressable>
+          </View>
+        ) : gate === 'waiting' ? (
+          /* 待機モード(§5 例外系③)。世界観トーンの一枚。読みものの帯は生かす */
+          <>
+            <View style={styles.empty}>
+              <Text style={styles.quietNotice}>{t.waiting.body(waitingDays)}</Text>
+            </View>
+            {unreadArticle && (
+              <ReadingStrip
+                style={styles.stripHome}
+                article={unreadArticle}
+                onPress={() => router.push(`/(app)/reading/${unreadArticle.id}`)}
+              />
+            )}
+          </>
+        ) : gate === 'checking' ? null : (
         <>
         {/* 庭: ホームの窓(静止画・全幅)。タップで絵巻へ */}
         {growth && growth.stones > 0 ? (
@@ -436,16 +545,19 @@ export default function Home() {
 
         {/* 閉じ際の儀式(§2)。縦スクロールの最下端に置く通常要素で、固定フッター・
             フローティングにはしない。ホーム以外の画面には置かない。
-            誘導はしない: 促す文言も、印も、バッジも添えない(§5) */}
-        <Pressable
-          style={styles.tojiru}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t.home.tojiru}
-          onPress={onTojiruPress}
-        >
-          <Text style={styles.tojiruText}>{t.home.tojiru}</Text>
-        </Pressable>
+            誘導はしない: 促す文言も、印も、バッジも添えない(§5)。
+            門の判定中(checking)は内容が無いけん、これも出さない */}
+        {(isDeveloper || gate !== 'checking') && (
+          <Pressable
+            style={styles.tojiru}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t.home.tojiru}
+            onPress={onTojiruPress}
+          >
+            <Text style={styles.tojiruText}>{t.home.tojiru}</Text>
+          </Pressable>
+        )}
       </Animated.ScrollView>
       </Sumiire>
 
@@ -542,6 +654,18 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#A9A28B' },
 
   empty: { paddingVertical: 72, alignItems: 'center' },
+  // 観測なし・待機モードの静かな案内(オンボーディング §4・§5)。警告色は使わない
+  quietNotice: {
+    fontFamily: fonts.serif,
+    fontSize: 16,
+    lineHeight: 34,
+    letterSpacing: 2,
+    color: colors.sumi,
+    textAlign: 'center',
+    paddingHorizontal: 28,
+  },
+  quietLink: { marginTop: 28, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  quietLinkText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
   stats: { paddingVertical: 40, paddingHorizontal: 28, alignItems: 'center' },
   // 帯が上にあるときは、帯の下余白(40)と二重にしない。
   statsUnderStrip: { paddingTop: 0 },

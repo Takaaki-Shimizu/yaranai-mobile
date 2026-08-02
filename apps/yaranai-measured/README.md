@@ -79,8 +79,17 @@ npx expo start --dev-client
 2. SQL Editor で `supabase/001_schema.sql` を全文実行
 3. SQL Editor で `supabase/002_excuse_declarations.sql` を全文実行(言い訳カード)
 4. SQL Editor で `supabase/003_graduation.sql` を全文実行(誓いの卒業)
-5. Authentication → Providers で Email を有効にする
-6. `apps/yaranai-measured/.env` に接続情報を置く:
+5. SQL Editor で `supabase/004_terms_acceptances.sql` を全文実行(規約同意の記録)
+6. Authentication → Providers で Email を有効にし、**Confirm email をONにする**
+   (オンボーディングのメール確認待ち画面はこの前提)
+7. Authentication → URL Configuration の Redirect URLs に
+   `yaranaimeasured://confirm-email` と `yaranaimeasured://reset-password` を追加する
+   (確認・再設定リンクからディープリンクでアプリへ戻すため)
+8. Google認証(任意): Google Cloud でOAuthクライアントを作成し、
+   Authentication → Providers → Google に Web クライアントのIDとシークレットを登録。
+   同じ Web クライアントIDを `.env` の `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` に置く。
+   未設定なら「Googleではじめる」ボタンごと出ない
+9. `apps/yaranai-measured/.env` に接続情報を置く:
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
@@ -88,7 +97,16 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx
 # 開発者モード(任意)。ログイン中の email がこれと一致すると庭デバッグモードになる。
 # 未設定なら常に本番挙動。個人メールはソースに直書きせずこの変数経由でのみ渡す。
 EXPO_PUBLIC_DEV_EMAIL=
+# Google認証のWebクライアントID(任意。未設定ならGoogleボタン非表示)
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=
+# 規約URLが未公開の間、1にすると同意行ごと非表示(クローズドテスト用)
+EXPO_PUBLIC_HIDE_TERMS_CONSENT=
 ```
+
+> 注意: Google Sign-In はネイティブモジュール
+> (`@react-native-google-signin/google-signin`)のため、**開発ビルドの作り直し
+> (EASフルビルド)が必要。OTAでは配信できない。**旧ビルドではボタンごと
+> 非表示になり、他の機能は変わらず動く。
 
 > 注意: `.env` に個人メールを入れる。`.env` が git 追跡から外れている(=`.gitignore` 済み)ことを
 > 必ず確認してからコミットすること。キー名の存在は値なしで `.env.example` に控えてある。
@@ -132,6 +150,40 @@ EXPO_PUBLIC_DEV_EMAIL=
   宣言し、機微権限の QUERY_ALL_PACKAGES は使わない。
   誓いの行も表示時に正式名を優先するため、宣言済みの誓いも名前が直る
   (Supabaseの app_label は宣言時の記録として残す)。
+
+## オンボーディングフロー — 2026-08
+
+初回起動から庭までの道筋(v1)。二段階認証・サインアップの遅延・他OAuthはやらない。
+
+```
+スプラッシュ → [A]世界観導入(とばす可) → [B]サインアップ(規約同意統合)
+  ├ メール登録 → [C]メール確認待ち(再送60秒クールダウン) → 確認リンク(ディープリンク)
+  └ Google認証(ネイティブSign-In → signInWithIdToken)
+→ [D]目立つ開示 → [E]使用状況アクセス許可(「あとで」の脇道あり)
+→ [F]時間の行き先(observe?onboarding=1) → [G]宣言1本 → [H]完了画面 → 庭
+   └ 履歴28日未満の端末は [F']待機モード → ホーム(28日到達の起動で[F]へ誘導)
+```
+
+```
+lib/onboarding.ts    進行の印(AsyncStorage)。導出できるステップは導出を優先し、
+                     印は worldview_seen / pending_email / disclosure_seen /
+                     permission_deferred / done.<uid> / waiting.<uid> だけ
+lib/terms.ts         規約URL・バージョン定数、同意のローカル記録とSupabase再送
+lib/google-auth.ts   ネイティブGoogle Sign-Inのラッパー(不在なら利用不可へ倒す)
+app/(auth)/worldview.tsx      [A] 世界観導入
+app/(auth)/confirm-email.tsx  [C] メール確認待ち(未確認の再起動はここへ再開)
+app/(app)/disclosure.tsx      [D] 目立つ開示(Play要件)
+app/(app)/waiting.tsx         [F'] 待機モード
+supabase/004_terms_acceptances.sql  同意の記録(RLSは自分の行のみ)
+```
+
+- 振り分けの正はホーム(`app/(app)/index.tsx` の「門」)。権限なし→開示/許可、
+  未完(宣言0本)→時間の行き先、履歴28日未満→待機、それ以外→ふだんのホーム。
+  宣言が既にあるユーザーは自動で完了扱い(既存ユーザーに新規画面は出ない)
+- 許可を「あとで」にした人のホームは観測なしの静かな案内だけ
+  (庭なし・開示への再訪リンク)。強制・警告色は使わない
+- 同意はサインアップ開始時にローカル記録し、セッションが張られた起動で
+  Supabaseへ送る(`app/(app)/_layout.tsx`)。オフラインでも失わない
 
 ## 庭(絵巻)アーキテクチャ — 2026-07 刷新
 
