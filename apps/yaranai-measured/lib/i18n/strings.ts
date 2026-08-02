@@ -61,6 +61,11 @@ export type AppStrings = {
     noAccessNotice: string;
     noAccessLink: string;
     savedHeadline: (days: number, time: string) => string;
+    /**
+     * 取り戻しがまだ0のあいだ、savedHeadline と同じ位置に置く一行。
+     * 宣言した直後の庭とアプリ行の間を埋め、次に何が出るかだけを静かに伝える
+     */
+    savedPending: string;
     rowSaved: (actual: string, baseline: string, saved: string) => string;
     rowWaiting: string;
     observeLink: string;
@@ -289,6 +294,7 @@ const ja: AppStrings = {
     noAccessNotice: '計測を始めるには、\n使用状況へのアクセスの許可が必要です。',
     noAccessLink: '許可について読む',
     savedHeadline: (days, time) => `${days}日で、${time}が\n戻ってきました。`,
+    savedPending: '明日から、取り戻した時間が\nここに表示されます。',
     rowSaved: (actual, baseline, saved) =>
       `昨日の使用 ${actual}(ふだん ${baseline})→ ${saved}戻った`,
     rowWaiting: '昨日の実測を待っています。',
@@ -496,6 +502,7 @@ const en: AppStrings = {
     noAccessLink: 'Read about the permission',
     savedHeadline: (days, time) =>
       `In ${days} ${days === 1 ? 'day' : 'days'},\n${time} came back to you.`,
+    savedPending: 'From tomorrow, the time that\ncomes back will appear here.',
     rowSaved: (actual, baseline, saved) =>
       `Yesterday ${actual} (usually ${baseline}) → ${saved} came back`,
     rowWaiting: "Waiting for yesterday's measurement.",
