@@ -32,6 +32,11 @@ const MIN_WEEKLY_TOTAL_MINUTES = 5;
 // 宣言しても取り戻せる時間がないけん候補に出さない。
 const MIN_AVG_MINUTES = 0.5;
 
+// 足切りは、オンボーディング(新規登録直後の宣言)では一切掛けない。免除されるのは
+// 「誓いのあるアプリ」やけん、誓いが1本もない登録直後は誰も免除されず、使い始めて
+// 日が浅いアプリ(12週平均が希釈されて小さい)が丸ごと消える。最初の一枚で
+// 「最近使っとるのに、選ぶ一覧に出てこない」が起きるのが一番きつい(下の shown を参照)。
+
 // 一覧の1行。数字は基準線と同じ12週平均(宣言すると、この数字がそのまま固定される)。
 type ObserveRow = {
   packageName: string;
@@ -115,6 +120,7 @@ export default function Observe() {
       const shown = candidates
         .filter(
           (r) =>
+            onboarding ||
             vowedPkgs.has(r.packageName) ||
             (r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
               r.avgMinutesPerDay >= MIN_AVG_MINUTES),
@@ -127,13 +133,16 @@ export default function Observe() {
       const shownSet = new Set(shown.map((r) => r.packageName));
       console.log(`[observe] candidates=${candidates.length} shown=${shown.length}`);
       for (const c of candidates) {
+        // オンボーディング中に落ちた行は件数上限だけが理由(足切りを掛けとらんけん)
         const state = shownSet.has(c.packageName)
           ? 'show'
-          : c.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES
-            ? 'drop:weekly'
-            : c.avgMinutesPerDay < MIN_AVG_MINUTES
-              ? 'drop:avg'
-              : 'drop:limit';
+          : onboarding
+            ? 'drop:limit'
+            : c.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES
+              ? 'drop:weekly'
+              : c.avgMinutesPerDay < MIN_AVG_MINUTES
+                ? 'drop:avg'
+                : 'drop:limit';
         console.log(
           `[observe] ${state} ${c.packageName} 7d合計=${c.weeklyTotalMinutes}m 12w=${c.avgMinutesPerDay}m/d`,
         );
@@ -155,7 +164,7 @@ export default function Observe() {
       );
     }
     setLoaded(true);
-  }, []);
+  }, [onboarding]);
 
   useFocusEffect(
     useCallback(() => {
@@ -186,7 +195,10 @@ export default function Observe() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{t.observe.title}</Text>
       <Text style={styles.subtitle}>{t.observe.subtitle}</Text>
-      <Text style={styles.note}>{t.observe.note}</Text>
+      <Text style={onboarding ? styles.noteTight : styles.note}>{t.observe.note}</Text>
+      {/* オンボーディングでは、選べる数を一覧の手前で明かしておく(§5)。
+          1つ選んだだけで理想へ流れると「3つまで選べた」ことに気づけんまま終わる */}
+      {onboarding && <Text style={styles.rule}>{t.observe.onboardingRule(MAX_VOWS)}</Text>}
 
       <View style={styles.list}>
         {rows.map((row) => {
@@ -251,9 +263,25 @@ export default function Observe() {
 
       {/* オンボーディング時のみ、画面下部に道しるべの一行(§5)。宣言の入口は
           各行の「これをやらないと宣言する」で、ここから飛ばしはしない。
-          戻る先のないオンボーディングでは「戻る」を出さない */}
+          戻る先のないオンボーディングでは「戻る」を出さない。
+          1つでも宣言できたら、道しるべの代わりに「すすむ」を置く ── ここを押すまでは
+          理想の画面へ流さんけん、2つめ3つめを選ぶ間(ま)が残る(§6) */}
       {onboarding ? (
-        <Text style={styles.guide}>{t.observe.onboardingGuide}</Text>
+        activeCount > 0 ? (
+          <View style={styles.foot}>
+            <Text style={styles.chosen}>{t.observe.onboardingChosen(activeCount, MAX_VOWS)}</Text>
+            <Pressable
+              style={styles.next}
+              onPress={() =>
+                router.replace({ pathname: '/(app)/ideal', params: { onboarding: '1' } })
+              }
+            >
+              <Text style={styles.nextText}>{t.observe.next}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={styles.guide}>{t.observe.onboardingGuide}</Text>
+        )
       ) : (
         <Pressable style={styles.back} onPress={() => router.back()}>
           <Text style={styles.backText}>{t.observe.back}</Text>
@@ -298,6 +326,25 @@ const styles = StyleSheet.create({
     color: colors.usuzumi,
     textAlign: 'center',
   },
+  // オンボーディングでは、この下に選べる数の一行が続くので余白を詰める
+  noteTight: {
+    marginBottom: 16,
+    fontSize: 11,
+    lineHeight: 20,
+    letterSpacing: 1,
+    color: colors.usuzumi,
+    textAlign: 'center',
+  },
+  // 選べる数の断り。注意書き(note)より一段だけ濃くして、読み飛ばされんようにする
+  rule: {
+    marginBottom: 40,
+    fontFamily: fonts.serif,
+    fontSize: 13,
+    lineHeight: 26,
+    letterSpacing: 1,
+    color: colors.sumi,
+    textAlign: 'center',
+  },
   list: { gap: 24 },
   row: {
     gap: 8,
@@ -329,4 +376,9 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     textAlign: 'center',
   },
+  // 「すすむ」の足元(§6)。道しるべの一行と同じ位置に、いま何つ選んどるかを添える
+  foot: { marginTop: 48, alignItems: 'center', gap: 8 },
+  chosen: { fontSize: 12, lineHeight: 22, letterSpacing: 1, color: colors.usuzumi },
+  next: { paddingVertical: 12, paddingHorizontal: 24, alignItems: 'center' },
+  nextText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 6 },
 });
