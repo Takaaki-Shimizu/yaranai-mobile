@@ -13,11 +13,50 @@ import {
   piecePath,
 } from '../washi/motif';
 
-test('意匠の構成: ヘッダー紙片2+箔2 / フッター紙片5+箔2(§4・§5)', () => {
+test('意匠の構成: ヘッダー紙片2+箔4 / フッター紙片5+箔3(§4・§5)', () => {
   assert.equal(HEADER_PIECES.length, 2);
-  assert.equal(HEADER_FOILS.length, 2);
+  assert.equal(HEADER_FOILS.length, 4);
   assert.equal(FOOTER_PIECES.length, 5);
-  assert.equal(FOOTER_FOILS.length, 2);
+  assert.equal(FOOTER_FOILS.length, 3);
+});
+
+test('ヘッダーの金箔は文字にも界線にも被らない', () => {
+  // ヘッダーの実レイアウト(幅390dp基準)で文字が乗る矩形。箔はここを避ける約束。
+  // 帯は半透明でステータスバーの下に潜るので、時刻・電池の帯も文字として数える。
+  const TEXT_BOXES = [
+    { name: 'ステータスバー', x0: 0, y0: 0, x1: 390, y1: 28 },
+    { name: '題字 Yaranai', x0: 28, y0: 62, x1: 135, y1: 88 },
+    { name: '金の界線', x0: 135, y0: 78, x1: 342, y1: 86 },
+    { name: '三本線', x0: 336, y0: 62, x1: 368, y1: 96 },
+    // 理想の一行(IdealHeader)。中央揃えで最大幅まで伸びうるので全幅を占有扱いにする
+    { name: '理想の一行', x0: 0, y0: 108, x1: 390, y1: 132 },
+  ];
+  for (const foil of HEADER_FOILS) {
+    // 回転で四隅がはみ出すぶんを見込んだ外接矩形(45度で最大 √2 倍)
+    const pad = (foil.size * (Math.SQRT2 - 1)) / 2;
+    const [x0, y0, x1, y1] = [
+      foil.x - pad, foil.y - pad, foil.x + foil.size + pad, foil.y + foil.size + pad,
+    ];
+    for (const box of TEXT_BOXES) {
+      const overlaps = x0 < box.x1 && x1 > box.x0 && y0 < box.y1 && y1 > box.y0;
+      assert.ok(!overlaps, `箔 (${foil.x}, ${foil.y}) が「${box.name}」に被る`);
+    }
+  }
+});
+
+test('フッターの金箔は真ん中のタブの線画に被らない', () => {
+  // 3枠は flex:1 の等分。中央アイコンは 24dp 角で、基準幅では x 183-207 / y 16-40。
+  const ICON = { x0: 183, y0: 16, x1: 207, y1: 40 };
+  // 真ん中のタブのまわり(左右1枠ぶんの内側)に少なくとも1粒ある
+  const nearCenter = FOOTER_FOILS.filter((f) => f.x > 130 && f.x < 260);
+  assert.ok(nearCenter.length >= 1, '真ん中のタブ付近に箔がない');
+  for (const foil of FOOTER_FOILS) {
+    const pad = (foil.size * (Math.SQRT2 - 1)) / 2;
+    const overlaps =
+      foil.x - pad < ICON.x1 && foil.x + foil.size + pad > ICON.x0 &&
+      foil.y - pad < ICON.y1 && foil.y + foil.size + pad > ICON.y0;
+    assert.ok(!overlaps, `箔 (${foil.x}, ${foil.y}) が中央アイコンに被る`);
+  }
 });
 
 test('金箔はすべて最小サイズ8dp以上(§8)', () => {
