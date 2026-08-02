@@ -11,6 +11,7 @@
     "types": []
   },
   "include": [
+    "lib/contact.ts",
     "lib/dates.ts",
     "lib/external-ui.ts",
     "lib/graduation.ts",

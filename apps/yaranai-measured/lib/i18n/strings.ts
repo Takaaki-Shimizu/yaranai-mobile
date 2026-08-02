@@ -10,11 +10,13 @@
 // 言語ごとに調整してあるので、機械的に揃えないこと。
 
 import type { Lang } from './types';
+import type { ContactDiagnostics } from '../contact';
 
 export type AppStrings = {
   menu: {
     a11yLabel: string;
     ideal: string;
+    settings: string;
     logout: string;
     logoutTitle: string;
     logoutBody: string;
@@ -256,12 +258,49 @@ export type AppStrings = {
     updateFailed: string;
     passwordChanged: string;
   };
+  /** 設定画面(設定+お問い合わせ スペック §3)。制度の棚 ── 日常的に触る機能は置かない */
+  settings: {
+    title: string;
+    sectionAbout: string;
+    contact: string;
+    sectionRules: string;
+    privacy: string;
+    terms: string;
+    sectionAccount: string;
+    deleteAccount: string;
+    /** バージョン行。タップ不可のテキスト */
+    versionLine: (version: string, build: string) => string;
+    back: string;
+    mailSubject: string;
+    /**
+     * メール本文(§4.2)。冒頭の3行はユーザーが書き始めるための空白。
+     * 診断情報は本文に平文で見え、送る前に消せる ── 「裏で何かを送っていない」
+     * ことの構造的な保証なので、「不要であれば削除してください」の一行は必ず残す
+     */
+    mailBody: (d: ContactDiagnostics) => string;
+    /** メールアプリ未設定の端末向け(§4.4)。アドレスはコピーできる形で出す */
+    fallbackBody: string;
+    copy: string;
+    copied: string;
+    fallbackClose: string;
+  };
+  /** アカウント削除の確認画面(§5)。事実だけを述べる。煽らない・引き止めない */
+  deleteAccount: {
+    title: string;
+    lede: string;
+    items: string[];
+    note: string;
+    confirm: string;
+    back: string;
+    failed: string;
+  };
 };
 
 const ja: AppStrings = {
   menu: {
     a11yLabel: 'メニュー',
     ideal: '理想を入力',
+    settings: '設定',
     logout: 'ログアウト',
     logoutTitle: 'ログアウトしますか?',
     logoutBody: '次に開くときは、もう一度ログインが必要です。',
@@ -470,12 +509,55 @@ const ja: AppStrings = {
     updateFailed: '変更できませんでした。もう一度お試しください。',
     passwordChanged: 'パスワードを変更しました。',
   },
+  settings: {
+    title: '設定',
+    sectionAbout: 'このアプリについて',
+    contact: 'お問い合わせ',
+    sectionRules: 'きまりごと',
+    privacy: 'プライバシーポリシー',
+    terms: '利用規約',
+    sectionAccount: 'アカウント',
+    deleteAccount: 'アカウントを削除する',
+    versionLine: (version, build) => `Yaranai ${version} (${build})`,
+    back: '戻る',
+    mailSubject: 'Yaranai お問い合わせ',
+    mailBody: (d) =>
+      [
+        '',
+        '',
+        '',
+        '――― 以下は不具合調査のための情報です ―――',
+        '（不要であれば削除してください）',
+        '',
+        `アプリ: Yaranai ${d.version} (${d.build})`,
+        `Android: ${d.androidVersion}`,
+        `端末: ${d.deviceModel}`,
+        `記録日数: ${d.recordedDays}日`,
+        `宣言数: ${d.vowCount}`,
+        `ID: ${d.userId}`,
+      ].join('\n'),
+    fallbackBody:
+      'お使いの端末でメールアプリが開けませんでした。\nお手数ですが、下のアドレス宛にご連絡ください。',
+    copy: 'コピー',
+    copied: 'コピーしました',
+    fallbackClose: 'もどる',
+  },
+  deleteAccount: {
+    title: 'アカウントを削除します',
+    lede: '削除すると、次のものが失われます。',
+    items: ['あなたの宣言', '記録した日々', '育ってきた庭'],
+    note: 'これらは元に戻せません。\n同じメールアドレスで登録し直しても、庭は最初からになります。\n\n端末内の利用記録も、あわせて消去されます。',
+    confirm: '削除する',
+    back: 'もどる',
+    failed: '削除できませんでした。時間をおいてもう一度お試しください。',
+  },
 };
 
 const en: AppStrings = {
   menu: {
     a11yLabel: 'Menu',
     ideal: 'Your ideal',
+    settings: 'Settings',
     logout: 'Log out',
     logoutTitle: 'Log out?',
     logoutBody: "You'll need to sign in again next time.",
@@ -687,6 +769,48 @@ const en: AppStrings = {
     linkExpired: 'That link seems to have expired. Please send yourself another email.',
     updateFailed: "Couldn't update it. Please try again.",
     passwordChanged: 'Your password has been updated.',
+  },
+  settings: {
+    title: 'Settings',
+    sectionAbout: 'About this app',
+    contact: 'Contact us',
+    sectionRules: 'Policies',
+    privacy: 'Privacy Policy',
+    terms: 'Terms of Service',
+    sectionAccount: 'Account',
+    deleteAccount: 'Delete your account',
+    versionLine: (version, build) => `Yaranai ${version} (${build})`,
+    back: 'Back',
+    mailSubject: 'Yaranai — Contact',
+    mailBody: (d) =>
+      [
+        '',
+        '',
+        '',
+        '――― The details below help us look into issues ―――',
+        '(Feel free to delete them.)',
+        '',
+        `App: Yaranai ${d.version} (${d.build})`,
+        `Android: ${d.androidVersion}`,
+        `Device: ${d.deviceModel}`,
+        `Recorded days: ${d.recordedDays}`,
+        `Vows: ${d.vowCount}`,
+        `ID: ${d.userId}`,
+      ].join('\n'),
+    fallbackBody:
+      "This device couldn't open a mail app.\nPlease reach us at the address below.",
+    copy: 'Copy',
+    copied: 'Copied',
+    fallbackClose: 'Back',
+  },
+  deleteAccount: {
+    title: 'Delete your account',
+    lede: 'Deleting it means losing:',
+    items: ['your declarations', 'the days you recorded', 'the garden that has grown'],
+    note: 'These cannot be brought back.\nEven if you sign up again with the same email, the garden starts over.\n\nUsage records on this device will be erased as well.',
+    confirm: 'Delete',
+    back: 'Back',
+    failed: "Couldn't delete your account. Please wait a while and try again.",
   },
 };
 

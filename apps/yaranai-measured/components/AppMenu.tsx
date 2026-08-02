@@ -4,7 +4,10 @@
 // (庭/読みもの/言い訳カード)と時間の行き先の右上に同じ形で出す ── 理想も言語も
 // ログアウトも画面を選ばない設定なので、庭に戻らないと開けないのは、ただの遠回りになる。
 //
-// 項目は上から: 理想を入力 / 言語(罫線で区切る) / ログアウト(罫線で区切り最下部)。
+// 項目は上から: 理想を入力 / 言語(罫線で区切る) / 設定 / ログアウト(罫線で区切り最下部)。
+//
+// 設定(設定+お問い合わせ スペック §3.1)は「制度の棚」── お問い合わせ・きまりごと・
+// アカウント削除の置き場で、日常的に触る「理想を入力/読みもの」より下の階層に置く。
 //
 // オンボーディング中(hideIdeal)は「理想を入力」を出さない。理想は宣言を終えた後に
 // 一度通る画面で書くもので、まだ何も宣言していない時点で「理想」だけ先に問うと、
@@ -94,6 +97,11 @@ export function AppMenu({ visible, onClose, hideIdeal = false }: Props) {
     router.push('/(app)/ideal');
   };
 
+  const goSettings = () => {
+    onClose();
+    router.push('/(app)/settings');
+  };
+
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       {/* 背景タップで閉じる。地の暗みも面と一緒に立ち上げる */}
@@ -134,6 +142,14 @@ export function AppMenu({ visible, onClose, hideIdeal = false }: Props) {
                   <Text style={[styles.langText, lang === 'en' && styles.langActive]}>English</Text>
                 </Pressable>
               </View>
+
+              {/* 設定(スペック §3.1)。オンボーディング中は伏せる ── この時点で要るのは
+                  言語と入り直しだけで、制度の棚まで見せると順路が散る */}
+              {!hideIdeal && (
+                <Pressable style={[styles.item, styles.separated]} onPress={goSettings}>
+                  <Text style={styles.itemText}>{t.menu.settings}</Text>
+                </Pressable>
+              )}
 
               {/* ログアウトは罫線で区切って最下部。表記は世界観で塗らない機能語 */}
               <Pressable style={[styles.item, styles.separated]} onPress={confirmLogout}>
