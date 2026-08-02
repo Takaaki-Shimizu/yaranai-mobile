@@ -16,6 +16,7 @@ import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modul
 import { useLang, useT } from '../../lib/i18n/context';
 import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
 import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
+import { AppMenuButton } from '../../components/AppMenu';
 
 // 候補の表示上限。並びは12週平均やけん、使い始めて日が浅いアプリは平均が
 // 希釈されて下位に沈む。直近7日に使っとる習慣を切り落とさんよう余裕を持たせる。
@@ -222,7 +223,11 @@ export default function Observe() {
                     onPress={() =>
                       router.push({
                         pathname: '/(app)/declare',
-                        params: { packageName: row.packageName, label },
+                        // オンボーディングの文脈は宣言まで持って行く。宣言のあと
+                        // 理想を書く画面を一度だけ通すのに要る(オンボーディング §6)
+                        params: onboarding
+                          ? { packageName: row.packageName, label, onboarding: '1' }
+                          : { packageName: row.packageName, label },
                       })
                     }
                   >
@@ -255,6 +260,11 @@ export default function Observe() {
         </Pressable>
       )}
     </ScrollView>
+
+    {/* メニュー(§5.3)。読みもの・言い訳カードと同じ右上に、見出しの行と同じ高さで
+        置く。一覧と一緒に流れると入口が消えるので、スクロールの外に固定する。
+        オンボーディング中は「理想を入力」を伏せ、言語とログアウトだけを出す */}
+    <AppMenuButton style={styles.menu} hideIdeal={onboarding} />
     </Sumiire>
   );
 }
@@ -262,6 +272,9 @@ export default function Observe() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.kinari },
   content: { paddingHorizontal: 28, paddingTop: 64, paddingBottom: 80 },
+  // 三本線の置き場所。見出し(paddingTop 64・20pt)の行の中央に来るよう、
+  // 上端から 64 の位置に見出し1行ぶんの箱を置いて、その中で縦中央に据える
+  menu: { position: 'absolute', top: 64, right: 28, height: 28, justifyContent: 'center' },
   title: {
     fontFamily: fonts.serif,
     fontSize: 20,

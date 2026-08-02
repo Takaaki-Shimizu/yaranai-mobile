@@ -25,9 +25,16 @@ export default function Declare() {
   const router = useSumiireRouter();
   const { lang } = useLang();
   const t = useT();
-  const params = useLocalSearchParams<{ packageName?: string; label?: string }>();
+  const params = useLocalSearchParams<{
+    packageName?: string;
+    label?: string;
+    onboarding?: string;
+  }>();
   const packageName = typeof params.packageName === 'string' ? params.packageName : '';
   const label = typeof params.label === 'string' ? params.label : packageName;
+  // オンボーディング文脈(時間の行き先から引き継ぐ)。宣言を終えたあと、庭へ入る前に
+  // 理想を書く画面を一度だけ通す(オンボーディング §6)。書かずに飛ばしてもよい
+  const onboarding = params.onboarding === '1';
 
   const [baseline, setBaseline] = useState<BaselineResult | null>(null);
   const [graduated, setGraduated] = useState<GraduatedVow | null>(null);
@@ -157,6 +164,13 @@ export default function Declare() {
   // どの分岐もルートは同型の Sumiire(墨入れ)なので、分岐が切り替わっても
   // 再マウントされず、入場はこの画面へ来た一度きりしか流れない
   if (done) {
+    // オンボーディングでは庭へ直行せず、理想を書く画面を一度だけ挟む。
+    // 宣言(やらないこと)の裏返しを、その勢いのまま書ける場所がここしかない。
+    // 書かずに「とばす」でも庭へ抜けられる ── 理想は任意入力のままにしておく。
+    const leave = () =>
+      onboarding
+        ? router.replace({ pathname: '/(app)/ideal', params: { onboarding: '1' } })
+        : router.replace('/(app)/(tabs)');
     return (
       <Sumiire style={styles.container}>
         <View style={styles.doneBody}>
@@ -164,12 +178,20 @@ export default function Declare() {
           <Text style={styles.worldview}>{t.declare.doneWorldview}</Text>
           {/* 言い訳カードの告知(言い訳カード §4.4)。世界観の語りの後に一行だけ。
               タップで言い訳カードのタブへ入る。タップ可能であることを示す装飾
-              (下線・矢印・ボタン枠)は付けない。告知はこの1箇所のみ */}
-          <Pressable onPress={() => router.push('/(app)/(tabs)/excuse')}>
+              (下線・矢印・ボタン枠)は付けない。告知はこの1箇所のみ。
+              オンボーディング中は文言だけ置いて飛ばさない ── ここで抜けると
+              理想の画面を通らずに庭へ出てしまう。カードはフッターからいつでも入れる */}
+          {onboarding ? (
             <Text style={styles.worldview}>{t.declare.doneExcuseHint}</Text>
-          </Pressable>
-          <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)/(tabs)')}>
-            <Text style={styles.doneActionText}>{t.declare.toGarden}</Text>
+          ) : (
+            <Pressable onPress={() => router.push('/(app)/(tabs)/excuse')}>
+              <Text style={styles.worldview}>{t.declare.doneExcuseHint}</Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.doneAction} onPress={leave}>
+            <Text style={styles.doneActionText}>
+              {onboarding ? t.declare.next : t.declare.toGarden}
+            </Text>
           </Pressable>
         </View>
       </Sumiire>
