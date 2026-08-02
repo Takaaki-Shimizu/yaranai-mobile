@@ -521,6 +521,25 @@
         letter-spacing: 0.24em;
         color: var(--usuzumi);
       }
+
+      /* 法務ページへの導線。目立たせない（読む人は探して辿り着く） */
+      footer nav {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+      }
+      footer nav a {
+        color: var(--usuzumi);
+        text-decoration: none;
+      }
+      footer nav a:hover {
+        color: var(--hikari);
+      }
+      footer nav a:focus-visible {
+        outline: 2px solid var(--hikari);
+        outline-offset: 4px;
+      }
     </style>
   </head>
   <body>
@@ -801,7 +820,13 @@
         </div>
       </section>
 
-      <footer>Yaranai</footer>
+      <footer>
+        <nav>
+          <a href="/terms">利用規約</a>
+          <a href="/privacy">プライバシーポリシー</a>
+        </nav>
+        Yaranai
+      </footer>
     </div>
 
     <script>
