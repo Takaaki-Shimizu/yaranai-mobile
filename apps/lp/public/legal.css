@@ -1,0 +1,183 @@
+/*
+  ============================================================
+  法務ページ共通スタイル（privacy.html / terms.html）
+  ------------------------------------------------------------
+  LP（index.html）の色・書体をそのまま踏襲しつつ、
+  長文を読むための調整だけ入れとる：
+    - ヒーローの演出（竹林・光）は持ち込まない。読む場所やから。
+    - 地は夜のまま。ただし本文は左揃え・行間広めで可読性を優先。
+  ※LPと同じくビルド無しの素のCSS。index.htmlの:root定義と
+    値がズレたら両方直すこと。
+  ============================================================
+*/
+
+:root {
+  --yoru: #12110c; /* 夜（地） */
+  --hikari: #e9e4d6; /* 光（文字） */
+  --usuzumi: #8c857b; /* 薄墨（補足） */
+  --font-min: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+  --font-goth: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--yoru);
+}
+
+body {
+  font-family: var(--font-goth);
+  font-weight: 300;
+  color: var(--hikari);
+  /* 中央上部がわずかに明るい夜。LPのヒーローと地続きに見せる */
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 0%, #1a1912, transparent 70%)
+      no-repeat,
+    var(--yoru);
+  line-height: 2;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 粒子（フィルムグレイン）：LPと同一 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.page {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 0 28px 96px;
+}
+
+/* ---------- 冠：戻り導線と題字 ---------- */
+.doc-head {
+  padding-top: 40px;
+}
+
+.back-link {
+  display: inline-block;
+  font-family: var(--font-min);
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  color: var(--usuzumi);
+  text-decoration: none;
+}
+.back-link:hover {
+  color: var(--hikari);
+}
+.back-link:focus-visible {
+  outline: 2px solid var(--hikari);
+  outline-offset: 4px;
+}
+
+.doc-head h1 {
+  margin-top: 44px;
+  font-family: var(--font-min);
+  font-weight: 400;
+  font-size: clamp(24px, 6.4vw, 32px);
+  letter-spacing: 0.18em;
+  line-height: 1.6;
+  color: #f3efe3;
+  text-shadow: 0 0 24px rgba(238, 233, 219, 0.28);
+}
+
+.doc-meta {
+  margin-top: 20px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--usuzumi);
+}
+
+/* ---------- 編集中の断り書き ---------- */
+.draft-notice {
+  margin-top: 32px;
+  padding: 18px 20px;
+  border: 1px solid rgba(140, 133, 123, 0.35);
+  border-left: 2px solid rgba(233, 228, 214, 0.5);
+  border-radius: 2px;
+  background: rgba(233, 228, 214, 0.04);
+  font-size: 13px;
+  line-height: 1.9;
+  letter-spacing: 0.08em;
+  color: rgba(233, 228, 214, 0.86);
+}
+
+/* ---------- 本文 ---------- */
+.doc-body {
+  margin-top: 56px;
+  padding-top: 56px;
+  border-top: 1px solid rgba(140, 133, 123, 0.25);
+}
+
+.doc-body section + section {
+  margin-top: 48px;
+}
+
+.doc-body h2 {
+  font-family: var(--font-min);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  line-height: 1.8;
+  color: #f3efe3;
+}
+
+.doc-body p {
+  margin-top: 12px;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: rgba(233, 228, 214, 0.88);
+}
+
+/* 未執筆の印。薄墨で置いて、書き上がった箇所と一目で見分ける */
+.wip {
+  color: var(--usuzumi);
+  letter-spacing: 0.2em;
+}
+
+.doc-body a {
+  color: rgba(233, 228, 214, 0.88);
+  text-underline-offset: 4px;
+}
+.doc-body a:focus-visible {
+  outline: 2px solid var(--hikari);
+  outline-offset: 3px;
+}
+
+footer {
+  margin-top: 96px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(140, 133, 123, 0.25);
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--usuzumi);
+}
+
+footer nav {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+footer nav a {
+  color: var(--usuzumi);
+  text-decoration: none;
+}
+footer nav a:hover {
+  color: var(--hikari);
+}
+footer nav a:focus-visible {
+  outline: 2px solid var(--hikari);
+  outline-offset: 4px;
+}
