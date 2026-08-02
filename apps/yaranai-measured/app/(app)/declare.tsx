@@ -150,7 +150,7 @@ export default function Declare() {
       }
       return;
     }
-    router.replace('/(app)');
+    router.replace('/(app)/(tabs)');
   };
 
   // 宣言(断つ)の儀式の完了画面。
@@ -165,10 +165,10 @@ export default function Declare() {
           {/* 言い訳カードの告知(言い訳カード §4.4)。世界観の語りの後に一行だけ。
               タップで言い訳カードのタブへ入る。タップ可能であることを示す装飾
               (下線・矢印・ボタン枠)は付けない。告知はこの1箇所のみ */}
-          <Pressable onPress={() => router.push('/(app)/excuse')}>
+          <Pressable onPress={() => router.push('/(app)/(tabs)/excuse')}>
             <Text style={styles.worldview}>{t.declare.doneExcuseHint}</Text>
           </Pressable>
-          <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)')}>
+          <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)/(tabs)')}>
             <Text style={styles.doneActionText}>{t.declare.toGarden}</Text>
           </Pressable>
         </View>

@@ -13,7 +13,7 @@ export default function Index() {
   useEffect(() => {
     let cancelled = false;
     if (session) {
-      setTarget('/(app)');
+      setTarget('/(app)/(tabs)');
       return;
     }
     (async () => {
