@@ -1,4 +1,4 @@
-// 誓いの「卒業」判定。純関数だけを置く(端末内DBの読み出しは usage-db.ts)。
+// 誓いの「卒業」判定。純関数だけを置く(端末内DBの読み出しは graduation-check.ts)。
 //
 // 卒業は成功でしか起きない。条件はただひとつ、「前日までの7暦日、一度も
 // 使っていない」。挑戦中(使用が残っている)の誓いを外す手段は
@@ -16,11 +16,28 @@ export type GraduationInput = {
   recordedDates: ReadonlySet<string>;
   /**
    * 対象パッケージの日別前景時間(ms)。行が無い日はキーごと存在しない。
-   * 分に丸めん理由: 丸めると数十秒の使用が0分になり、「1分も使っとらん」と
-   * 「ちょっとだけ開いた」が同じ顔になる。卒業は前者にだけ許す。
+   * 丸めは isUsedDay() が持つ(ここは生のmsをそのまま渡す)。
    */
   foregroundMsByDate: ReadonlyMap<string, number>;
 };
+
+/**
+ * その日、そのアプリを「使った」か。粒度は画面に出る数字と同じ ── 前景時間を
+ * 分へ四捨五入して1分以上なら使った、0分なら使っていない。
+ *
+ * ms厳密(> 0)にしない理由: この機能が利用者に見せる数字はどこも分に四捨五入
+ * しとる(誓い別詳細の「昨日の使用 0分」、日別の「+54分」、時間の行き先の
+ * 「1日平均◯分」)。判定だけをmsで持つと、リンクのタップ・PiP・キャストで
+ * 数秒だけ前面に出た日が「0分」の顔をしたまま卒業を恒久的に塞ぐ。利用者には
+ * 7日連続0分に見えとるのに卒業の導線が現れん ── 何も嘘は言うとらんのに、
+ * アプリが自分の見せた数字を裏切る。それが一番きつい。
+ *
+ * よって閾値は「表示が0分に見えるかどうか」に一致させる(= 30秒未満)。
+ * 分への丸めは usage-db.ts の getMinutesForPackage と同じ式を使う。
+ */
+export function isUsedDay(foregroundMs: number): boolean {
+  return Math.round(foregroundMs / 60000) > 0;
+}
 
 /**
  * 対象パッケージが卒業条件を満たすか。判定してよいのは active の誓いだけで、
@@ -36,5 +53,5 @@ export type GraduationInput = {
 export function computeGraduationEligibility(input: GraduationInput): boolean {
   const { windowDates, recordedDates, foregroundMsByDate } = input;
   if (!windowDates.some((d) => recordedDates.has(d))) return false;
-  return windowDates.every((d) => (foregroundMsByDate.get(d) ?? 0) <= 0);
+  return windowDates.every((d) => !isUsedDay(foregroundMsByDate.get(d) ?? 0));
 }

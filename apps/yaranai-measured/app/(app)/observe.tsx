@@ -11,6 +11,7 @@ import { recentWindowStart } from '../../lib/dates';
 import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../lib/baseline';
 import { averageMinutesPerDay } from '../../lib/usage-buckets';
 import { isNoisePackage, labelForPackage } from '../../lib/app-labels';
+import { findGraduablePackages } from '../../lib/graduation-check';
 import { formatMinutes } from '../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
 import { useLang, useT } from '../../lib/i18n/context';
@@ -31,6 +32,13 @@ const MIN_WEEKLY_TOTAL_MINUTES = 5;
 // 12週平均がこれ未満(四捨五入で表示が「0分」になる)のアプリは、
 // 宣言しても取り戻せる時間がないけん候補に出さない。
 const MIN_AVG_MINUTES = 0.5;
+
+// 卒業済みのアプリが「ぶり返した」とみなす直近7日の合計の下限(分)。
+// ここも判定の粒度は表示に合わせる(lib/graduation.ts の isUsedDay と同じ考え):
+// getWeeklyTopApps の totalMinutes は分へ四捨五入した値やけん、1分以上 =
+// 画面に出る数字が「1分」以上になった、ということ。数秒の前面化で
+// 「計測に戻す」を突きつけられんようにする。
+const RELAPSE_MIN_WEEKLY_MINUTES = 1;
 
 // 足切りは、オンボーディング(新規登録直後の宣言)では一切掛けない。免除されるのは
 // 「誓いのあるアプリ」やけん、誓いが1本もない登録直後は誰も免除されず、使い始めて
@@ -96,14 +104,36 @@ export default function Observe() {
     // 直近7日に使ったアプリだけを候補にする(今も続いとる習慣のフィルタ)。
     // 並び順と表示は12週平均: 一時的な急増は平均に吸収され、
     // やめ済みアプリを宣言して基準線だけ稼ぐ抜け道も防ぐ。
-    // 候補窓は当日を含む7日。卒業判定は前日までの7日(lib/dates.ts)で1日ずれるが、
-    // 「消えた = 卒業できる」の対応は誓いのなかのアプリの足切り免除で保証する:
-    // 1分でも使えばここに並び続けるけん、「並んどらんのに卒業できん」は起きん。
+    //
+    // 挑戦中の誓いだけは候補窓では見ず、卒業判定そのもの(前日までの7日・
+    // lib/graduation-check.ts)に載せ替えて、成立したらこの一覧から落とす。
+    // 以前は「足切りの免除」で「消えた = 卒業できる」の対応を保証しとったが、
+    // 窓が1日ずれる以上、免除では担保できんかった ── 当日だけ使ったアプリは
+    // 「一覧に残る かつ 卒業できる」になり、7日前だけ使ったアプリは
+    // 「一覧から消えとるのに卒業できん」になる。ホームと同じ判定を見に行けば、
+    // 対応は両向きとも構造的に成立する。
     try {
       const [recent, vowsRes] = await Promise.all([
         getWeeklyTopApps(recentWindowStart(), 100),
         fetchLivingVows(),
       ]);
+      // 誓いの状態は一覧の組み立てにも要る(卒業判定に載せるのは挑戦中だけ)。
+      const vowStateByPkg = new Map<string, VowState>(
+        (vowsRes.data ?? []).map((v) => [
+          v.package_name as string,
+          (v.graduated_on ? 'graduated' : 'active') as VowState,
+        ]),
+      );
+      // 端末内DBが読めんかった回は「誰も卒業できとらん」に倒す。落とす側へ倒すと、
+      // 読み込みが揺れるたびに誓いのアプリが一覧から消えて見える。
+      let graduablePkgs = new Set<string>();
+      try {
+        graduablePkgs = await findGraduablePackages(
+          [...vowStateByPkg].filter(([, s]) => s === 'active').map(([pkg]) => pkg),
+        );
+      } catch (e) {
+        console.log('[observe] graduation check failed', e);
+      }
       const baseline = measureBaselineWindow();
       setAvailableDays(baseline.availableDays);
       // 調査用: 集計できた日数はゲートの内外どちらでも出す。以前は表示できたときだけ
@@ -113,11 +143,12 @@ export default function Observe() {
           `coveredMs=${baseline.window.coveredMs} recent7d=${recent.length}`,
       );
       if (baseline.availableDays >= BASELINE_MIN_DAYS) {
-        // 誓いのある(挑戦中・卒業済み)パッケージは足切りと件数上限を免除する。
-        // 卒業済みが1分でも使えばここに再浮上して「計測に戻す」が届き、
-        // 挑戦中は「時間の行き先から消えた = 卒業できる」の対応が崩れん。
+        // 誓いのある(挑戦中・卒業済み)パッケージはノイズ足切りと件数上限を免除し、
+        // 代わりに状態ごとの規則で残す/落とすを決める:
+        //   挑戦中   卒業条件が成立したら落とす(= 消えた ⟺ 卒業できる)
+        //   卒業済み 直近7日に1分以上使うたら残す(= ぶり返し。「計測に戻す」が届く)
         // 廃止済みは vowsRes に含まれん(= ただの候補として扱う)。
-        const vowedPkgs = new Set((vowsRes.data ?? []).map((v) => v.package_name as string));
+        const vowedPkgs = new Set(vowStateByPkg.keys());
         const candidates = recent
           .filter((r) => !isNoisePackage(r.packageName))
           .map((r) => ({
@@ -126,14 +157,22 @@ export default function Observe() {
             weeklyTotalMinutes: r.totalMinutes,
           }))
           .sort((a, b) => b.avgMinutesPerDay - a.avgMinutesPerDay);
+        // 行が残る理由(= 落ちた理由)。実機ログにもそのまま出す。
+        const keepReason = (r: (typeof candidates)[number]): string => {
+          if (onboarding) return 'show';
+          const vowState = vowStateByPkg.get(r.packageName);
+          if (vowState === 'active') {
+            return graduablePkgs.has(r.packageName) ? 'drop:graduable' : 'show';
+          }
+          if (vowState === 'graduated') {
+            return r.weeklyTotalMinutes >= RELAPSE_MIN_WEEKLY_MINUTES ? 'show' : 'drop:relapse';
+          }
+          if (r.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES) return 'drop:weekly';
+          if (r.avgMinutesPerDay < MIN_AVG_MINUTES) return 'drop:avg';
+          return 'show';
+        };
         const shown = candidates
-          .filter(
-            (r) =>
-              onboarding ||
-              vowedPkgs.has(r.packageName) ||
-              (r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
-                r.avgMinutesPerDay >= MIN_AVG_MINUTES),
-          )
+          .filter((r) => keepReason(r) === 'show')
           .filter((r, i) => i < MAX_CANDIDATES || vowedPkgs.has(r.packageName));
         setRows(shown);
         setOfficialLabels(getAppLabels(shown.map((r) => r.packageName)));
@@ -142,16 +181,13 @@ export default function Observe() {
         const shownSet = new Set(shown.map((r) => r.packageName));
         console.log(`[observe] candidates=${candidates.length} shown=${shown.length}`);
         for (const c of candidates) {
-          // オンボーディング中に落ちた行は件数上限だけが理由(足切りを掛けとらんけん)
+          // 免除・卒業判定を通ったのに並んどらん行は、件数上限だけが理由
+          const reason = keepReason(c);
           const state = shownSet.has(c.packageName)
             ? 'show'
-            : onboarding
+            : reason === 'show'
               ? 'drop:limit'
-              : c.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES
-                ? 'drop:weekly'
-                : c.avgMinutesPerDay < MIN_AVG_MINUTES
-                  ? 'drop:avg'
-                  : 'drop:limit';
+              : reason;
           console.log(
             `[observe] ${state} ${c.packageName} 7d合計=${c.weeklyTotalMinutes}m 12w=${c.avgMinutesPerDay}m/d`,
           );
@@ -163,14 +199,7 @@ export default function Observe() {
       // 誓いが引けんかった回は前回の状態を残す。空の Map に落とすと、誓いの
       // 立っとるアプリにまで「宣言する」が並んでしまう。
       if (!vowsRes.error) {
-        setVowStates(
-          new Map(
-            (vowsRes.data ?? []).map((v) => [
-              v.package_name as string,
-              (v.graduated_on ? 'graduated' : 'active') as VowState,
-            ]),
-          ),
-        );
+        setVowStates(vowStateByPkg);
       }
     } catch (e) {
       // 読み込みが落ちた回も loaded だけは立てる。立てんまま止まると、この画面は
