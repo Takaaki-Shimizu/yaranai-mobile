@@ -20,6 +20,23 @@ type GraduatedVow = {
   baseline_minutes: number;
 };
 
+// 挑戦中の誓いの本数。枠の担保はDBトリガーが唯一の正で、これは
+// 「あと選べるか」を先に知るための補助(復帰の可否と、オンボーディングの行き先)。
+// マイグレーション 003 未適用の Supabase では graduated_on 列が無く 42703 で落ちるけん、
+// そのときだけ列なしで数える(旧スキーマに卒業済みは存在せん)。
+async function fetchActiveCount() {
+  const full = await supabase
+    .from('measured_vows')
+    .select('id', { count: 'exact', head: true })
+    .is('discontinued_on', null)
+    .is('graduated_on', null);
+  if (!isMissingGraduatedOn(full.error)) return full;
+  return supabase
+    .from('measured_vows')
+    .select('id', { count: 'exact', head: true })
+    .is('discontinued_on', null);
+}
+
 export default function Declare() {
   const session = useSession();
   const router = useSumiireRouter();
@@ -44,6 +61,9 @@ export default function Declare() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  // 宣言を終えた時点で枠が埋まったかどうか(オンボーディングの行き先を分ける)。
+  // 埋まったなら理想へ、まだ選べるなら時間の行き先へ返す(オンボーディング §6)
+  const [slotsFull, setSlotsFull] = useState(false);
 
   // このパッケージに卒業済みの誓いがあれば復帰モード、無ければ新規宣言。
   // 復帰なら基準線は再計算せず、宣言時に固定された値をそのまま出す(五原則3)。
@@ -74,18 +94,6 @@ export default function Declare() {
         ...legacy,
         data: legacy.data ? { ...legacy.data, graduated_on: null } : null,
       };
-    };
-    const fetchActiveCount = async () => {
-      const full = await supabase
-        .from('measured_vows')
-        .select('id', { count: 'exact', head: true })
-        .is('discontinued_on', null)
-        .is('graduated_on', null);
-      if (!isMissingGraduatedOn(full.error)) return full;
-      return supabase
-        .from('measured_vows')
-        .select('id', { count: 'exact', head: true })
-        .is('discontinued_on', null);
     };
     (async () => {
       // 枠の担保はDBトリガーが唯一の正。count は満杯を先に伝えるための補助で、
@@ -131,6 +139,14 @@ export default function Declare() {
     }
     // 宣言1本でオンボーディングは完走(オンボーディング §6)。完了済みなら何も変わらん
     await markOnboardingDone(session.user.id);
+    // 宣言を終えて枠が埋まったなら、この先は選べん ── 完了画面から理想へ抜ける。
+    // まだ空きがあるなら時間の行き先へ返し、続けて選ぶか「すすむ」かを本人に委ねる。
+    // 数えられんかった回(通信断など)は一覧へ返す側に倒す:選び直す道は残るが、
+    // 理想へ飛ばしてしまうと2つめ3つめを選ぶ機会がここで閉じてしまう。
+    if (onboarding) {
+      const active = await fetchActiveCount();
+      setSlotsFull((active.count ?? 0) >= MAX_VOWS);
+    }
     // 宣言の完了。世界観の一文を添えた完了画面を挟んでから庭へ戻る(§変更5)
     setDone(true);
   };
@@ -167,10 +183,19 @@ export default function Declare() {
     // オンボーディングでは庭へ直行せず、理想を書く画面を一度だけ挟む。
     // 宣言(やらないこと)の裏返しを、その勢いのまま書ける場所がここしかない。
     // 書かずに「とばす」でも庭へ抜けられる ── 理想は任意入力のままにしておく。
-    const leave = () =>
-      onboarding
-        ? router.replace({ pathname: '/(app)/ideal', params: { onboarding: '1' } })
-        : router.replace('/(app)/(tabs)');
+    //
+    // ただし理想へ渡すのは、枠(3つ)が埋まったときだけ。まだ選べるうちは
+    // 時間の行き先へ返す ── 1つ宣言しただけで理想へ流れると、3つ選べたことに
+    // 気づかんまま庭に出てしまう。一覧の「すすむ」が、本人が終いを決める場所。
+    const leave = () => {
+      if (!onboarding) {
+        router.replace('/(app)/(tabs)');
+      } else if (slotsFull) {
+        router.replace({ pathname: '/(app)/ideal', params: { onboarding: '1' } });
+      } else {
+        router.replace({ pathname: '/(app)/observe', params: { onboarding: '1' } });
+      }
+    };
     return (
       <Sumiire style={styles.container}>
         <View style={styles.doneBody}>
@@ -190,7 +215,11 @@ export default function Declare() {
           )}
           <Pressable style={styles.doneAction} onPress={leave}>
             <Text style={styles.doneActionText}>
-              {onboarding ? t.declare.next : t.declare.toGarden}
+              {!onboarding
+                ? t.declare.toGarden
+                : slotsFull
+                  ? t.declare.next
+                  : t.declare.chooseMore}
             </Text>
           </Pressable>
         </View>

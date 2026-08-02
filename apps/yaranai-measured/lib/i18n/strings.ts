@@ -126,6 +126,8 @@ export type AppStrings = {
     toGarden: string;
     /** オンボーディングでは庭の手前に理想を書く画面が挟まるので、行き先を名指さない */
     next: string;
+    /** オンボーディングで枠がまだ空いているとき。時間の行き先へ返して、続きを委ねる */
+    chooseMore: string;
     pickFromObserve: string;
     gatheringTitle: string;
     gatheringBody: (need: number, have: number) => string;
@@ -163,6 +165,12 @@ export type AppStrings = {
     back: string;
     /** オンボーディング時だけ画面下部に出す一行(§5)。ボタンではなく道しるべ */
     onboardingGuide: string;
+    /** オンボーディングで一覧の手前に置く断り。少なくとも1つ、多くて3つ(§5) */
+    onboardingRule: (max: number) => string;
+    /** いま何つ選んだか。「すすむ」の足元に添える(§6) */
+    onboardingChosen: (chosen: number, max: number) => string;
+    /** 1つ以上選んだときだけ出す、理想を書く画面への一歩(§6) */
+    next: string;
   };
   permission: {
     androidOnly: string;
@@ -348,6 +356,7 @@ const ja: AppStrings = {
     doneExcuseHint: 'やらないことを掲げておく一枚も、用意してあります。',
     toGarden: '庭へ',
     next: 'すすむ',
+    chooseMore: 'つづけて選ぶ',
     pickFromObserve: 'アプリは、観測の一覧から選んでください。',
     gatheringTitle: 'ふだんの記録を集めています',
     gatheringBody: (need, have) =>
@@ -380,6 +389,10 @@ const ja: AppStrings = {
     empty: 'まだ観測が集まっていません。\nこの端末を使ううちに、静かに集まります。',
     back: '戻る',
     onboardingGuide: 'この中から、やらないものを選ぶ',
+    onboardingRule: (max) => `すくなくとも1つ。\nここでは${max}つまで選べます。`,
+    onboardingChosen: (chosen, max) =>
+      chosen >= max ? `${max}つ、選びました。` : `いま${chosen}つ。あと${max - chosen}つ選べます。`,
+    next: 'すすむ',
   },
   permission: {
     androidOnly: 'この計測は、Androidの端末でだけ働きます。',
@@ -559,6 +572,7 @@ const en: AppStrings = {
     doneExcuseHint: 'There is also a card, for holding up an “I won’t.”',
     toGarden: 'To the garden',
     next: 'Continue',
+    chooseMore: 'Choose another',
     pickFromObserve: 'Choose an app from your observations.',
     gatheringTitle: 'Learning your usual',
     gatheringBody: (need, have) =>
@@ -591,6 +605,12 @@ const en: AppStrings = {
     empty: "No observations yet.\nThey'll gather quietly as you use this device.",
     back: 'Back',
     onboardingGuide: "From these, choose what you won't do",
+    onboardingRule: (max) => `At least one.\nYou can choose up to ${max} here.`,
+    onboardingChosen: (chosen, max) =>
+      chosen >= max
+        ? `You've chosen ${max}.`
+        : `${chosen} so far. You can choose ${max - chosen} more.`,
+    next: 'Continue',
   },
   permission: {
     androidOnly: 'This measurement only works on Android devices.',
