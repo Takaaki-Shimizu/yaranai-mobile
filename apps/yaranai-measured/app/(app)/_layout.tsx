@@ -4,6 +4,7 @@ import { useSession, colors } from '@yaranai/core';
 import { syncAll } from '../../lib/usage-sync';
 import { evaluateCrashedDay } from '../../lib/articles/evaluate';
 import { useIsDeveloper } from '../../lib/developer';
+import { syncConsentToSupabase } from '../../lib/terms';
 
 export default function AppLayout() {
   const session = useSession();
@@ -17,6 +18,13 @@ export default function AppLayout() {
       syncAll(session.user.id).then(() => evaluateCrashedDay());
     }
   }, [session, isDeveloper]);
+
+  // 規約同意の再送(オンボーディング §7)。サインアップ時にローカルへ記録した同意を、
+  // セッションが張られた起動ごとにSupabaseへ送る(送信済みなら何もしない)。
+  // メール確認やGoogle認証でアカウント作成が同意より後になっても、ここで必ず届く。
+  useEffect(() => {
+    if (session) syncConsentToSupabase(session.user.id);
+  }, [session]);
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
 

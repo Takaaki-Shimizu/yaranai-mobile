@@ -10,6 +10,7 @@ import { computeBaseline, type BaselineResult, BASELINE_MIN_DAYS } from '../../l
 import { formatMinutes } from '../../lib/format';
 import { useLang, useT } from '../../lib/i18n/context';
 import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
+import { markOnboardingDone } from '../../lib/onboarding';
 
 // 卒業済みの誓い(卒業機能 §5-3)。この画面は宣言と復帰の二役を持つ。
 // 同じパッケージに生きた誓いがあるなら新規宣言はありえん(unique index が弾く)ので、
@@ -121,6 +122,8 @@ export default function Declare() {
       }
       return;
     }
+    // 宣言1本でオンボーディングは完走(オンボーディング §6)。完了済みなら何も変わらん
+    await markOnboardingDone(session.user.id);
     // 宣言の完了。世界観の一文を添えた完了画面を挟んでから庭へ戻る(§変更5)
     setDone(true);
   };

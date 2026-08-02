@@ -57,6 +57,9 @@ export type AppStrings = {
   };
   home: {
     emptyHeadline: string;
+    /** 許可を「あとで」にした人への静かな案内(オンボーディング §4)。警告色は使わない */
+    noAccessNotice: string;
+    noAccessLink: string;
     savedHeadline: (days: number, time: string) => string;
     rowSaved: (actual: string, baseline: string, saved: string) => string;
     rowWaiting: string;
@@ -149,12 +152,46 @@ export type AppStrings = {
     gathering: (need: number, have: number) => string;
     empty: string;
     back: string;
+    /** オンボーディング時だけ画面下部に出す一行(§5)。ボタンではなく道しるべ */
+    onboardingGuide: string;
   };
   permission: {
     androidOnly: string;
     body: string;
     note: string;
     openSettings: string;
+    /** 許可せずホームへ抜ける静かな脇道(オンボーディング §4)。強制はしない */
+    later: string;
+  };
+  /** 世界観導入(オンボーディング §1)。文言は仮。煽り・カウントダウンは入れない */
+  worldview: {
+    lede: string;
+    body: string;
+    skip: string;
+    next: string;
+  };
+  /** メール確認待ち(オンボーディング §3) */
+  confirmEmail: {
+    title: string;
+    body: string;
+    resend: string;
+    /** 連打防止の残り秒。急かす表現にしない */
+    resendWait: (sec: number) => string;
+    resent: string;
+    resendFailed: string;
+    wrongEmail: string;
+  };
+  /** 目立つ開示(オンボーディング §4)。何を・何のために読むか、外に出る範囲はどこまでか */
+  disclosure: {
+    what: string;
+    boundary: string;
+    action: string;
+  };
+  /** 待機モード(オンボーディング §5)。「あと◯日」のカウントダウン表現はしない */
+  waiting: {
+    body: (days: number) => string;
+    note: string;
+    proceed: string;
   };
   garden: {
     /** 絵巻ビューからホームへ帰る。障子演出は再生しない(ゆえに「とじる」ではない) */
@@ -167,6 +204,17 @@ export type AppStrings = {
     passwordPlaceholder: string;
     enter: string;
     begin: string;
+    /** 同意行(オンボーディング §2)。リンク部分だけ別要素にするため分割して持つ */
+    agreePrefix: string;
+    termsLink: string;
+    agreeAnd: string;
+    privacyLink: string;
+    agreeSuffix: string;
+    consentA11y: string;
+    /** Google認証(§2)。ボタン文言はサインアップが「Googleではじめる」 */
+    googleBegin: string;
+    googleEnter: string;
+    googleFailed: string;
     createAccount: string;
     haveAccount: string;
     forgotPassword: string;
@@ -238,6 +286,8 @@ const ja: AppStrings = {
   },
   home: {
     emptyHeadline: 'ここから、変わる。',
+    noAccessNotice: '計測を始めるには、\n使用状況へのアクセスの許可が必要です。',
+    noAccessLink: '許可について読む',
     savedHeadline: (days, time) => `${days}日で、${time}が\n戻ってきました。`,
     rowSaved: (actual, baseline, saved) =>
       `昨日の使用 ${actual}(ふだん ${baseline})→ ${saved}戻った`,
@@ -317,12 +367,40 @@ const ja: AppStrings = {
       `まだ記録を集めています。\nこの端末の記録が${need}日ぶんに満ちると、\n時間の行き先が見えるようになります。\nいまは${have}日ぶんです。`,
     empty: 'まだ観測が集まっていません。\nこの端末を使ううちに、静かに集まります。',
     back: '戻る',
+    onboardingGuide: 'この中から、やらないものを選ぶ',
   },
   permission: {
     androidOnly: 'この計測は、Androidの端末でだけ働きます。',
     body: 'あなたの時間の記録は、この端末の中にあります。\nYaranaiはそれを読むだけです。外には送りません。',
     note: '設定で「使用状況へのアクセス」をYaranaiに許すと、計測が始まります。',
     openSettings: '設定を開く',
+    later: 'あとで',
+  },
+  worldview: {
+    lede: 'スマホに渡していた時間を、\n静かに取り戻す。',
+    body: '「やらない」とひとつ決める。\nそのぶんだけ、あなたの庭が育ちます。',
+    skip: 'とばす',
+    next: 'すすむ',
+  },
+  confirmEmail: {
+    title: '確認メールを送りました',
+    body: 'メールのリンクを開いてからお入りください。',
+    resend: 'メールを再送する',
+    resendWait: (sec) => `再送は${sec}秒ほど、お待ちください。`,
+    resent: '送りました。',
+    resendFailed: '送れませんでした。少し時間をおいてもう一度。',
+    wrongEmail: 'メールアドレスを間違えた方',
+  },
+  disclosure: {
+    what: 'Yaranaiは、この端末にある\nアプリごとの利用時間の統計を読み取ります。\nあなたの「ふだん」を知り、\n取り戻した時間を測るためです。',
+    boundary:
+      '全アプリの利用記録は、この端末の中にだけ残ります。\nサーバーに送られるのは、あなたが「やらない」と\n宣言したアプリの1日ごとの合計時間と、\nその基準線だけです。',
+    action: 'わかった、設定へ',
+  },
+  waiting: {
+    body: (days) => `あなたの時間の記録を、端末が集めています。\nいま${days}日目です。`,
+    note: '記録が満ちるころ、\nやらないことを選べるようになります。',
+    proceed: 'すすむ',
   },
   garden: {
     back: '戻る',
@@ -334,6 +412,15 @@ const ja: AppStrings = {
     passwordPlaceholder: 'パスワード',
     enter: '入る',
     begin: 'はじめる',
+    agreePrefix: '',
+    termsLink: '利用規約',
+    agreeAnd: ' と ',
+    privacyLink: 'プライバシーポリシー',
+    agreeSuffix: ' に同意する',
+    consentA11y: '利用規約とプライバシーポリシーに同意する',
+    googleBegin: 'Googleではじめる',
+    googleEnter: 'Googleで入る',
+    googleFailed: 'Googleでは入れませんでした。少し時間をおいてもう一度。',
     createAccount: 'アカウントをつくる',
     haveAccount: 'すでにアカウントをお持ちの方',
     forgotPassword: 'パスワードをお忘れの方',
@@ -405,6 +492,8 @@ const en: AppStrings = {
   },
   home: {
     emptyHeadline: 'This is where it changes.',
+    noAccessNotice: 'To begin measuring, Yaranai needs\nthe "Usage access" permission.',
+    noAccessLink: 'Read about the permission',
     savedHeadline: (days, time) =>
       `In ${days} ${days === 1 ? 'day' : 'days'},\n${time} came back to you.`,
     rowSaved: (actual, baseline, saved) =>
@@ -486,12 +575,40 @@ const en: AppStrings = {
       `Still gathering records.\nOnce this device holds ${need} days' worth,\nyou'll see where your time goes.\nSo far, it has ${have}.`,
     empty: "No observations yet.\nThey'll gather quietly as you use this device.",
     back: 'Back',
+    onboardingGuide: "From these, choose what you won't do",
   },
   permission: {
     androidOnly: 'This measurement only works on Android devices.',
     body: 'The record of your time lives on this device.\nYaranai only reads it. Nothing is sent outside.',
     note: 'Grant Yaranai "Usage access" in Settings, and measurement begins.',
     openSettings: 'Open Settings',
+    later: 'Later',
+  },
+  worldview: {
+    lede: 'Quietly take back the time\nyou were handing to your phone.',
+    body: 'Decide on one "I won\'t."\nYour garden grows by that much.',
+    skip: 'Skip',
+    next: 'Continue',
+  },
+  confirmEmail: {
+    title: 'Confirmation email sent',
+    body: 'Open the link inside, then come on in.',
+    resend: 'Send it again',
+    resendWait: (sec) => `Please wait about ${sec} seconds before resending.`,
+    resent: 'Sent.',
+    resendFailed: "Couldn't send it. Wait a moment and try again.",
+    wrongEmail: 'Entered the wrong address?',
+  },
+  disclosure: {
+    what: 'Yaranai reads the per-app usage statistics\nheld on this device —\nto learn your "usual," and to measure\nthe time that comes back to you.',
+    boundary:
+      'The usage log of all your apps stays on this device.\nOnly the daily totals of the apps you declare\n"I won\'t" for, and their baselines,\nare sent to the server.',
+    action: 'Understood — to Settings',
+  },
+  waiting: {
+    body: (days) => `This device is gathering the record of your time.\nDay ${days}, so far.`,
+    note: "Once the record fills in,\nyou'll be able to choose what you won't do.",
+    proceed: 'Continue',
   },
   garden: {
     back: 'Back',
@@ -503,6 +620,15 @@ const en: AppStrings = {
     passwordPlaceholder: 'Password',
     enter: 'Enter',
     begin: 'Begin',
+    agreePrefix: 'I agree to the ',
+    termsLink: 'Terms of Service',
+    agreeAnd: ' and ',
+    privacyLink: 'Privacy Policy',
+    agreeSuffix: '.',
+    consentA11y: 'Agree to the Terms of Service and the Privacy Policy',
+    googleBegin: 'Start with Google',
+    googleEnter: 'Enter with Google',
+    googleFailed: "Couldn't get you in with Google. Wait a moment and try again.",
     createAccount: 'Create an account',
     haveAccount: 'Already have an account?',
     forgotPassword: 'Forgot your password?',

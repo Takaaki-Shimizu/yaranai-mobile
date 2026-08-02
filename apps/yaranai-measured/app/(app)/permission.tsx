@@ -9,6 +9,7 @@ import {
 } from '../../modules/usage-stats';
 import { useT } from '../../lib/i18n/context';
 import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
+import { clearPermissionDeferred, setPermissionDeferred } from '../../lib/onboarding';
 
 export default function Permission() {
   const router = useSumiireRouter();
@@ -16,9 +17,18 @@ export default function Permission() {
 
   const checkAndLeave = useCallback(() => {
     if (isUsageStatsAvailable && hasUsageAccess()) {
+      // 許可された。「あとで」の印は畳み、ホームがオンボーディングの続きへ導く
+      clearPermissionDeferred();
       router.replace('/(app)');
     }
   }, [router]);
+
+  // 例外系①: 許可せずに戻ってきた場合はこの画面に留まる。「あとで」だけが
+  // 静かな脇道で、ホームは観測なしの案内を出す(強制・警告色は使わない)
+  const later = async () => {
+    await setPermissionDeferred();
+    router.replace('/(app)');
+  };
 
   // 設定画面から戻ってきたときに再確認する
   useEffect(() => {
@@ -53,6 +63,10 @@ export default function Permission() {
 
         <Pressable style={styles.primary} onPress={openUsageAccessSettings}>
           <Text style={styles.primaryText}>{t.permission.openSettings}</Text>
+        </Pressable>
+
+        <Pressable style={styles.later} hitSlop={12} accessibilityRole="button" onPress={later}>
+          <Text style={styles.laterText}>{t.permission.later}</Text>
         </Pressable>
       </View>
     </Sumiire>
@@ -101,4 +115,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 6,
   },
+  later: { marginTop: 8, paddingVertical: 10, alignItems: 'center' },
+  laterText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },
 });
