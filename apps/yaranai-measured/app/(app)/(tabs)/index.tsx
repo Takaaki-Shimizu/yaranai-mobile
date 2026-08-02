@@ -449,8 +449,10 @@ export default function Home() {
           />
         )}
 
-        {/* 蓄積 */}
-        {totals && Math.round(totalSavedMinutes) > 0 && (
+        {/* 蓄積。宣言した直後は取り戻しが0で、ここが丸ごと消えるとアプリ行が庭に
+            貼りついてしまう。誓いが1本でもある間は同じ枠を保ち、数字の代わりに
+            「明日から出る」ことだけを薄墨で置く(枠の高さ=余白も一緒に残る) */}
+        {totals && Math.round(totalSavedMinutes) > 0 ? (
           <View style={[styles.stats, unreadArticle && styles.statsUnderStrip]}>
             <Text style={styles.headline}>
               {t.home.savedHeadline(totals.longest_days, formatMinutes(totalSavedMinutes, lang))}
@@ -458,7 +460,11 @@ export default function Home() {
             {/* §変更4: 変化があったときだけ、過去形・数字なしの一行を添える */}
             {gardenNote && <Text style={styles.changeNote}>{gardenNote}</Text>}
           </View>
-        )}
+        ) : vows.length > 0 ? (
+          <View style={[styles.stats, unreadArticle && styles.statsUnderStrip]}>
+            <Text style={styles.pendingHeadline}>{t.home.savedPending}</Text>
+          </View>
+        ) : null}
 
         {/* 誓い */}
         <View style={styles.list}>
@@ -640,7 +646,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   // ホームでは庭と累計の一文の間に挟むので、上下に息をつける余白を持たせる。
-  // 下の 40 は、累計ブロック非表示(戻り時間が 0)のときも帯がアプリ行に貼りつかないため。
+  // 下の 40 は、累計ブロック非表示(誓いが1本もない)のときも帯がアプリ行に貼りつかないため。
   stripHome: { marginTop: 28, marginBottom: 40 },
   stripLabel: { fontSize: 10, color: colors.usuzumi, letterSpacing: 3 },
   stripTitle: {
@@ -684,6 +690,16 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     letterSpacing: 2,
     color: colors.sumi,
+    textAlign: 'center',
+  },
+  // 取り戻し待ちの一行。まだ起きとらんことを headline と同じ濃さでは言わんけん、
+  // 一段小さく薄墨で置く(位置と余白だけ headline と同じ)
+  pendingHeadline: {
+    fontFamily: fonts.serif,
+    fontSize: 16,
+    lineHeight: 32,
+    letterSpacing: 2,
+    color: colors.usuzumi,
     textAlign: 'center',
   },
   list: { gap: 28, paddingHorizontal: 28 },
