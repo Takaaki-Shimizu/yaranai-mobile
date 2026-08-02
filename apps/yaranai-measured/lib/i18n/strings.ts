@@ -104,6 +104,8 @@ export type AppStrings = {
     note: (max: number) => string;
     save: string;
     back: string;
+    /** オンボーディングで宣言のあとに通るときだけ、「戻る」の位置に出す */
+    skip: string;
     tooLong: (max: number) => string;
     saveFailed: string;
     inputA11y: string;
@@ -122,6 +124,8 @@ export type AppStrings = {
     /** 言い訳カードの告知(§4.4)。宣伝はこの1箇所だけ */
     doneExcuseHint: string;
     toGarden: string;
+    /** オンボーディングでは庭の手前に理想を書く画面が挟まるので、行き先を名指さない */
+    next: string;
     pickFromObserve: string;
     gatheringTitle: string;
     gatheringBody: (need: number, have: number) => string;
@@ -324,6 +328,7 @@ const ja: AppStrings = {
     note: (max) => `${max}文字まで。いつでも書き直せます。`,
     save: '保存する',
     back: '戻る',
+    skip: 'とばす',
     tooLong: (max) => `${max}文字以内にしてください。`,
     saveFailed: '保存できませんでした。',
     inputA11y: '理想',
@@ -342,6 +347,7 @@ const ja: AppStrings = {
     doneWorldview: 'この庭は、あなたが取り戻した時間とともに、\nゆっくり姿を変えていきます。',
     doneExcuseHint: 'やらないことを掲げておく一枚も、用意してあります。',
     toGarden: '庭へ',
+    next: 'すすむ',
     pickFromObserve: 'アプリは、観測の一覧から選んでください。',
     gatheringTitle: 'ふだんの記録を集めています',
     gatheringBody: (need, have) =>
@@ -533,6 +539,7 @@ const en: AppStrings = {
     note: (max) => `Up to ${max} characters. Rewrite it whenever you like.`,
     save: 'Save',
     back: 'Back',
+    skip: 'Skip',
     tooLong: (max) => `Keep it within ${max} characters.`,
     saveFailed: "Couldn't save.",
     inputA11y: 'Your ideal',
@@ -551,6 +558,7 @@ const en: AppStrings = {
     doneWorldview: 'This garden will slowly change shape\nalongside the time you take back.',
     doneExcuseHint: 'There is also a card, for holding up an “I won’t.”',
     toGarden: 'To the garden',
+    next: 'Continue',
     pickFromObserve: 'Choose an app from your observations.',
     gatheringTitle: 'Learning your usual',
     gatheringBody: (need, have) =>

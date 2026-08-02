@@ -1,4 +1,5 @@
 // 理想(WHAT)の編集画面。ホームヘッダーの表示枠タップと、ハンバーガーメニューから入る。
+// オンボーディングでは、宣言の直後にもここを一度だけ通る(onboarding=1)。
 //
 // 理想は任意入力。空文字での保存は「理想を消す」操作として許可する。
 // 20文字上限。改行は禁止(multiline を使わない)。
@@ -7,6 +8,7 @@ import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { IDEAL_MAX_LENGTH, idealLength, validateIdeal } from '../../lib/ideal/validate';
@@ -18,6 +20,14 @@ export default function Ideal() {
   const router = useSumiireRouter();
   const t = useT();
   const userId = session?.user?.id;
+  // オンボーディングの通り道(宣言 → ここ → 庭)。戻る先は宣言完了画面ではなく庭:
+  // 宣言は済んどるけん、来た道を戻らせず、書いても飛ばしても同じ庭へ抜ける
+  const params = useLocalSearchParams<{ onboarding?: string }>();
+  const onboarding = params.onboarding === '1';
+  const leave = () => {
+    if (onboarding) router.replace('/(app)/(tabs)');
+    else router.back();
+  };
 
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -60,7 +70,7 @@ export default function Ideal() {
       setError(t.ideal.saveFailed);
       return;
     }
-    router.back();
+    leave();
   };
 
   return (
@@ -89,8 +99,10 @@ export default function Ideal() {
           <Text style={styles.primaryText}>{t.ideal.save}</Text>
         </Pressable>
 
-        <Pressable style={styles.secondary} onPress={() => router.back()}>
-          <Text style={styles.secondaryText}>{t.ideal.back}</Text>
+        {/* オンボーディングでは戻る先がない(宣言は済んどる)。同じ位置に
+            「とばす」を置いて、書かずに庭へ抜ける道を必ず残す */}
+        <Pressable style={styles.secondary} onPress={leave}>
+          <Text style={styles.secondaryText}>{onboarding ? t.ideal.skip : t.ideal.back}</Text>
         </Pressable>
 
         {error !== '' && <Text style={styles.error}>{error}</Text>}

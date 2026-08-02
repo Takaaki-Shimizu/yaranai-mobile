@@ -1,10 +1,15 @@
 // ハンバーガーメニュー(実装仕様書 §5.3)。ヘッダー右上の「退出」を差し替える入口。
 //
 // 入口(三本線)は AppMenuButton として同じファイルに置き、フッターを持つ3画面
-// (庭/読みもの/言い訳カード)の右上に同じ形で出す ── 理想も言語もログアウトも
-// 画面を選ばない設定なので、庭に戻らないと開けないのは、ただの遠回りになる。
+// (庭/読みもの/言い訳カード)と時間の行き先の右上に同じ形で出す ── 理想も言語も
+// ログアウトも画面を選ばない設定なので、庭に戻らないと開けないのは、ただの遠回りになる。
 //
 // 項目は上から: 理想を入力 / 言語(罫線で区切る) / ログアウト(罫線で区切り最下部)。
+//
+// オンボーディング中(hideIdeal)は「理想を入力」を出さない。理想は宣言を終えた後に
+// 一度通る画面で書くもので、まだ何も宣言していない時点で「理想」だけ先に問うと、
+// 順路が二本に割れる。この時点で要るのは、読める言語に替えることと、入り直すこと ──
+// 言語とログアウトだけを残す。
 //
 // 「読みもの」はフッターの2つめのタブが持つのでここには置かない。理想は庭の掛け軸
 // (IdealHeader)のタップでも入れるが、掛け軸は未入力だと何も出ない無地の枠で、そこが
@@ -32,9 +37,11 @@ import { useSumiireRouter } from './Sumiire';
 type Props = {
   visible: boolean;
   onClose: () => void;
+  /** オンボーディング中だけ true。「理想を入力」を伏せ、言語とログアウトだけを出す */
+  hideIdeal?: boolean;
 };
 
-export function AppMenu({ visible, onClose }: Props) {
+export function AppMenu({ visible, onClose, hideIdeal = false }: Props) {
   const router = useSumiireRouter();
   const { lang, setLang } = useLang();
   const t = useT();
@@ -108,14 +115,17 @@ export function AppMenu({ visible, onClose }: Props) {
               <View pointerEvents="none" style={styles.topHighlight} />
 
               {/* 理想を入力(§5.3)。庭の掛け軸タップと同じ編集画面へ入る */}
-              <Pressable style={styles.item} onPress={goIdeal}>
-                <Text style={styles.itemText}>{t.menu.ideal}</Text>
-              </Pressable>
+              {!hideIdeal && (
+                <Pressable style={styles.item} onPress={goIdeal}>
+                  <Text style={styles.itemText}>{t.menu.ideal}</Text>
+                </Pressable>
+              )}
 
               {/* 言語。両言語の名前をそれぞれの言語で並べる(いま読めない言語の人にも
                   自分の言語が見つかるように)。選択中は墨、他方は薄墨 */}
-              {/* 項目の間はすべて同じ1本の罫線で区切る(ここだけ無いと束ねて見える) */}
-              <View style={[styles.langRow, styles.separated]}>
+              {/* 項目の間はすべて同じ1本の罫線で区切る(ここだけ無いと束ねて見える)。
+                  先頭に来たときは区切る相手がおらんけん、罫線は引かない */}
+              <View style={[styles.langRow, !hideIdeal && styles.separated]}>
                 <Pressable onPress={() => setLang('ja')} hitSlop={8}>
                   <Text style={[styles.langText, lang === 'ja' && styles.langActive]}>日本語</Text>
                 </Pressable>
@@ -142,7 +152,9 @@ export function AppMenu({ visible, onClose }: Props) {
  * 庭はヘッダー帯の行の中に流し込み、読みもの・言い訳カードは見出しの行の右端へ
  * style で絶対配置する ── 画面ごとに三本線の寸法や色が散らないよう、絵はここにだけ置く。
  */
-export function AppMenuButton({ style }: { style?: StyleProp<ViewStyle> }) {
+export function AppMenuButton(
+  { style, hideIdeal }: { style?: StyleProp<ViewStyle>; hideIdeal?: boolean },
+) {
   const [open, setOpen] = useState(false);
   const t = useT();
   return (
@@ -160,7 +172,7 @@ export function AppMenuButton({ style }: { style?: StyleProp<ViewStyle> }) {
           <View style={styles.hbLine} />
         </View>
       </Pressable>
-      <AppMenu visible={open} onClose={() => setOpen(false)} />
+      <AppMenu visible={open} onClose={() => setOpen(false)} hideIdeal={hideIdeal} />
     </>
   );
 }
