@@ -61,8 +61,8 @@ export default function Declare() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  // 宣言を終えた時点で枠が埋まったかどうか(オンボーディングの行き先を分ける)。
-  // 埋まったなら理想へ、まだ選べるなら時間の行き先へ返す(オンボーディング §6)
+  // 宣言を終えた時点で枠が埋まったかどうか(完了画面の導線を分ける)。
+  // 埋まったなら「次へすすむ」だけ、まだ選べるなら「つづけて選ぶ」も並べる(オンボーディング §6)
   const [slotsFull, setSlotsFull] = useState(false);
 
   // このパッケージに卒業済みの誓いがあれば復帰モード、無ければ新規宣言。
@@ -139,10 +139,10 @@ export default function Declare() {
     }
     // 宣言1本でオンボーディングは完走(オンボーディング §6)。完了済みなら何も変わらん
     await markOnboardingDone(session.user.id);
-    // 宣言を終えて枠が埋まったなら、この先は選べん ── 完了画面から理想へ抜ける。
-    // まだ空きがあるなら時間の行き先へ返し、続けて選ぶか「すすむ」かを本人に委ねる。
-    // 数えられんかった回(通信断など)は一覧へ返す側に倒す:選び直す道は残るが、
-    // 理想へ飛ばしてしまうと2つめ3つめを選ぶ機会がここで閉じてしまう。
+    // 宣言を終えて枠が埋まったなら、この先は選べん ── 完了画面は「次へすすむ」だけ。
+    // まだ空きがあるなら「つづけて選ぶ」も並べ、選び足すか終いにするかを本人に委ねる。
+    // 数えられんかった回(通信断など)は選べる側に倒す:選び直す道は残るが、
+    // 「つづけて選ぶ」を消してしまうと2つめ3つめを選ぶ機会がここで閉じてしまう。
     if (onboarding) {
       const active = await fetchActiveCount();
       setSlotsFull((active.count ?? 0) >= MAX_VOWS);
@@ -184,17 +184,18 @@ export default function Declare() {
     // 宣言(やらないこと)の裏返しを、その勢いのまま書ける場所がここしかない。
     // 書かずに「とばす」でも庭へ抜けられる ── 理想は任意入力のままにしておく。
     //
-    // ただし理想へ渡すのは、枠(3つ)が埋まったときだけ。まだ選べるうちは
-    // 時間の行き先へ返す ── 1つ宣言しただけで理想へ流れると、3つ選べたことに
-    // 気づかんまま庭に出てしまう。一覧の「すすむ」が、本人が終いを決める場所。
-    const leave = () => {
+    // 「次へすすむ」はいつでも理想へ抜けられる。枠(3つ)にまだ空きがあるときは
+    // 「つづけて選ぶ」も並べて、時間の行き先へ戻って選び足す道を残す ──
+    // 1つで終いにするか、続けて選ぶかは、この画面で本人が決められる。
+    const proceed = () => {
       if (!onboarding) {
         router.replace('/(app)/(tabs)');
-      } else if (slotsFull) {
-        router.replace({ pathname: '/(app)/ideal', params: { onboarding: '1' } });
       } else {
-        router.replace({ pathname: '/(app)/observe', params: { onboarding: '1' } });
+        router.replace({ pathname: '/(app)/ideal', params: { onboarding: '1' } });
       }
+    };
+    const chooseMore = () => {
+      router.replace({ pathname: '/(app)/observe', params: { onboarding: '1' } });
     };
     return (
       <Sumiire style={styles.container}>
@@ -213,15 +214,16 @@ export default function Declare() {
               <Text style={styles.worldview}>{t.declare.doneExcuseHint}</Text>
             </Pressable>
           )}
-          <Pressable style={styles.doneAction} onPress={leave}>
+          <Pressable style={styles.doneAction} onPress={proceed}>
             <Text style={styles.doneActionText}>
-              {!onboarding
-                ? t.declare.toGarden
-                : slotsFull
-                  ? t.declare.next
-                  : t.declare.chooseMore}
+              {onboarding ? t.declare.next : t.declare.toGarden}
             </Text>
           </Pressable>
+          {onboarding && !slotsFull && (
+            <Pressable style={styles.doneSubAction} onPress={chooseMore}>
+              <Text style={styles.doneSubActionText}>{t.declare.chooseMore}</Text>
+            </Pressable>
+          )}
         </View>
       </Sumiire>
     );
@@ -403,4 +405,12 @@ const styles = StyleSheet.create({
   },
   doneAction: { marginTop: 24, paddingVertical: 12, paddingHorizontal: 24, alignItems: 'center' },
   doneActionText: { fontFamily: fonts.serif, fontSize: 15, color: colors.sumi, letterSpacing: 6 },
+  // 「つづけて選ぶ」は控えの導線。主導線の「次へすすむ」より一段静かに置く
+  doneSubAction: { marginTop: -16, paddingVertical: 10, paddingHorizontal: 24, alignItems: 'center' },
+  doneSubActionText: {
+    fontFamily: fonts.serif,
+    fontSize: 13,
+    color: colors.usuzumi,
+    letterSpacing: 3,
+  },
 });
