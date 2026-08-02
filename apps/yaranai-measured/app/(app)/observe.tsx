@@ -84,86 +84,102 @@ export default function Observe() {
   const [loaded, setLoaded] = useState(false);
 
   const loadAll = useCallback(async () => {
-    await syncLocalUsage();
+    // 同期に失敗しても一覧は諦めない: 端末DBに残っとる観測から組める。
+    // 以前はここが「database is locked」(起動時の syncAll との並走。いまは
+    // singleFlight で相乗り)で落ちると loadAll ごと沈黙し、一覧も
+    // 「まだ観測が集まっていません」も出ん白紙のまま止まっとった。
+    try {
+      await syncLocalUsage();
+    } catch (e) {
+      console.log('[observe] syncLocalUsage failed', e);
+    }
     // 直近7日に使ったアプリだけを候補にする(今も続いとる習慣のフィルタ)。
     // 並び順と表示は12週平均: 一時的な急増は平均に吸収され、
     // やめ済みアプリを宣言して基準線だけ稼ぐ抜け道も防ぐ。
     // 候補窓は当日を含む7日。卒業判定は前日までの7日(lib/dates.ts)で1日ずれるが、
     // 「消えた = 卒業できる」の対応は誓いのなかのアプリの足切り免除で保証する:
     // 1分でも使えばここに並び続けるけん、「並んどらんのに卒業できん」は起きん。
-    const [recent, vowsRes] = await Promise.all([
-      getWeeklyTopApps(recentWindowStart(), 100),
-      fetchLivingVows(),
-    ]);
-    const baseline = measureBaselineWindow();
-    setAvailableDays(baseline.availableDays);
-    // 調査用: 集計できた日数はゲートの内外どちらでも出す。以前は表示できたときだけ
-    // 出しとったけん、「まだ記録を集めています」に落ちた原因が実機ログで追えんかった。
-    console.log(
-      `[observe] availableDays=${baseline.availableDays} need=${BASELINE_MIN_DAYS} ` +
-        `coveredMs=${baseline.window.coveredMs} recent7d=${recent.length}`,
-    );
-    if (baseline.availableDays >= BASELINE_MIN_DAYS) {
-      // 誓いのある(挑戦中・卒業済み)パッケージは足切りと件数上限を免除する。
-      // 卒業済みが1分でも使えばここに再浮上して「計測に戻す」が届き、
-      // 挑戦中は「時間の行き先から消えた = 卒業できる」の対応が崩れん。
-      // 廃止済みは vowsRes に含まれん(= ただの候補として扱う)。
-      const vowedPkgs = new Set((vowsRes.data ?? []).map((v) => v.package_name as string));
-      const candidates = recent
-        .filter((r) => !isNoisePackage(r.packageName))
-        .map((r) => ({
-          packageName: r.packageName,
-          avgMinutesPerDay: averageMinutesPerDay(baseline.window, r.packageName),
-          weeklyTotalMinutes: r.totalMinutes,
-        }))
-        .sort((a, b) => b.avgMinutesPerDay - a.avgMinutesPerDay);
-      const shown = candidates
-        .filter(
-          (r) =>
-            onboarding ||
-            vowedPkgs.has(r.packageName) ||
-            (r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
-              r.avgMinutesPerDay >= MIN_AVG_MINUTES),
-        )
-        .filter((r, i) => i < MAX_CANDIDATES || vowedPkgs.has(r.packageName));
-      setRows(shown);
-      setOfficialLabels(getAppLabels(shown.map((r) => r.packageName)));
-      // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
-      // (adb logcat -s ReactNativeJS UsageStats)。端末の外には出ない。
-      const shownSet = new Set(shown.map((r) => r.packageName));
-      console.log(`[observe] candidates=${candidates.length} shown=${shown.length}`);
-      for (const c of candidates) {
-        // オンボーディング中に落ちた行は件数上限だけが理由(足切りを掛けとらんけん)
-        const state = shownSet.has(c.packageName)
-          ? 'show'
-          : onboarding
-            ? 'drop:limit'
-            : c.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES
-              ? 'drop:weekly'
-              : c.avgMinutesPerDay < MIN_AVG_MINUTES
-                ? 'drop:avg'
-                : 'drop:limit';
-        console.log(
-          `[observe] ${state} ${c.packageName} 7d合計=${c.weeklyTotalMinutes}m 12w=${c.avgMinutesPerDay}m/d`,
+    try {
+      const [recent, vowsRes] = await Promise.all([
+        getWeeklyTopApps(recentWindowStart(), 100),
+        fetchLivingVows(),
+      ]);
+      const baseline = measureBaselineWindow();
+      setAvailableDays(baseline.availableDays);
+      // 調査用: 集計できた日数はゲートの内外どちらでも出す。以前は表示できたときだけ
+      // 出しとったけん、「まだ記録を集めています」に落ちた原因が実機ログで追えんかった。
+      console.log(
+        `[observe] availableDays=${baseline.availableDays} need=${BASELINE_MIN_DAYS} ` +
+          `coveredMs=${baseline.window.coveredMs} recent7d=${recent.length}`,
+      );
+      if (baseline.availableDays >= BASELINE_MIN_DAYS) {
+        // 誓いのある(挑戦中・卒業済み)パッケージは足切りと件数上限を免除する。
+        // 卒業済みが1分でも使えばここに再浮上して「計測に戻す」が届き、
+        // 挑戦中は「時間の行き先から消えた = 卒業できる」の対応が崩れん。
+        // 廃止済みは vowsRes に含まれん(= ただの候補として扱う)。
+        const vowedPkgs = new Set((vowsRes.data ?? []).map((v) => v.package_name as string));
+        const candidates = recent
+          .filter((r) => !isNoisePackage(r.packageName))
+          .map((r) => ({
+            packageName: r.packageName,
+            avgMinutesPerDay: averageMinutesPerDay(baseline.window, r.packageName),
+            weeklyTotalMinutes: r.totalMinutes,
+          }))
+          .sort((a, b) => b.avgMinutesPerDay - a.avgMinutesPerDay);
+        const shown = candidates
+          .filter(
+            (r) =>
+              onboarding ||
+              vowedPkgs.has(r.packageName) ||
+              (r.weeklyTotalMinutes >= MIN_WEEKLY_TOTAL_MINUTES &&
+                r.avgMinutesPerDay >= MIN_AVG_MINUTES),
+          )
+          .filter((r, i) => i < MAX_CANDIDATES || vowedPkgs.has(r.packageName));
+        setRows(shown);
+        setOfficialLabels(getAppLabels(shown.map((r) => r.packageName)));
+        // 調査用: 候補がどの段階で消えたかを実機ログで追えるようにする
+        // (adb logcat -s ReactNativeJS UsageStats)。端末の外には出ない。
+        const shownSet = new Set(shown.map((r) => r.packageName));
+        console.log(`[observe] candidates=${candidates.length} shown=${shown.length}`);
+        for (const c of candidates) {
+          // オンボーディング中に落ちた行は件数上限だけが理由(足切りを掛けとらんけん)
+          const state = shownSet.has(c.packageName)
+            ? 'show'
+            : onboarding
+              ? 'drop:limit'
+              : c.weeklyTotalMinutes < MIN_WEEKLY_TOTAL_MINUTES
+                ? 'drop:weekly'
+                : c.avgMinutesPerDay < MIN_AVG_MINUTES
+                  ? 'drop:avg'
+                  : 'drop:limit';
+          console.log(
+            `[observe] ${state} ${c.packageName} 7d合計=${c.weeklyTotalMinutes}m 12w=${c.avgMinutesPerDay}m/d`,
+          );
+        }
+      } else {
+        setRows([]);
+        setOfficialLabels({});
+      }
+      // 誓いが引けんかった回は前回の状態を残す。空の Map に落とすと、誓いの
+      // 立っとるアプリにまで「宣言する」が並んでしまう。
+      if (!vowsRes.error) {
+        setVowStates(
+          new Map(
+            (vowsRes.data ?? []).map((v) => [
+              v.package_name as string,
+              (v.graduated_on ? 'graduated' : 'active') as VowState,
+            ]),
+          ),
         );
       }
-    } else {
-      setRows([]);
-      setOfficialLabels({});
+    } catch (e) {
+      // 読み込みが落ちた回も loaded だけは立てる。立てんまま止まると、この画面は
+      // 一覧も文言も出さん白紙になり、オンボーディングでは進む手立てが消える。
+      // 前回の rows は残し、次の focus で取り直す。
+      console.log('[observe] load failed', e);
+    } finally {
+      setLoaded(true);
     }
-    // 誓いが引けんかった回は前回の状態を残す。空の Map に落とすと、誓いの
-    // 立っとるアプリにまで「宣言する」が並んでしまう。
-    if (!vowsRes.error) {
-      setVowStates(
-        new Map(
-          (vowsRes.data ?? []).map((v) => [
-            v.package_name as string,
-            (v.graduated_on ? 'graduated' : 'active') as VowState,
-          ]),
-        ),
-      );
-    }
-    setLoaded(true);
   }, [onboarding]);
 
   useFocusEffect(

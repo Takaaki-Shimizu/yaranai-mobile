@@ -13,7 +13,7 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
-    dbPromise = (async () => {
+    const opening = (async () => {
       const db = await SQLite.openDatabaseAsync('yaranai-measured.db');
       await db.execAsync(`
         pragma journal_mode = WAL;
@@ -27,6 +27,12 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
       `);
       return db;
     })();
+    // 開けんかった Promise を掴んだままにせん: 持ち越すと、以後の全クエリが
+    // 再起動まで同じ失敗を返し続ける。次の呼び出しで開き直す。
+    opening.catch(() => {
+      if (dbPromise === opening) dbPromise = null;
+    });
+    dbPromise = opening;
   }
   return dbPromise;
 }
