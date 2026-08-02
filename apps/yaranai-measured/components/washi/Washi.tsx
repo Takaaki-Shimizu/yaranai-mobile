@@ -95,7 +95,7 @@ function FoilRect({ foil }: { foil: Foil }) {
 }
 
 /**
- * ヘッダー意匠(§4): 紙片2枚+金箔2粒。ヘッダー帯 wrapper の最初の子として置き、
+ * ヘッダー意匠(§4): 紙片2枚+金箔4粒。ヘッダー帯 wrapper の最初の子として置き、
  * 帯の上端にアンカーする。座標は幅390dp基準の等倍スケール(モックの
  * preserveAspectRatio="xMidYMin slice" 相当)。
  */
@@ -126,7 +126,7 @@ export function HeaderWashi() {
 }
 
 /**
- * フッター意匠(§5): 紙片5枚+金箔2粒。AppFooter の帯の内側(アイコンより背面)に
+ * フッター意匠(§5): 紙片5枚+金箔3粒。AppFooter の帯の内側(アイコンより背面)に
  * 置く。フッターを持つ3画面(庭/読みもの/言い訳カード)すべてで同じ意匠が出る。帯の実高(height)へ縦をストレッチして追従し(preserveAspectRatio: none 相当)、
  * overflow: hidden で帯の境界にクリップする。上端のヘアラインは帯の border なので、
  * 意匠がそれより上に出ることは構造的にない。

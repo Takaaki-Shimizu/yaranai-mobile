@@ -54,14 +54,26 @@ export const HEADER_PIECES: readonly PaperPiece[] = [
 ];
 
 /**
- * ヘッダー意匠: 金箔2粒(§4)。
+ * ヘッダー意匠: 金箔4粒(§4)。
  * 2粒目は元々 (268, 70) にあったが、題字のベースライン(y≈82)に金の界線
  * (GOLD_RULE)を通したことで線のすぐ上に浮くかたちになったため、上へ逃がした。
  * 金の主役は界線で、箔はその余韻に留める。
+ *
+ * 置ける場所は文字の隙間だけなので、ヘッダーの実レイアウト(幅390dp基準)から逆算する:
+ *   - y < 28  … ステータスバーの時刻・電池が乗る(帯は半透明で下に潜る)。使わない
+ *   - y 28-60 … 空き。既存2粒はここ
+ *   - y 64-86 … 題字 Yaranai(x 28-135)/ 金の界線(y≈82)/ 三本線(x 342-362)
+ *   - y 88-106… 界線の下の空き(ヘッダー行の paddingBottom 20)
+ *   - y ≧110  … 理想(IdealHeader)の一行。中央揃えで最大幅まで伸びうるので使わない
+ * 追加の2粒は「上の空き」と「界線の下の空き」に1粒ずつ散らす。同じ帯に並べると
+ * 粒が行に見えるため、高さを変えて置く。
  */
 export const HEADER_FOILS: readonly Foil[] = [
   { x: 96, y: 34, size: 9, rotate: 16, fill: WASHI.foil1, opacity: 0.7 },
   { x: 296, y: 52, size: 8, rotate: -14, fill: WASHI.foil2, opacity: 0.55 },
+  { x: 208, y: 30, size: 9, rotate: -22, fill: WASHI.foil2, opacity: 0.5 },
+  // 界線の下の余韻。線から6dp下げ、題字(右端x≈135)より右に置いて字にも線にも触れない
+  { x: 178, y: 88, size: 8, rotate: 16, fill: WASHI.foil1, opacity: 0.5 },
 ];
 
 /**
@@ -102,15 +114,21 @@ export const FOOTER_PIECES: readonly PaperPiece[] = [
 ];
 
 /**
- * フッター意匠: 金箔2粒(§5)。
+ * フッター意匠: 金箔3粒(§5)。
  * 箔の y は「帯上端からの dp」で、紙片と違い縦ストレッチをかけずに置く。
  * ストレッチに載せると、下インセット(システムナビ)が大きい端末で箔が
  * アイコン帯の外へ沈んで見えなくなるため(実機で発生)。y+size は
  * インセットを除いた帯の高さ(FOOTER_HEIGHT = 56)以内に収めること。
+ *
+ * 3粒目は真ん中のタブ(読みもの)のまわり。3枠は flex:1 の等分なので中央アイコン
+ * (24dp)は基準幅では x 183-207 / y 16-40 を占める ── その右下の空きに置いて、
+ * 箔が線画に重ならないようにする。横位置は箔もアイコンも画面幅に比例するので、
+ * この間合いは端末幅が変わっても保たれる。
  */
 export const FOOTER_FOILS: readonly Foil[] = [
   { x: 338, y: 14, size: 9, rotate: -14, fill: WASHI.foil2, opacity: 0.6 },
   { x: 72, y: 42, size: 8, rotate: 20, fill: WASHI.foil1, opacity: 0.6 },
+  { x: 216, y: 34, size: 9, rotate: 12, fill: WASHI.foil1, opacity: 0.55 },
 ];
 
 /**
