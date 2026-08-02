@@ -27,7 +27,8 @@
       "expo-secure-store",
       "expo-sqlite",
       "@react-native-google-signin/google-signin",
-      "./plugins/with-x-queries"
+      "./plugins/with-x-queries",
+      "./plugins/with-mailto-queries"
     ],
     "experiments": {
       "typedRoutes": true

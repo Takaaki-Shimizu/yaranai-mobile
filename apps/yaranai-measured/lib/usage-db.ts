@@ -111,6 +111,13 @@ export async function getPackageForegroundMsByDateSince(
   return new Map(rows.map((r) => [r.record_date, r.foreground_ms]));
 }
 
+// アカウント削除(設定+お問い合わせ スペック §5.4)。Supabase 側は auth.users の
+// 削除で連鎖するが、端末内 SQLite は連鎖せんけん、ここで明示的に空にする。
+export async function clearAllUsageData(): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('delete from usage_daily');
+}
+
 export type WeeklyUsage = {
   packageName: string;
   totalMinutes: number;
