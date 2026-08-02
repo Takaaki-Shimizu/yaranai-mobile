@@ -169,7 +169,7 @@ export type AppStrings = {
     onboardingGuide: string;
     /** オンボーディングで一覧の手前に置く断り。少なくとも1つ、多くて3つ(§5) */
     onboardingRule: (max: number) => string;
-    /** いま何つ選んだか。「すすむ」の足元に添える(§6) */
+    /** いま何つ選んだか。「次へすすむ」の足元に添える(§6) */
     onboardingChosen: (chosen: number, max: number) => string;
     /** 1つ以上選んだときだけ出す、理想を書く画面への一歩(§6) */
     next: string;
@@ -320,7 +320,7 @@ const ja: AppStrings = {
     inputLede: 'やらないことをひとつ。',
     inputA11y: 'やらないこと',
     inputNote: (max) => `全角${max}字まで。「はやらない。」は、こちらで添えます。`,
-    next: 'すすむ',
+    next: '次へすすむ',
     confirmQuestion: 'これを、やらないと宣言しますか。',
     declare: '宣言する',
     back: '戻る',
@@ -394,7 +394,7 @@ const ja: AppStrings = {
     doneWorldview: 'この庭は、あなたが取り戻した時間とともに、\nゆっくり姿を変えていきます。',
     doneExcuseHint: 'やらないことを掲げておく一枚も、用意してあります。',
     toGarden: '庭へ',
-    next: 'すすむ',
+    next: '次へすすむ',
     chooseMore: 'つづけて選ぶ',
     pickFromObserve: 'アプリは、観測の一覧から選んでください。',
     gatheringTitle: 'ふだんの記録を集めています',
@@ -431,7 +431,7 @@ const ja: AppStrings = {
     onboardingRule: (max) => `すくなくとも1つ。\nここでは${max}つまで選べます。`,
     onboardingChosen: (chosen, max) =>
       chosen >= max ? `${max}つ、選びました。` : `いま${chosen}つ。あと${max - chosen}つ選べます。`,
-    next: 'すすむ',
+    next: '次へすすむ',
   },
   permission: {
     androidOnly: 'この計測は、Androidの端末でだけ働きます。',
@@ -444,7 +444,7 @@ const ja: AppStrings = {
     lede: 'スマホに渡していた時間を、\n静かに取り戻す。',
     body: '「やらない」とひとつ決める。\nそのぶんだけ、あなたの庭が育ちます。',
     skip: 'とばす',
-    next: 'すすむ',
+    next: '次へすすむ',
   },
   confirmEmail: {
     title: '確認メールを送りました',
@@ -464,7 +464,7 @@ const ja: AppStrings = {
   waiting: {
     body: (days) => `あなたの時間の記録を、端末が集めています。\nいま${days}日目です。`,
     note: '記録が満ちるころ、\nやらないことを選べるようになります。',
-    proceed: 'すすむ',
+    proceed: '次へすすむ',
   },
   garden: {
     back: '戻る',
