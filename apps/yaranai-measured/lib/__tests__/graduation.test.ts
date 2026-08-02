@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeGraduationEligibility } from '../graduation';
+import { computeGraduationEligibility, isUsedDay } from '../graduation';
 import {
   RECENT_WINDOW_DAYS,
   getTodayRecordDate,
@@ -74,13 +74,12 @@ test('6日使用0 + 1日でも使用があれば不成立', () => {
   );
 });
 
-// 分に丸めると0分になる20秒。それでも「開いた」ことに変わりはない
-test('窓の末日(当日)に一瞬だけ開いていても不成立', () => {
+test('窓の末日に1分以上開いていれば不成立', () => {
   assert.equal(
     computeGraduationEligibility({
       windowDates: WINDOW,
       recordedDates: allRecorded,
-      foregroundMsByDate: new Map([['2026-08-01', 20_000]]),
+      foregroundMsByDate: new Map([['2026-08-01', 90_000]]),
     }),
     false,
   );
@@ -168,5 +167,44 @@ test('前景0msの行は使用とみなさない(行の有無ではなく前景�
       ]),
     }),
     true,
+  );
+});
+
+// ---- 「使った」の粒度 -----------------------------------------------------
+//
+// 判定は画面に出る数字と同じ分粒度。ms厳密にすると、リンクのタップや PiP で
+// 数秒だけ前面に出た日が「0分」の顔をしたまま卒業を恒久的に塞ぐ。
+
+test('isUsedDay の境界は分への四捨五入(= 30秒)', () => {
+  assert.equal(isUsedDay(0), false);
+  assert.equal(isUsedDay(1), false);
+  assert.equal(isUsedDay(29_999), false);
+  assert.equal(isUsedDay(30_000), true);
+  assert.equal(isUsedDay(60_000), true);
+});
+
+test('表示が「0分」になる数秒の前面化は卒業を妨げない', () => {
+  assert.equal(
+    computeGraduationEligibility({
+      windowDates: WINDOW,
+      recordedDates: allRecorded,
+      // 12秒・3秒。誓い別詳細ではどちらも「0分」として出る日
+      foregroundMsByDate: new Map([
+        ['2026-07-28', 12_000],
+        ['2026-08-01', 3_000],
+      ]),
+    }),
+    true,
+  );
+});
+
+test('表示が「1分」になる31秒は使用とみなして不成立', () => {
+  assert.equal(
+    computeGraduationEligibility({
+      windowDates: WINDOW,
+      recordedDates: allRecorded,
+      foregroundMsByDate: new Map([['2026-07-29', 31_000]]),
+    }),
+    false,
   );
 });

@@ -10,9 +10,8 @@ import { useFocusEffect } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { supabase } from '../../../lib/supabase';
 import { syncAll } from '../../../lib/usage-sync';
-import { graduationWindowDates, graduationWindowStart, recordDateDaysAgo } from '../../../lib/dates';
-import { getPackageForegroundMsByDateSince, getRecordedDatesSince } from '../../../lib/usage-db';
-import { computeGraduationEligibility } from '../../../lib/graduation';
+import { recordDateDaysAgo } from '../../../lib/dates';
+import { findGraduablePackages } from '../../../lib/graduation-check';
 import { formatMinutes } from '../../../lib/format';
 import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../../modules/usage-stats';
 import { HomeGarden } from '../../../components/garden/HomeGarden';
@@ -173,21 +172,16 @@ export default function Home() {
       // 累計はやめた誓いも卒業した誓いも含めた全体(消えない蓄積)。
       setTotalSavedMinutes(allVows.reduce((sum, v) => sum + v.saved_minutes, 0));
 
-      // 卒業判定(卒業機能 §4)。窓は前日までの7暦日(当日は含めない。含めると
-      // 実質6日と数時間の判定になる)。材料は端末内DBだけ ── サーバーには
-      // 問い合わせん。成立した誓いの行にだけ、静かなテキストリンクが1行増える。
-      // 促しも通知もここには無い(五原則1)。
-      const since = graduationWindowStart();
-      const windowDates = graduationWindowDates();
-      const recordedDates = await getRecordedDatesSince(since);
-      const graduable = new Set<string>();
-      for (const vow of activeVows) {
-        const foregroundMsByDate = await getPackageForegroundMsByDateSince(vow.package_name, since);
-        if (computeGraduationEligibility({ windowDates, recordedDates, foregroundMsByDate })) {
-          graduable.add(vow.vow_id);
-        }
-      }
-      setGraduableVowIds(graduable);
+      // 卒業判定(卒業機能 §4)。窓もクエリも lib/graduation-check.ts に一本化しとる
+      // ── 「時間の行き先」がこの画面と違う判定でアプリを並べてしまわんように。
+      // 材料は端末内DBだけで、サーバーには問い合わせん。成立した誓いの行にだけ、
+      // 静かなテキストリンクが1行増える。促しも通知もここには無い(五原則1)。
+      const graduablePkgs = await findGraduablePackages(activeVows.map((v) => v.package_name));
+      setGraduableVowIds(
+        new Set(
+          activeVows.filter((v) => graduablePkgs.has(v.package_name)).map((v) => v.vow_id),
+        ),
+      );
     }
 
     // §変更4: 前回表示時の状態と比べ、変化があれば差分演出+一行を用意し、現在状態を保存する。

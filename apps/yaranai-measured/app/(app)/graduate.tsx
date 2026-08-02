@@ -6,9 +6,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { colors, fonts } from '@yaranai/core';
 import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { supabase } from '../../lib/supabase';
-import { getTodayTokyoDate, graduationWindowDates, graduationWindowStart } from '../../lib/dates';
-import { getPackageForegroundMsByDateSince, getRecordedDatesSince } from '../../lib/usage-db';
-import { computeGraduationEligibility } from '../../lib/graduation';
+import { getTodayTokyoDate } from '../../lib/dates';
+import { isGraduable } from '../../lib/graduation-check';
 import { useT } from '../../lib/i18n/context';
 
 // 卒業の儀式(卒業機能 §5-2)。宣言(declare.tsx)と同じ二拍 ── 確認 → 完了画面。
@@ -36,25 +35,12 @@ export default function Graduate() {
   // 卒業条件をもう一度、端末内DBから評価する。窓は前日までの7暦日やけん、
   // 当日の使用では崩れん。崩れうるのは、日付が変わって窓がずれた場合や、
   // 同期で過去日が埋まった場合(競合状態)。そのときは何も言わず庭へ戻す。
-  const stillEligible = async (): Promise<boolean> => {
-    const since = graduationWindowStart();
-    const [recordedDates, foregroundMsByDate] = await Promise.all([
-      getRecordedDatesSince(since),
-      getPackageForegroundMsByDateSince(packageName, since),
-    ]);
-    return computeGraduationEligibility({
-      windowDates: graduationWindowDates(),
-      recordedDates,
-      foregroundMsByDate,
-    });
-  };
-
   const graduate = async () => {
     if (busy || !vowId || !packageName) return;
     setBusy(true);
     setMessage('');
 
-    if (!(await stillEligible())) {
+    if (!(await isGraduable(packageName))) {
       setBusy(false);
       router.replace('/(app)/(tabs)');
       return;
