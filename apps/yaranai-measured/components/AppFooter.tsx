@@ -19,7 +19,6 @@ import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
 import { colors } from '@yaranai/core';
 import { useT } from '../lib/i18n/context';
 import { FooterWashi } from './washi/Washi';
-import { useSumiireRouter } from './Sumiire';
 
 export type FooterTab = 'garden' | 'reading' | 'excuse';
 
@@ -77,16 +76,19 @@ type Href = Parameters<ReturnType<typeof useRouter>['navigate']>[0];
 type Item = { tab: FooterTab; href: Href; label: string; icon: (p: { color: string }) => ReactElement };
 
 export function AppFooter({ active }: { active: FooterTab }) {
-  // タブ移動も「筆を引いてから移る」。帯そのものは3画面で共通なので動かない
-  const router = useSumiireRouter();
+  // タブ移動は「木漏れ日フェード」(app/(app)/(tabs)/_layout.tsx)。クロスフェードと
+  // 木漏れ日レイヤーが並行して走るので、ここでは何も待たずに即座に navigate する
+  // (墨入れの「筆を引いてから移る」直列制御はタブ間には使わない ── 待ちの間の
+  // 素の紙がフラッシュに見える)。帯そのものは3画面で共通なので動いて見えない
+  const router = useRouter();
   const t = useT();
   const insets = useSafeAreaInsets();
   const barHeight = FOOTER_HEIGHT + insets.bottom;
 
   const items: Item[] = [
-    { tab: 'garden', href: '/(app)', label: t.footer.garden, icon: StonesIcon },
-    { tab: 'reading', href: '/(app)/reading', label: t.footer.reading, icon: ScrollIcon },
-    { tab: 'excuse', href: '/(app)/excuse', label: t.footer.excuse, icon: LanternIcon },
+    { tab: 'garden', href: '/(app)/(tabs)', label: t.footer.garden, icon: StonesIcon },
+    { tab: 'reading', href: '/(app)/(tabs)/reading', label: t.footer.reading, icon: ScrollIcon },
+    { tab: 'excuse', href: '/(app)/(tabs)/excuse', label: t.footer.excuse, icon: LanternIcon },
   ];
 
   return (
@@ -105,8 +107,8 @@ export function AppFooter({ active }: { active: FooterTab }) {
           accessibilityState={{ selected: tab === active }}
           // 文字ラベルを持たないので、読み上げ名はここでだけ与える(§3)
           accessibilityLabel={label}
-          // navigate はスタックに同じ画面があれば積まずに戻る。
-          // タブを行き来しても履歴が伸びず、端末の戻るでホームへ帰れる
+          // タブ間の移動はタブナビゲータ内で完結する(backBehavior 既定の
+          // firstRoute)。行き来しても履歴が伸びず、端末の戻るで庭へ帰れる
           onPress={() => {
             if (tab !== active) router.navigate(href);
           }}

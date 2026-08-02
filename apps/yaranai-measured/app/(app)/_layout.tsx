@@ -6,6 +6,10 @@ import { evaluateCrashedDay } from '../../lib/articles/evaluate';
 import { useIsDeveloper } from '../../lib/developer';
 import { syncConsentToSupabase } from '../../lib/terms';
 
+// 本編の初期ルートはタブ群(旧 index)。ディープリンクで奥の画面から入っても
+// 戻る先が庭になるよう、アンカーを明示しておく
+export const unstable_settings = { initialRouteName: '(tabs)' };
+
 export default function AppLayout() {
   const session = useSession();
   const isDeveloper = useIsDeveloper();
@@ -38,7 +42,9 @@ export default function AppLayout() {
         // だけを担う。Android の fade は 150ms 固定で、遷移中は新旧両画面の
         // 不透明度が同時に下がりウィンドウ背景が透けるため、app.json の
         // backgroundColor を生成りに固定してある(未指定だとOSテーマの色で暗転が出る)。
-        // 庭の「控えめなフェード」(§5.3)もこの既定に含まれる
+        // 庭の「控えめなフェード」(§5.3)もこの既定に含まれる。
+        // フッター3タブ間の遷移だけは別で、(tabs)/_layout.tsx の
+        // 「木漏れ日フェード」(クロスフェード+光のレイヤー)が受け持つ
         animation: 'fade',
       }}
     />

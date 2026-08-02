@@ -19,7 +19,7 @@ export default function Permission() {
     if (isUsageStatsAvailable && hasUsageAccess()) {
       // 許可された。「あとで」の印は畳み、ホームがオンボーディングの続きへ導く
       clearPermissionDeferred();
-      router.replace('/(app)');
+      router.replace('/(app)/(tabs)');
     }
   }, [router]);
 
@@ -27,7 +27,7 @@ export default function Permission() {
   // 静かな脇道で、ホームは観測なしの案内を出す(強制・警告色は使わない)
   const later = async () => {
     await setPermissionDeferred();
-    router.replace('/(app)');
+    router.replace('/(app)/(tabs)');
   };
 
   // 設定画面から戻ってきたときに再確認する

@@ -24,7 +24,7 @@ export default function Waiting() {
       await setWaitingMode(session.user.id);
       await markOnboardingDone(session.user.id);
     }
-    router.replace('/(app)');
+    router.replace('/(app)/(tabs)');
   };
 
   return (

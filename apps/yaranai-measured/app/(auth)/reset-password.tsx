@@ -71,7 +71,7 @@ export default function ResetPassword() {
         <Text style={styles.wordmark}>Yaranai</Text>
         <View style={styles.form}>
           <Text style={styles.notice}>{t.auth.passwordChanged}</Text>
-          <Pressable style={styles.primary} onPress={() => router.replace('/(app)')}>
+          <Pressable style={styles.primary} onPress={() => router.replace('/(app)/(tabs)')}>
             <Text style={styles.primaryText}>{t.auth.enter}</Text>
           </Pressable>
         </View>

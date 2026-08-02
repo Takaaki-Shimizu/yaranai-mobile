@@ -8,38 +8,38 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
-import { supabase } from '../../lib/supabase';
-import { syncAll } from '../../lib/usage-sync';
-import { graduationWindowDates, graduationWindowStart, recordDateDaysAgo } from '../../lib/dates';
-import { getPackageForegroundMsByDateSince, getRecordedDatesSince } from '../../lib/usage-db';
-import { computeGraduationEligibility } from '../../lib/graduation';
-import { formatMinutes } from '../../lib/format';
-import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../modules/usage-stats';
-import { HomeGarden } from '../../components/garden/HomeGarden';
-import { DevGarden } from '../../components/garden/DevGarden';
-import { loadGrowth, loadLastSeen, saveLastSeen } from '../../components/garden/load';
-import { HOME_ASPECT } from '../../lib/garden/scene';
-import { isEngawaOpen } from '../../lib/garden/gate';
-import { changedCategories, changeNote, diffDuration, type DiffCategory } from '../../lib/garden/diff';
-import { useIsDeveloper } from '../../lib/developer';
-import { TojiruCurtain } from '../../components/tojiru/TojiruCurtain';
-import { exitToBackground } from '../../lib/tojiru/exit';
-import { TOJIRU_TIMELINE } from '../../lib/tojiru/timeline';
-import { useReduceMotion } from '../../lib/use-reduce-motion';
-import { useForegroundGeneration } from '../../lib/use-foreground';
-import { evaluateCrashedDay, evaluateStanding } from '../../lib/articles/evaluate';
-import { loadArticlesState } from '../../lib/articles/storage';
-import { newestUnread, previewStripArticle, type ArticleListItem } from '../../lib/articles/select';
-import type { ArticlesState } from '../../lib/articles/types';
-import { AppMenuButton } from '../../components/AppMenu';
-import { AppFooter, FOOTER_HEIGHT } from '../../components/AppFooter';
-import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
-import { IdealHeader } from '../../components/IdealHeader';
-import { GoldRule, GrainOverlay, HeaderWashi } from '../../components/washi/Washi';
-import { useLang, useT } from '../../lib/i18n/context';
-import { isMissingGraduatedOn, MAX_VOWS } from '../../lib/vows';
-import type { GrowthParams } from '../../lib/garden/growth';
-import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../lib/baseline';
+import { supabase } from '../../../lib/supabase';
+import { syncAll } from '../../../lib/usage-sync';
+import { graduationWindowDates, graduationWindowStart, recordDateDaysAgo } from '../../../lib/dates';
+import { getPackageForegroundMsByDateSince, getRecordedDatesSince } from '../../../lib/usage-db';
+import { computeGraduationEligibility } from '../../../lib/graduation';
+import { formatMinutes } from '../../../lib/format';
+import { getAppLabels, hasUsageAccess, isUsageStatsAvailable } from '../../../modules/usage-stats';
+import { HomeGarden } from '../../../components/garden/HomeGarden';
+import { DevGarden } from '../../../components/garden/DevGarden';
+import { loadGrowth, loadLastSeen, saveLastSeen } from '../../../components/garden/load';
+import { HOME_ASPECT } from '../../../lib/garden/scene';
+import { isEngawaOpen } from '../../../lib/garden/gate';
+import { changedCategories, changeNote, diffDuration, type DiffCategory } from '../../../lib/garden/diff';
+import { useIsDeveloper } from '../../../lib/developer';
+import { TojiruCurtain } from '../../../components/tojiru/TojiruCurtain';
+import { exitToBackground } from '../../../lib/tojiru/exit';
+import { TOJIRU_TIMELINE } from '../../../lib/tojiru/timeline';
+import { useReduceMotion } from '../../../lib/use-reduce-motion';
+import { useForegroundGeneration } from '../../../lib/use-foreground';
+import { evaluateCrashedDay, evaluateStanding } from '../../../lib/articles/evaluate';
+import { loadArticlesState } from '../../../lib/articles/storage';
+import { newestUnread, previewStripArticle, type ArticleListItem } from '../../../lib/articles/select';
+import type { ArticlesState } from '../../../lib/articles/types';
+import { AppMenuButton } from '../../../components/AppMenu';
+import { AppFooter, FOOTER_HEIGHT } from '../../../components/AppFooter';
+import { Sumiire, useSumiireRouter } from '../../../components/Sumiire';
+import { IdealHeader } from '../../../components/IdealHeader';
+import { GoldRule, GrainOverlay, HeaderWashi } from '../../../components/washi/Washi';
+import { useLang, useT } from '../../../lib/i18n/context';
+import { isMissingGraduatedOn, MAX_VOWS } from '../../../lib/vows';
+import type { GrowthParams } from '../../../lib/garden/growth';
+import { BASELINE_MIN_DAYS, measureBaselineWindow } from '../../../lib/baseline';
 import {
   clearWaitingMode,
   isDisclosureSeen,
@@ -47,7 +47,7 @@ import {
   isPermissionDeferred,
   isWaitingMode,
   markOnboardingDone,
-} from '../../lib/onboarding';
+} from '../../../lib/onboarding';
 
 // ホームの門(オンボーディング §0)。焦点が当たるたびに、どの姿で出すかを決める:
 //   checking  判定中(生成りの地だけ)

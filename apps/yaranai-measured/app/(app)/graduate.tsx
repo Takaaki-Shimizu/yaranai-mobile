@@ -30,7 +30,7 @@ export default function Graduate() {
 
   // 入口が無い状態(直リンク・パラメータ落ち)では黙って庭へ還す。
   useEffect(() => {
-    if (!vowId || !packageName) router.replace('/(app)');
+    if (!vowId || !packageName) router.replace('/(app)/(tabs)');
   }, [vowId, packageName, router]);
 
   // 卒業条件をもう一度、端末内DBから評価する。窓は前日までの7暦日やけん、
@@ -56,7 +56,7 @@ export default function Graduate() {
 
     if (!(await stillEligible())) {
       setBusy(false);
-      router.replace('/(app)');
+      router.replace('/(app)/(tabs)');
       return;
     }
 
@@ -83,7 +83,7 @@ export default function Graduate() {
         <View style={styles.doneBody}>
           <Text style={styles.doneLede}>{t.graduate.doneLede(label)}</Text>
           <Text style={styles.worldview}>{t.graduate.doneWorldview}</Text>
-          <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)')}>
+          <Pressable style={styles.doneAction} onPress={() => router.replace('/(app)/(tabs)')}>
             <Text style={styles.doneActionText}>{t.graduate.toGarden}</Text>
           </Pressable>
         </View>
