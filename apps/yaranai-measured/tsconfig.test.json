@@ -13,6 +13,7 @@
   "include": [
     "lib/dates.ts",
     "lib/external-ui.ts",
+    "lib/single-flight.ts",
     "lib/graduation.ts",
     "lib/usage-buckets.ts",
     "lib/vow-log.ts",

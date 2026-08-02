@@ -5,6 +5,7 @@ import {
   queryUsageEvents,
 } from '../modules/usage-stats';
 import { dayRange, getTodayRecordDate, recordDateDaysAgo } from './dates';
+import { singleFlight } from './single-flight';
 import { supabase } from './supabase';
 import { aggregateBucketsByDay } from './usage-buckets';
 import { aggregateEventsByDay } from './usage-events';
@@ -27,7 +28,13 @@ const LOCAL_SYNC_DAYS = 7; // OSの日次統計・イベントの保持期間に
 // 日次バケット(INTERVAL_DAILY)は、イベントが残っとらん日の埋め草としてだけ使う。
 // イベント由来の正確な値を、日をまたいで混ざりうるバケット値で後から上書きせんよう、
 // バケットで書くのは端末DBにまだデータが無い日に限る。
-export async function syncLocalUsage(): Promise<void> {
+//
+// singleFlight で二重走行を止めとる理由: 起動直後は _layout の syncAll と
+// observe の loadAll が同時にここへ入る。replaceDay の排他トランザクションは
+// 別コネクションで走り、並走した側の書き込みが「database is locked」で落ちる
+// (expo-sqlite の仕様)。オンボーディングはホームの門が observe へ直行させるけん、
+// この衝突が毎起動で起き、時間の行き先が白紙のまま止まっとった。
+export const syncLocalUsage = singleFlight(async (): Promise<void> => {
   if (!isUsageStatsAvailable || !hasUsageAccess()) return;
   const now = Date.now();
   const targetDates: string[] = [];
@@ -51,7 +58,7 @@ export async function syncLocalUsage(): Promise<void> {
       await replaceDay(recordDate, bucketRows);
     }
   }
-}
+});
 
 type ActiveVow = {
   id: string;
