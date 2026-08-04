@@ -11,7 +11,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
-import { loadIdeal } from '../lib/ideal/storage';
+import { loadCachedIdeal, loadIdeal } from '../lib/ideal/storage';
 import { useT } from '../lib/i18n/context';
 import { useSumiireRouter } from './Sumiire';
 
@@ -33,9 +33,15 @@ export function IdealHeader() {
         return;
       }
       let alive = true;
-      loadIdeal(userId).then((v) => {
-        if (alive) setIdeal(v);
-      });
+      // 正本はサーバー(lib/ideal/storage.ts)。ただし応答を待つ間に掛け軸が空白へ
+      // 落ちると、開くたび一瞬だけ言葉が消えるように見える。先に端末の写しを出し、
+      // 取れた正本で静かに差し替える(枠の高さは固定やけん行組みは動かん)。
+      (async () => {
+        const cached = await loadCachedIdeal(userId);
+        if (alive) setIdeal(cached);
+        const current = await loadIdeal(userId);
+        if (alive) setIdeal(current);
+      })();
       return () => {
         alive = false;
       };

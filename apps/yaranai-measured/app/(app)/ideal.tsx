@@ -4,7 +4,7 @@
 // 理想は任意入力。空文字での保存は「理想を消す」操作として許可する。
 // 20文字上限。改行は禁止(multiline を使わない)。
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
 } from 'react-native';
@@ -12,7 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSession, colors, fonts } from '@yaranai/core';
 import { Sumiire, useSumiireRouter } from '../../components/Sumiire';
 import { IDEAL_MAX_LENGTH, idealLength, validateIdeal } from '../../lib/ideal/validate';
-import { loadIdeal, saveIdeal } from '../../lib/ideal/storage';
+import { loadCachedIdeal, loadIdeal, saveIdeal } from '../../lib/ideal/storage';
 import { useT } from '../../lib/i18n/context';
 
 export default function Ideal() {
@@ -33,20 +33,31 @@ export default function Ideal() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // 書き始めたあとにサーバーの応答が届いても、入力を奪わんための印。
+  // 正本の取得は非同期やけん、遅れて返った値で上書きすると打っとる言葉が消える
+  const edited = useRef(false);
+
   // 既存値は全文をそのままロードする。21文字以上でも勝手に切り詰めない
   // (短縮を求めるのは、ユーザーが保存しようとした時点)。
+  //
+  // 正本はサーバー(lib/ideal/storage.ts)。先に端末の写しを入れて入力欄を埋め、
+  // 取れた正本で差し替える ── 圏外では写しのまま編集でき、保存の可否だけが変わる。
   useEffect(() => {
     if (!userId) return;
     let alive = true;
-    loadIdeal(userId).then((v) => {
-      if (alive) setText(v);
-    });
+    (async () => {
+      const cached = await loadCachedIdeal(userId);
+      if (alive && !edited.current) setText(cached);
+      const current = await loadIdeal(userId);
+      if (alive && !edited.current) setText(current);
+    })();
     return () => {
       alive = false;
     };
   }, [userId]);
 
   const onChangeText = (next: string) => {
+    edited.current = true;
     // 上限はコードポイント単位で数える(絵文字を2文字と数えて弾かないため)。
     // 短くする方向は常に受け付ける(既存の21文字以上のデータを縮められるように)。
     if (idealLength(next) <= IDEAL_MAX_LENGTH || idealLength(next) < idealLength(text)) {
