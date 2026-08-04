@@ -61,6 +61,8 @@ export default function Settings() {
     vowCount: 0,
   });
   const [mailFallback, setMailFallback] = useState(false);
+  // 記録が入る仕組みの開示(§3-1b)。既定はたたんだ状態
+  const [recordGapOpen, setRecordGapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -136,6 +138,20 @@ export default function Settings() {
           <Pressable style={styles.item} onPress={openContact}>
             <Text style={styles.itemText}>{t.settings.contact}</Text>
           </Pressable>
+
+          {/* 記録が入る仕組み(記録欠落の開示 §3-1b)。診断情報を送る窓口の隣に、
+              たたんだ状態で置く。開いた人にだけ本文が出る ── 制度の棚に置く説明であって、
+              読ませにいくものではない。矢印や警告色は付けない */}
+          <Pressable style={styles.item} onPress={() => setRecordGapOpen((v) => !v)}>
+            <Text style={styles.itemQuietText}>{t.settings.recordGapItem}</Text>
+          </Pressable>
+          {recordGapOpen && (
+            <View style={styles.gapBody}>
+              {t.settings.recordGapBody.map((p) => (
+                <Text key={p} style={styles.gapParagraph}>{p}</Text>
+              ))}
+            </View>
+          )}
 
           <Text style={[styles.sectionHead, styles.sectionGap]}>
             {t.settings.sectionRules}
@@ -246,6 +262,9 @@ const styles = StyleSheet.create({
     color: colors.usuzumi,
     letterSpacing: 2,
   },
+  // 記録が入る仕組み(§3-1b)を開いたときの本文。枠線も背景色も敷かず、段落の間だけで区切る
+  gapBody: { paddingVertical: 16, gap: 16 },
+  gapParagraph: { fontSize: 13, lineHeight: 24, color: colors.usuzumi },
   version: { marginTop: 18, fontSize: 13, color: colors.usuzumi, letterSpacing: 1 },
   back: { marginTop: 64, paddingVertical: 10, alignItems: 'center' },
   backText: { fontFamily: fonts.serif, fontSize: 13, color: colors.usuzumi, letterSpacing: 3 },

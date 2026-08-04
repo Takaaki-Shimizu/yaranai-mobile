@@ -27,6 +27,17 @@ export default function Disclosure() {
         <Text style={styles.body}>{t.disclosure.what}</Text>
         <Text style={styles.note}>{t.disclosure.boundary}</Text>
 
+        {/* 記録が入る仕組み(記録欠落の開示 §3-1a)。7日を超えて開かんかった期間の記録は
+            端末にもサーバーにも残らん ── 補正せんと決めた仕様やけん、宣言の手前で先に伝える。
+            注意書きの体裁(アイコン・枠線・警告色)は使わず、開くことも求めない。
+            最後の一行は独立した段落にする: 受け取れん日の話にくっつけると、
+            「減らない」がそこに飲まれて読み落とされる */}
+        <View style={styles.gap}>
+          <Text style={styles.gapTitle}>{t.disclosure.recordGapTitle}</Text>
+          <Text style={styles.note}>{t.disclosure.recordGapBody}</Text>
+          <Text style={styles.note}>{t.disclosure.recordGapKeep}</Text>
+        </View>
+
         <Pressable style={styles.primary} onPress={proceed}>
           <Text style={styles.primaryText}>{t.disclosure.action}</Text>
         </Pressable>
@@ -63,6 +74,16 @@ const styles = StyleSheet.create({
     color: colors.usuzumi,
     fontSize: 13,
     lineHeight: 24,
+    textAlign: 'center',
+  },
+  // 段落どうしの間だけで区切る。枠線も背景色も敷かない(注意書きにしないため)
+  gap: { gap: 14 },
+  gapTitle: {
+    fontFamily: fonts.serif,
+    fontSize: 14,
+    lineHeight: 26,
+    letterSpacing: 1,
+    color: colors.sumi,
     textAlign: 'center',
   },
   primary: {
