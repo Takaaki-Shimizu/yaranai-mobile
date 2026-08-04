@@ -53,9 +53,13 @@ export default function Settings() {
   const t = useT();
 
   // 記録日数・宣言数は画面に入った時点で先に取りに行く(タップ時に待たせない)。
-  // 取れんかった回は 0 のまま送る ── 診断情報は本文で見えて編集できるけん、
-  // 欠けとってもユーザーが気づける
-  const [diag, setDiag] = useState({ recordedDays: 0, vowCount: 0 });
+  // 記録日数が取れんかった回は 0 に丸めず null のまま送り、本文には「取得できず」と出す
+  // ── 0日と書いてしまうと、記録の欠落や復元の相談で調査が逆方向へ行く。
+  // 診断情報は本文で見えて編集できるけん、欠けとってもユーザーが気づける
+  const [diag, setDiag] = useState<{ recordedDays: number | null; vowCount: number }>({
+    recordedDays: null,
+    vowCount: 0,
+  });
   const [mailFallback, setMailFallback] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -68,7 +72,7 @@ export default function Settings() {
     ]).then(([growth, vowCount]) => {
       if (!active) return;
       setDiag({
-        recordedDays: growth?.recordedDays ?? 0,
+        recordedDays: growth?.status === 'ok' ? growth.growth.recordedDays : null,
         vowCount: vowCount ?? 0,
       });
     });

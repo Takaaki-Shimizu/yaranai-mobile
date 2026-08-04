@@ -62,6 +62,14 @@ export type AppStrings = {
     /** 許可を「あとで」にした人への静かな案内(オンボーディング §4)。警告色は使わない */
     noAccessNotice: string;
     noAccessLink: string;
+    /**
+     * 蓄積が引けず、端末にも手がかりが無いときの一行。
+     * 宣言前の空文言(emptyHeadline)を代わりに出さないための面で、
+     * 「失われた」と読める語は使わない。読めていない、とだけ言う
+     */
+    gardenUnavailable: string;
+    /** 上の一行に添える、もう一度だけの導線。促さず、置くだけ */
+    gardenRetry: string;
     savedHeadline: (days: number, time: string) => string;
     /**
      * 取り戻しがまだ0のあいだ、savedHeadline と同じ位置に置く一行。
@@ -344,6 +352,8 @@ const ja: AppStrings = {
     emptyHeadline: 'ここから、変わる。',
     noAccessNotice: '計測を始めるには、\n使用状況へのアクセスの許可が必要です。',
     noAccessLink: '許可について読む',
+    gardenUnavailable: 'いまは、庭を読み込めませんでした。\n積んだものは、そのままです。',
+    gardenRetry: 'もう一度読み込む',
     savedHeadline: (days, time) => `${days}日で、${time}が\n戻ってきました。`,
     savedPending: '明日から、取り戻した時間が\nここに表示されます。',
     rowSaved: (actual, baseline, saved) =>
@@ -532,7 +542,7 @@ const ja: AppStrings = {
         `アプリ: Yaranai ${d.version} (${d.build})`,
         `Android: ${d.androidVersion}`,
         `端末: ${d.deviceModel}`,
-        `記録日数: ${d.recordedDays}日`,
+        `記録日数: ${d.recordedDays == null ? '取得できず' : `${d.recordedDays}日`}`,
         `宣言数: ${d.vowCount}`,
         `ID: ${d.userId}`,
       ].join('\n'),
@@ -601,6 +611,8 @@ const en: AppStrings = {
     emptyHeadline: 'This is where it changes.',
     noAccessNotice: 'To begin measuring, Yaranai needs\nthe "Usage access" permission.',
     noAccessLink: 'Read about the permission',
+    gardenUnavailable: "The garden couldn't be loaded just now.\nWhat you've built is still there.",
+    gardenRetry: 'Load it again',
     savedHeadline: (days, time) =>
       `In ${days} ${days === 1 ? 'day' : 'days'},\n${time} came back to you.`,
     savedPending: 'From tomorrow, the time that\ncomes back will appear here.',
@@ -793,7 +805,7 @@ const en: AppStrings = {
         `App: Yaranai ${d.version} (${d.build})`,
         `Android: ${d.androidVersion}`,
         `Device: ${d.deviceModel}`,
-        `Recorded days: ${d.recordedDays}`,
+        `Recorded days: ${d.recordedDays ?? 'unavailable'}`,
         `Vows: ${d.vowCount}`,
         `ID: ${d.userId}`,
       ].join('\n'),

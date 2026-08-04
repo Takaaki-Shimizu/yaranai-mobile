@@ -51,11 +51,48 @@ export function buildGrowthFromDebug(days: number, savedHours: number): GrowthPa
   return deriveGrowth(snapshot);
 }
 
-export async function loadGrowth(userId: string): Promise<GrowthParams> {
+/** 高水位マーク。読めんかった・まだ無いはどちらも null */
+async function readHighWater(userId: string): Promise<GardenSnapshot | null> {
+  try {
+    const raw = await AsyncStorage.getItem(keyFor(userId));
+    return raw ? (JSON.parse(raw) as GardenSnapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 庭の読み込み結果。
+ *
+ * 'unavailable' は「サーバーから引けず、高水位も無い」= 蓄積が分からん状態。
+ * ここを 0 のスナップショットで代用してはならん ── 石が0本になると、ホームは
+ * 庭を描かずに宣言前の空文言へ落ちる。圏外で開いただけで「まだ何も宣言しとらん」
+ * 画面が出るのが、このアプリで一番やってはいけないことにあたる。
+ */
+export type GrowthResult =
+  | { status: 'ok'; growth: GrowthParams }
+  | { status: 'unavailable' };
+
+export async function loadGrowth(userId: string): Promise<GrowthResult> {
   const [savedRes, daysRes] = await Promise.all([
     supabase.from('measured_saved').select('saved_minutes'),
     supabase.from('measured_daily').select('record_date'),
   ]);
+
+  // 取得できんかった回は、空配列に落として 0 を作らない。
+  // @supabase/postgrest-js は圏外でも例外を投げず {data: null, error} で返す
+  // (2.105.1 の PostgrestBuilder が fetch の失敗を catch しとる)けん、
+  // error を見んかぎり通信断は「値が0やった」と見分けがつかん。
+  // ホーム(app/(app)/(tabs)/index.tsx)の誓い一覧が同じ事故を防いどるのと同じ扱いにする。
+  if (savedRes.error || daysRes.error) {
+    const reason = savedRes.error ?? daysRes.error;
+    console.log(`[garden] load failed: ${reason?.code} ${reason?.message}`);
+    // 高水位があるなら、最後に見せた庭をそのまま出す(後退させない)。
+    // 失敗した回に高水位を書き戻すことはせん ── 書く理由が無い。
+    const prev = await readHighWater(userId);
+    return prev ? { status: 'ok', growth: deriveGrowth(prev) } : { status: 'unavailable' };
+  }
+
   const vows = savedRes.data ?? [];
   const snapshot: GardenSnapshot = {
     stoneCount: vows.length,
@@ -63,14 +100,7 @@ export async function loadGrowth(userId: string): Promise<GrowthParams> {
     recordedDays: new Set((daysRes.data ?? []).map((d) => d.record_date as string)).size,
   };
 
-  let prev: GardenSnapshot | null = null;
-  try {
-    const raw = await AsyncStorage.getItem(keyFor(userId));
-    if (raw) prev = JSON.parse(raw) as GardenSnapshot;
-  } catch {
-    prev = null;
-  }
-  const merged = mergeHighWater(prev, snapshot);
+  const merged = mergeHighWater(await readHighWater(userId), snapshot);
   AsyncStorage.setItem(keyFor(userId), JSON.stringify(merged)).catch(() => {});
-  return deriveGrowth(merged);
+  return { status: 'ok', growth: deriveGrowth(merged) };
 }
