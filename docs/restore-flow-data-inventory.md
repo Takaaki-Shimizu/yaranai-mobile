@@ -55,7 +55,7 @@
 | # | 項目 | 現在の保存先 | 根拠 | 確度 | ギャップ / 移行作業 |
 |---|---|---|---|---|---|
 | 11 | 庭の成長パラメータ(石・道・苔・週数・朱) | **どこにも保存されていない。** 毎回 Supabase から導出する純関数の出力 | `lib/garden/growth.ts:48-59` / `components/garden/load.ts:54-76` | 確定 | **移行不要。** 復元後は `measured_saved` / `measured_daily` を引き直せば同じ値が出る |
-| 12 | 庭の高水位マーク(単調非減少ガード) | 端末 AsyncStorage `garden-high-water:v1:{userId}`。値は `GardenSnapshot`(`stoneCount` / `recordedDays` / `savedMinutes`) | `components/garden/load.ts:18, 66-75` | 確定 | **失われても実害は小さい。** 復元直後は Supabase 値がそのまま高水位の初期値になる。ただし「サーバー側が欠落している日数(#7)」を端末の高水位が覆い隠していた場合、**復元後に庭が後退して見える**。復元完了時に一度 `loadGrowth` を通し、その結果を高水位の初期値として書くのが自然 |
+| 12 | 庭の高水位マーク(単調非減少ガード) | 端末 AsyncStorage `garden-high-water:v1:{userId}`。値は `GardenSnapshot`(`stoneCount` / `recordedDays` / `savedMinutes`) | `components/garden/load.ts:18, 66-75` | 確定 | **失われても実害は小さい。** 復元直後は Supabase 値がそのまま高水位の初期値になる。<br>※当初「サーバー側の欠落日(#7)を高水位が覆い隠していた場合、復元後に庭が後退して見える」と書いていたが、**この記述は誤り**。追加調査(`restore-flow-highwater-investigation.md` §6-1)で、高水位が守っているのは欠落日ではなく **Supabase の取得失敗時に `data ?? []` が 0 を作る経路**(`components/garden/load.ts:59, 63`)と確定した。欠落日は「サーバー値が高水位に永久に届かない」形で効き、後退ではなく上乗せ分の消失になる。復元完了時に一度 `loadGrowth` を通し、その結果を高水位の初期値として書くのが自然 |
 | 13 | 前回表示時の庭の状態(入庭差分演出用) | 端末 AsyncStorage `garden_last_seen_state:{userId}`。値は `GrowthParams` | `components/garden/load.ts:20, 23-39` / `app/(app)/(tabs)/index.tsx:190-196` | 確定 | **移行不要。** 失われると復元後の初回表示で「全要素が変化扱い」になり差分演出が一気に流れる。復元完了時に現在状態を `saveLastSeen` しておけば初回は無演出になる |
 | 14 | 誓い別詳細のスナップショット | 端末 AsyncStorage `vow-log-snapshot:v1:{vowId}`。オフライン表示専用の写し | `lib/vow-log-cache.ts:22, 25-40` | 確定 | **移行不要。** 次回オンライン取得で自動的に埋まる |
 
