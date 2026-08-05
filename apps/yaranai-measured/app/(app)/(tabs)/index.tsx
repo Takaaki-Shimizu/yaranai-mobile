@@ -119,6 +119,8 @@ export default function Home() {
   const [yesterdayMinutes, setYesterdayMinutes] = useState<Map<string, number>>(new Map());
   const [totals, setTotals] = useState<Totals | null>(null);
   const [growth, setGrowth] = useState<GrowthParams | null>(null);
+  // 庭が引けず、高水位も無くて蓄積が分からん状態。宣言前の空文言とは別の面を出す
+  const [gardenUnavailable, setGardenUnavailable] = useState(false);
   // 入庭時の差分演出(§変更4): 前回表示時の状態と、変化した種別。
   // 一行の文言はレンダー時に言語をかけて組む(切替が即時に効くように、文字列では持たない)。
   const [prevGrowth, setPrevGrowth] = useState<GrowthParams | null>(null);
@@ -153,7 +155,12 @@ export default function Home() {
     setYesterdayMinutes(
       new Map((dailyRes.data ?? []).map((d) => [d.vow_id as string, d.actual_minutes as number])),
     );
-    setGrowth(growthRes);
+    // 庭が引けんかった回は、前回表示した庭をそのまま残す(誓い一覧と同じ扱い)。
+    // 高水位も無くて蓄積が分からんときだけ、読み込み失敗の面を出す
+    const gardenOk = growthRes?.status === 'ok';
+    const nextGrowth = gardenOk ? growthRes.growth : null;
+    if (nextGrowth) setGrowth(nextGrowth);
+    setGardenUnavailable(growthRes?.status === 'unavailable');
 
     if (vowsRes.error) {
       // 誓いが引けんかった回は、前回表示した誓いをそのまま残す。ここで空配列に
@@ -186,14 +193,15 @@ export default function Home() {
 
     // §変更4: 前回表示時の状態と比べ、変化があれば差分演出+一行を用意し、現在状態を保存する。
     // 初回(スナップショットなし)は演出をスキップし、現在状態をそのまま保存する。
-    if (session && growthRes) {
+    // 引けんかった回は演出もスナップショットの更新もせん(前回見た状態を動かさない)。
+    if (session && nextGrowth) {
       const prev = await loadLastSeen(session.user.id);
-      const cats = changedCategories(prev, growthRes);
+      const cats = changedCategories(prev, nextGrowth);
       setPrevGrowth(cats.length ? prev : null);
       setGardenCats(cats);
       // 差分アニメが流れる間は「とじる」を受け付けない(§6)
       diffUntil.current = cats.length ? Date.now() + diffDuration(cats) : 0;
-      saveLastSeen(session.user.id, growthRes);
+      saveLastSeen(session.user.id, nextGrowth);
     } else {
       setPrevGrowth(null);
       setGardenCats([]);
@@ -261,7 +269,7 @@ export default function Home() {
             await clearWaitingMode(session.user.id);
             if (!cancelled) {
               setGate('ready');
-              loadAll();
+              loadAll().catch(() => {});
               router.push({ pathname: '/(app)/observe', params: { onboarding: '1' } });
             }
             return;
@@ -269,14 +277,14 @@ export default function Home() {
           if (!cancelled) {
             setGate('waiting');
             setWaitingDays(Math.max(1, availableDays));
-            loadAll();
+            loadAll().catch(() => {});
           }
           return;
         }
 
         if (!cancelled) {
           setGate('ready');
-          loadAll();
+          loadAll().catch(() => {});
         }
       })();
       return () => {
@@ -287,9 +295,15 @@ export default function Home() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (session && !isDeveloper) await syncAll(session.user.id);
-    await loadAll();
-    setRefreshing(false);
+    // finally で必ず畳む。途中で落ちると、引っぱって更新の輪が回ったまま止まらん
+    try {
+      if (session && !isDeveloper) await syncAll(session.user.id);
+      await loadAll();
+    } catch (e) {
+      console.log(`[home] refresh failed: ${String(e)}`);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // ホームの庭窓は全幅・構図の 90%×縦100%。アスペクト 1.35:1 で高さが決まる(§変更1)。
@@ -424,6 +438,22 @@ export default function Home() {
           <Pressable onPress={onGardenPress}>
             <HomeGarden growth={growth} height={gardenHeight} prevGrowth={prevGrowth} />
           </Pressable>
+        ) : gardenUnavailable ? (
+          /* 蓄積が引けんかった面。宣言前の空文言(emptyHeadline)は絶対に出さない ──
+             機種変更の直後に圏外で開いた人に「ここから、変わる。」を見せたら、
+             積んだものが無くなったと読める。喪失を連想させる語は使わず、
+             いまは読めていないことだけを言い、もう一度だけ静かに置く(五原則) */
+          <View style={styles.empty}>
+            <Text style={styles.quietNotice}>{t.home.gardenUnavailable}</Text>
+            <Pressable
+              style={styles.quietLink}
+              hitSlop={12}
+              accessibilityRole="button"
+              onPress={() => { loadAll().catch(() => {}); }}
+            >
+              <Text style={styles.quietLinkText}>{t.home.gardenRetry}</Text>
+            </Pressable>
+          </View>
         ) : (
           <View style={styles.empty}>
             <Text style={styles.headline}>{t.home.emptyHeadline}</Text>

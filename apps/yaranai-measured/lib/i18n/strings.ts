@@ -62,6 +62,14 @@ export type AppStrings = {
     /** 許可を「あとで」にした人への静かな案内(オンボーディング §4)。警告色は使わない */
     noAccessNotice: string;
     noAccessLink: string;
+    /**
+     * 蓄積が引けず、端末にも手がかりが無いときの一行。
+     * 宣言前の空文言(emptyHeadline)を代わりに出さないための面で、
+     * 「失われた」と読める語は使わない。読めていない、とだけ言う
+     */
+    gardenUnavailable: string;
+    /** 上の一行に添える、もう一度だけの導線。促さず、置くだけ */
+    gardenRetry: string;
     savedHeadline: (days: number, time: string) => string;
     /**
      * 取り戻しがまだ0のあいだ、savedHeadline と同じ位置に置く一行。
@@ -205,6 +213,20 @@ export type AppStrings = {
     what: string;
     boundary: string;
     action: string;
+    /**
+     * 記録が入る仕組みの開示(記録欠落の開示 §3-1a)。
+     *
+     * 主語は「Yaranai を開いたかどうか」であって、誓い対象アプリを使ったかどうかではない。
+     * 文言でもここを混ぜんこと ── 混ざると「対象アプリを使わんかった日は記録されん」と読める。
+     *
+     * 補正しないと決めた仕様やけん(docs/yaranai-list.md §12)、仕組みの説明として置く。
+     * 注意書きの体裁(アイコン・枠線・警告色)は使わず、開くことも求めない。
+     * 3つ目の段は必ず独立した段落として置く ── 2つ目にくっつけると、
+     * 受け取れん日の話に飲まれて「減らない」が読み落とされる。
+     */
+    recordGapTitle: string;
+    recordGapBody: string;
+    recordGapKeep: string;
   };
   /** 待機モード(オンボーディング §5)。「あと◯日」のカウントダウン表現はしない */
   waiting: {
@@ -263,6 +285,15 @@ export type AppStrings = {
     title: string;
     sectionAbout: string;
     contact: string;
+    /**
+     * 記録が入る仕組みの開示(記録欠落の開示 §3-1b)。診断情報の近くに、たたんだ状態で置く。
+     * 開いた人にだけ本文が出る ── 制度の棚に置く説明であって、読ませにいくものではない。
+     *
+     * 主語は「Yaranai を開いたかどうか」。誓い対象アプリを使ったかどうかではない。
+     * 欠落日は取り戻し時間にも記録日数にも加わらず、崩れとしても扱わない(欠測日ルール)。
+     */
+    recordGapItem: string;
+    recordGapBody: string[];
     sectionRules: string;
     privacy: string;
     terms: string;
@@ -344,6 +375,8 @@ const ja: AppStrings = {
     emptyHeadline: 'ここから、変わる。',
     noAccessNotice: '計測を始めるには、\n使用状況へのアクセスの許可が必要です。',
     noAccessLink: '許可について読む',
+    gardenUnavailable: 'いまは、庭を読み込めませんでした。\n積んだものは、そのままです。',
+    gardenRetry: 'もう一度読み込む',
     savedHeadline: (days, time) => `${days}日で、${time}が\n戻ってきました。`,
     savedPending: '明日から、取り戻した時間が\nここに表示されます。',
     rowSaved: (actual, baseline, saved) =>
@@ -460,6 +493,11 @@ const ja: AppStrings = {
     boundary:
       '全アプリの利用記録は、この端末の中にだけ残ります。\nサーバーに送られるのは、あなたが「やらない」と\n宣言したアプリの1日ごとの合計時間と、\nその基準線だけです。',
     action: 'わかった、設定へ',
+    recordGapTitle: '記録は、アプリを開いたときに残ります',
+    recordGapBody:
+      'Yaranaiは、あなたが画面を開いたときにだけ、その間の記録を受け取ります。\n'
+      + '一週間以上あいだが空くと、受け取れなかった日が出ます。その日ぶんは、積まれません。',
+    recordGapKeep: 'ただし、それまでに積んだものが減ることはありません。',
   },
   waiting: {
     body: (days) => `あなたの時間の記録を、端末が集めています。\nいま${days}日目です。`,
@@ -513,6 +551,12 @@ const ja: AppStrings = {
     title: '設定',
     sectionAbout: 'このアプリについて',
     contact: 'お問い合わせ',
+    recordGapItem: '記録が入っていないと感じたら',
+    recordGapBody: [
+      'Yaranaiは、アプリを開いたときにだけ記録を受け取ります。開かない期間が一週間を超えると、その手前の日から受け取れなくなります。受け取れなかった日は、記録なしとして扱われます。',
+      '記録なしの日は、取り戻した時間にも、記録した日数にも加わりません。失敗した日として扱われることもありません。',
+      'これまでに積んだ時間が、あとから減ることはありません。',
+    ],
     sectionRules: 'きまりごと',
     privacy: 'プライバシーポリシー',
     terms: '利用規約',
@@ -532,8 +576,8 @@ const ja: AppStrings = {
         `アプリ: Yaranai ${d.version} (${d.build})`,
         `Android: ${d.androidVersion}`,
         `端末: ${d.deviceModel}`,
-        `記録日数: ${d.recordedDays}日`,
-        `宣言数: ${d.vowCount}`,
+        `記録日数: ${d.recordedDays == null ? '取得できず' : `${d.recordedDays}日`}`,
+        `宣言数: ${d.vowCount ?? '取得できず'}`,
         `ID: ${d.userId}`,
       ].join('\n'),
     fallbackBody:
@@ -601,6 +645,8 @@ const en: AppStrings = {
     emptyHeadline: 'This is where it changes.',
     noAccessNotice: 'To begin measuring, Yaranai needs\nthe "Usage access" permission.',
     noAccessLink: 'Read about the permission',
+    gardenUnavailable: "The garden couldn't be loaded just now.\nWhat you've built is still there.",
+    gardenRetry: 'Load it again',
     savedHeadline: (days, time) =>
       `In ${days} ${days === 1 ? 'day' : 'days'},\n${time} came back to you.`,
     savedPending: 'From tomorrow, the time that\ncomes back will appear here.',
@@ -721,6 +767,11 @@ const en: AppStrings = {
     boundary:
       'The usage log of all your apps stays on this device.\nOnly the daily totals of the apps you declare\n"I won\'t" for, and their baselines,\nare sent to the server.',
     action: 'Understood — to Settings',
+    recordGapTitle: 'The record arrives when you open the app',
+    recordGapBody:
+      'Yaranai receives the record of that stretch of time only when you open the screen.\n'
+      + 'If more than a week goes by, there will be days it could not receive. Those days are not added.',
+    recordGapKeep: 'What you have built up until then does not shrink.',
   },
   waiting: {
     body: (days) => `This device is gathering the record of your time.\nDay ${days}, so far.`,
@@ -774,6 +825,12 @@ const en: AppStrings = {
     title: 'Settings',
     sectionAbout: 'About this app',
     contact: 'Contact us',
+    recordGapItem: 'If a record seems to be missing',
+    recordGapBody: [
+      'Yaranai receives the record only when you open the app. Once more than a week passes without opening it, the days before that point can no longer be received. Days it could not receive are treated as having no record.',
+      'Days with no record are not added to the time you took back, nor to the days you recorded. They are not treated as days you failed, either.',
+      'The time you have built up until now does not shrink afterwards.',
+    ],
     sectionRules: 'Policies',
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
@@ -793,8 +850,8 @@ const en: AppStrings = {
         `App: Yaranai ${d.version} (${d.build})`,
         `Android: ${d.androidVersion}`,
         `Device: ${d.deviceModel}`,
-        `Recorded days: ${d.recordedDays}`,
-        `Vows: ${d.vowCount}`,
+        `Recorded days: ${d.recordedDays ?? 'unavailable'}`,
+        `Vows: ${d.vowCount ?? 'unavailable'}`,
         `ID: ${d.userId}`,
       ].join('\n'),
     fallbackBody:

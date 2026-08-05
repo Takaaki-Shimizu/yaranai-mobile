@@ -42,7 +42,13 @@ export default function GardenMode() {
 
   useEffect(() => {
     // 開発者モード(§3): loadGrowth を呼ばない(高水位の読み書きで本番マークを汚さない)。
-    if (session && open && !isDeveloper) loadGrowth(session.user.id).then(setGrowth);
+    // 引けんかった回は null のまま。絵巻を描かず、戻る導線だけが残る
+    // (ここは宣言前の空文言を持たんけん、ホームのような化け方はせん)
+    if (session && open && !isDeveloper) {
+      loadGrowth(session.user.id).then((res) => {
+        if (res.status === 'ok') setGrowth(res.growth);
+      });
+    }
   }, [session, open, isDeveloper]);
 
   // 開発者モード(§2): ホームのスライダー値をパラメータで受け取り、その場で組む。

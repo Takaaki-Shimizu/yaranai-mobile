@@ -17,8 +17,14 @@ export type ContactDiagnostics = {
   build: string;
   androidVersion: string;
   deviceModel: string;
-  recordedDays: number;
-  vowCount: number;
+  /**
+   * 記録日数と宣言数。null = 取得できなかった(通信断など)。
+   * どちらも 0 に丸めてはならん ── 復元や記録の欠落の相談で届く本文やけん、
+   * 「引けんかった」と「本当に0」を取り違えると調査そのものが逆方向へ行く。
+   * 0日・0本の本文は「まだ何も宣言しとらん人」の顔をしてしまう。
+   */
+  recordedDays: number | null;
+  vowCount: number | null;
   userId: string;
 };
 
