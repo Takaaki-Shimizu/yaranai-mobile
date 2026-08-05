@@ -577,7 +577,7 @@ const ja: AppStrings = {
         `Android: ${d.androidVersion}`,
         `端末: ${d.deviceModel}`,
         `記録日数: ${d.recordedDays == null ? '取得できず' : `${d.recordedDays}日`}`,
-        `宣言数: ${d.vowCount}`,
+        `宣言数: ${d.vowCount ?? '取得できず'}`,
         `ID: ${d.userId}`,
       ].join('\n'),
     fallbackBody:
@@ -851,7 +851,7 @@ const en: AppStrings = {
         `Android: ${d.androidVersion}`,
         `Device: ${d.deviceModel}`,
         `Recorded days: ${d.recordedDays ?? 'unavailable'}`,
-        `Vows: ${d.vowCount}`,
+        `Vows: ${d.vowCount ?? 'unavailable'}`,
         `ID: ${d.userId}`,
       ].join('\n'),
     fallbackBody:

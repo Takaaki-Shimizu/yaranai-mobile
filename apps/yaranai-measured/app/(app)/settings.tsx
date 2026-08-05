@@ -53,12 +53,13 @@ export default function Settings() {
   const t = useT();
 
   // 記録日数・宣言数は画面に入った時点で先に取りに行く(タップ時に待たせない)。
-  // 記録日数が取れんかった回は 0 に丸めず null のまま送り、本文には「取得できず」と出す
-  // ── 0日と書いてしまうと、記録の欠落や復元の相談で調査が逆方向へ行く。
+  // 取れんかった回は 0 に丸めず null のまま送り、本文には「取得できず」と出す ──
+  // 「記録日数 0日・宣言数 0」と書いてしまうと、記録の欠落や復元の相談で届いた本文が
+  // 「まだ何も宣言しとらん人」に見え、調査が逆方向へ行く。
   // 診断情報は本文で見えて編集できるけん、欠けとってもユーザーが気づける
-  const [diag, setDiag] = useState<{ recordedDays: number | null; vowCount: number }>({
+  const [diag, setDiag] = useState<{ recordedDays: number | null; vowCount: number | null }>({
     recordedDays: null,
-    vowCount: 0,
+    vowCount: null,
   });
   const [mailFallback, setMailFallback] = useState(false);
   // 記録が入る仕組みの開示(§3-1b)。既定はたたんだ状態
@@ -75,7 +76,7 @@ export default function Settings() {
       if (!active) return;
       setDiag({
         recordedDays: growth?.status === 'ok' ? growth.growth.recordedDays : null,
-        vowCount: vowCount ?? 0,
+        vowCount,
       });
     });
     return () => {
